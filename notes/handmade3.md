@@ -1,0 +1,15 @@
+episode 3 - allocating a backbuffer
+- you used to just have to provide the gpu with a buffer to display
+- oop ppl like to make sure they have symmetrical allocation and deletion of objects
+    - RAII
+    - almost always better that things are acquired & released in aggregate
+    - think about things as part of a group
+    - my guess for why you would do this is that by doing things in waves theres less opportunities for mistakes
+- global variable dogma
+    - not needed, but theres reasons why dogmas come about
+    - more you can make code clear about what it can/cant access, the better
+    - its okay in win32 platform layer cause theres not much crossover code here
+- static always initializes to 0
+- display device context vs memory device context
+    - rasterizing to a display vs a buffer
+- you can use task manager to see if you have memory leaks

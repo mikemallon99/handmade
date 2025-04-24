@@ -1,0 +1,5 @@
+general coding process:
+- compression oriented coding, get something working and clean up in a way that feels natural
+- when dealing with a bug, print out values and draw things to the screen
+- leave TODO's wherever you can when youre not confident in something
+- dimensional analysis comes in handy quite often

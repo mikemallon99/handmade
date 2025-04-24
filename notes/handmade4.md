@@ -1,0 +1,22 @@
+episode 4:
+- there were reasons that we dont need a DC that I dont totally understand
+- padding is good so theres no unaligned penalties
+    - 32 bit boundaries
+- a lot of the OS stuff is very fast paced lol
+- you can make sure nobody has a stale pointer to an object by using VirtualProtect
+    - tracks use after free bug
+- declare things as global when youre figuring out how it should work, then take them off global once its working
+- pointer math
+    - pitch: add to row[0] value to get to next row
+    - stride: add to cur idx value to get to next column in the row
+- nvim: nice to have workflow where you can go through compile errors and instantly jump to a line
+- C silently multiplies subtraction by size of a unit of a thing? with a pointer
+- we turned computer with big operating system to 1980s computer that we can play with
+    - bitmap that we can draw to
+- GetMessageA is blocking
+    - when theres no messages, it will shut down
+    - we need to not wait for windows for our game
+- Used to actually need to define types
+- calling malloc
+    - calls a bunch of c runtime code and then eventually runs VirtualAlloc
+    - malloc/new are c runtime library ways of running VirtualAlloc

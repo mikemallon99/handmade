@@ -1,0 +1,24 @@
+Review of windows graphics
+- when using the stack, compiler can assume a lot of stuff that will allow it to speed things up
+- inlining
+    - short code, just insert it right into the function rather than make new function call
+- aliasing
+    - 2 pointers that go to the same memory
+- compiler, optimizer
+    - totally change your code to where its not recognizeable
+- assertions
+    - errors that dont manifest themselves often
+    - errorrs that are hard to find
+    - errors that manifest themselves quickly and obviously
+- take things that are globals, wrap them up into a structure
+    - good to do after figuring out what you need with globals
+- lots of conceptual cleanup stuff with no payoff
+    - all of your cleanup should have some kind of payoff
+- bad to pass bundle structs as function header
+    - forces people to call function using the struct even if they have width and height separate
+    - cant arbitrarily comibne offscreen buffer stuff, so that stays in function header
+- stack growing downwards
+    - stack suggests its 2mb
+    - recursive function could definitiely overflow the stack
+- hinstance is the process handle
+    - processes have their own memory space, need to know where to point to memory from within that processes memory space
