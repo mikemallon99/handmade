@@ -131,12 +131,13 @@ GetTileChunk(world *World, uint32 TileChunkX, uint32 TileChunkY)
 inline void
 RecanonicalizeCoord(world *World, uint32 *Tile, real32 *TileRel)
 {
-    int32 Offset = FloorReal32ToInt32(*TileRel / World->TileSideInMeters);
+    // NOTE: World is torodial, so if you step off one end then you end up on the other
+    int32 Offset = RoundReal32ToInt32(*TileRel / World->TileSideInMeters);
     *Tile += Offset;
     *TileRel -= Offset*World->TileSideInMeters;
 
-    Assert(*TileRel >= 0.0f);
-    /*Assert(*TileRel < World->TileSideInMeters);*/
+    Assert(*TileRel >= -0.5*World->TileSideInMeters);
+    Assert(*TileRel <= 0.5*World->TileSideInMeters);
 }
 
 inline world_position
@@ -228,20 +229,20 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 1, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 1, 1, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
         {1, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 1, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
-        {1, 0, 1, 1,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 0},
+        {1, 0, 1, 1,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
         {1, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
         {1, 0, 0, 0,  1, 1, 1, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
-        {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1},
-        {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1},
+        {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1},
+        {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1},
         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
-        {0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
-        {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1},
+        {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1},
     };
 
     world World;
@@ -294,8 +295,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             {
                 dPlayerX = 1.0f;
             }
-            dPlayerX *= 2.0f;
-            dPlayerY *= 2.0f;
+
+            real32 PlayerSpeed = 2.0f;
+            if (Controller->ActionUp.EndedDown)
+            {
+                PlayerSpeed = 10.0f;
+            }
+            dPlayerX *= PlayerSpeed;
+            dPlayerY *= PlayerSpeed;
 
             world_position NewPlayerP = GameState->PlayerP;
             NewPlayerP.TileRelX += Input->dtForFrame*dPlayerX;
@@ -321,14 +328,19 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     DrawRectangle(Buffer, 0.0f, 0.0f, (real32)Buffer->Width, (real32)Buffer->Height, 
                   1.0f, 0.0f, 0.0f);
 
-    for (uint32 Row = 0;
-         Row < 9;
-         Row++)
+    real32 ScreenCenterX = 0.5f*(real32)Buffer->Width;
+    real32 ScreenCenterY = 0.5f*(real32)Buffer->Height;
+
+    for (int32 RelRow = -10;
+         RelRow < 10;
+         RelRow++)
     {
-        for (uint32 Column = 0;
-             Column < 17;
-             Column++)
+        for (int32 RelColumn = -20;
+             RelColumn < 20;
+             RelColumn++)
         {
+            uint32 Row = GameState->PlayerP.AbsTileY + RelRow;
+            uint32 Column = GameState->PlayerP.AbsTileX + RelColumn;
             uint32 TileID = GetTileValue(&World, Column, Row);
             real32 Gray = 0.5f;
             if (TileID == 1)
@@ -339,10 +351,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             {
                 Gray = 0.0f;
             }
-            real32 MinX = LowerLeftX + ((real32)Column)*World.TileSideInPixels;
-            real32 MinY = LowerLeftY - ((real32)Row+1)*World.TileSideInPixels;
-            real32 MaxX = MinX + World.TileSideInPixels;
-            real32 MaxY = MinY + World.TileSideInPixels;
+            real32 CenX = ScreenCenterX - World.MetersToPixels*GameState->PlayerP.TileRelX + ((real32)RelColumn)*World.TileSideInPixels;
+            real32 CenY = ScreenCenterY + World.MetersToPixels*GameState->PlayerP.TileRelY - ((real32)RelRow)*World.TileSideInPixels;
+            real32 MinX = CenX - 0.5f*World.TileSideInPixels;
+            real32 MinY = CenY - 0.5f*World.TileSideInPixels;
+            real32 MaxX = CenX + 0.5f*World.TileSideInPixels;
+            real32 MaxY = CenY + 0.5f*World.TileSideInPixels;
             DrawRectangle(Buffer, MinX, MinY, MaxX, MaxY,
                           Gray, Gray, Gray);
         }
@@ -351,10 +365,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     real32 PlayerR = 1.0f;
     real32 PlayerG = 1.0f;
     real32 PlayerB = 0.0f;
-    real32 PlayerLeft = LowerLeftX + GameState->PlayerP.AbsTileX*World.TileSideInPixels +
-        World.MetersToPixels*GameState->PlayerP.TileRelX - World.MetersToPixels*0.5f*PlayerWidth;
-    real32 PlayerTop = LowerLeftY - GameState->PlayerP.AbsTileY*World.TileSideInPixels -
-        World.MetersToPixels*GameState->PlayerP.TileRelY - World.MetersToPixels*PlayerHeight;
+    real32 PlayerLeft = ScreenCenterX - World.MetersToPixels*0.5f*PlayerWidth;
+    real32 PlayerTop = ScreenCenterY - World.MetersToPixels*PlayerHeight;
     DrawRectangle(Buffer, 
                   PlayerLeft, PlayerTop, 
                   PlayerLeft + World.MetersToPixels*PlayerWidth, 
