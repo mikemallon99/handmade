@@ -16,6 +16,8 @@ typedef int32_t int32;
 typedef int64_t int64;
 typedef int32 bool32;
 
+typedef size_t memory_index;
+
 typedef uint8_t uint8;
 typedef uint16_t uint16;
 typedef uint32_t uint32;
@@ -191,51 +193,47 @@ typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 //
 //
 
-struct world_position
-{
-    uint32 AbsTileX; 
-    uint32 AbsTileY;
+#include "handmade_intrinsics.h"
+#include "handmade_tile.h"
 
-    // NOTE: Tile relative X and Y
-    // TODO: change to offsets?
-    real32 TileRelX;
-    real32 TileRelY;
+struct memory_arena
+{
+    memory_index Size;
+    uint8 *Base;
+    memory_index Used;
 };
 
-struct tile_chunk_position
+internal void
+InitializeArena(memory_arena *Arena, memory_index Size, uint8 *Base)
 {
-    uint32 TileChunkX;
-    uint32 TileChunkY;
+    Arena->Size = Size;
+    Arena->Base = Base;
+    Arena->Used = 0;
+}
 
-    uint32 ChunkRelTileX;
-    uint32 ChunkRelTileY;
-};
-
-struct tile_chunk
+#define PushStruct(Arena, type) (type *)PushSize_(Arena, sizeof(type))
+#define PushArray(Arena, Count, type) (type *)PushSize_(Arena, (Count)*sizeof(type))
+void *
+PushSize_(memory_arena *Arena, memory_index Size)
 {
-    uint32 *Tiles;
-};
+    Assert((Arena->Used + Size) <= Arena->Size)
+    void *Result = Arena->Base + Arena->Used;
+    Arena->Used += Size;
+
+    return Result;
+}
 
 struct world
 {
-    uint32 ChunkShift;
-    uint32 ChunkMask;
-    uint32 ChunkDim;
-
-    real32 TileSideInMeters;
-    int32 TileSideInPixels;
-    real32 MetersToPixels;
-
-    // TODO: beginners sparseness
-    int32 TileChunkCountX;
-    int32 TileChunkCountY;
-
-    tile_chunk *TileChunks;
+    tile_map *TileMap;
 };
 
 struct game_state
 {
-    world_position PlayerP;
+    memory_arena WorldArena;
+    world *World;
+
+    tile_map_position PlayerP;
 };
 
 #endif
