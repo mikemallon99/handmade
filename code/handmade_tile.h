@@ -1,14 +1,30 @@
 #ifndef HANDMADE_TILE_H
 #define HANDMADE_TILE_H
 
+struct tile_map_difference
+{
+    v2 dXY;
+    real32 dZ;
+};
+
+struct tile_map_position
+{
+    uint32 AbsTileX; 
+    uint32 AbsTileY;
+    uint32 AbsTileZ;
+
+    // NOTE: Offsets from the tile center
+    v2 Offset;
+};
+
 struct tile_chunk_position
 {
     uint32 TileChunkX;
     uint32 TileChunkY;
     uint32 TileChunkZ;
 
-    uint32 OffsetX;
-    uint32 OffsetY;
+    uint32 TileRelX;
+    uint32 TileRelY;
 };
 
 struct tile_chunk
@@ -32,18 +48,6 @@ struct tile_map
     uint32 TileChunkCountZ;
 
     tile_chunk *TileChunks;
-};
-
-struct tile_map_position
-{
-    uint32 AbsTileX; 
-    uint32 AbsTileY;
-    uint32 AbsTileZ;
-
-    // NOTE: Tile relative X and Y
-    // TODO: change to offsets?
-    real32 TileRelX;
-    real32 TileRelY;
 };
 
 

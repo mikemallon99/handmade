@@ -24,8 +24,8 @@ GetChunkPositionFor(tile_map *TileMap, uint32 AbsTileX, uint32 AbsTileY, uint32 
     Result.TileChunkX = AbsTileX >> TileMap->ChunkShift;
     Result.TileChunkY = AbsTileY >> TileMap->ChunkShift;
     Result.TileChunkZ = AbsTileZ;
-    Result.OffsetX = AbsTileX & TileMap->ChunkMask;
-    Result.OffsetY = AbsTileY & TileMap->ChunkMask;
+    Result.TileRelX = AbsTileX & TileMap->ChunkMask;
+    Result.TileRelY = AbsTileY & TileMap->ChunkMask;
 
     return Result;
 }
@@ -85,7 +85,7 @@ GetTileValue(tile_map *TileMap, uint32 AbsTileX, uint32 AbsTileY, uint32 AbsTile
                                          ChunkPos.TileChunkX, 
                                          ChunkPos.TileChunkY, 
                                          ChunkPos.TileChunkZ);
-    uint32 TileChunkValue = GetTileValue(TileMap, TileChunk, ChunkPos.OffsetX, ChunkPos.OffsetY);
+    uint32 TileChunkValue = GetTileValue(TileMap, TileChunk, ChunkPos.TileRelX, ChunkPos.TileRelY);
 
     return TileChunkValue;
 }
@@ -98,15 +98,23 @@ GetTileValue(tile_map *TileMap, tile_map_position Pos)
     return TileChunkValue;
 }
 
+inline bool32
+IsTileValueEmpty(uint32 TileValue)
+{
+    bool32 Empty = ((TileValue == 1) || 
+                    (TileValue == 3) ||
+                    (TileValue == 4));
+
+    return Empty;
+}
+
 internal bool32
 IsTileMapPointEmpty(tile_map *TileMap, tile_map_position Pos)
 {
     bool32 Empty = false;
 
     uint32 TileChunkValue = GetTileValue(TileMap, Pos);
-    Empty = (TileChunkValue == 1 || 
-             TileChunkValue == 3 ||
-             TileChunkValue == 4);
+    Empty = IsTileValueEmpty(TileChunkValue);
 
     return Empty;
 }
@@ -137,7 +145,7 @@ SetTileValue(memory_arena *Arena, tile_map *TileMap,
         }
     }
 
-    SetTileValue(TileMap, TileChunk, ChunkPos.OffsetX, ChunkPos.OffsetY, TileValue);
+    SetTileValue(TileMap, TileChunk, ChunkPos.TileRelX, ChunkPos.TileRelY, TileValue);
 }
 
 inline void
@@ -157,8 +165,8 @@ RecanonicalizePosition(tile_map *TileMap, tile_map_position Pos)
 {
     tile_map_position Result = Pos;
 
-    RecanonicalizeCoord(TileMap, &Result.AbsTileX, &Result.TileRelX);
-    RecanonicalizeCoord(TileMap, &Result.AbsTileY, &Result.TileRelY);
+    RecanonicalizeCoord(TileMap, &Result.AbsTileX, &Result.Offset.X);
+    RecanonicalizeCoord(TileMap, &Result.AbsTileY, &Result.Offset.Y);
 
     return Result;
 }
@@ -171,5 +179,22 @@ IsOnSameTile(tile_map_position PosA, tile_map_position PosB)
                        PosA.AbsTileZ == PosB.AbsTileZ);
 
     return SameTile;
+}
+
+internal tile_map_difference
+Subtract(tile_map *TileMap, tile_map_position *A, tile_map_position *B)
+{
+    tile_map_difference Result;
+
+    v2 dTileXY;
+    dTileXY.X = (real32)A->AbsTileX - (real32)B->AbsTileX;
+    dTileXY.Y = (real32)A->AbsTileY - (real32)B->AbsTileY;
+    real32 dTileZ = (real32)A->AbsTileZ - (real32)B->AbsTileZ;
+
+
+    Result.dXY = TileMap->TileSideInMeters*dTileXY + (A->Offset - B->Offset);
+    Result.dZ = dTileZ;
+
+    return Result;
 }
 

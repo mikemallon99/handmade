@@ -6,6 +6,20 @@
 //
 #include <math.h>
 
+inline real32
+SquareRoot(real32 Real32)
+{
+    real32 Result = sqrtf(Real32);
+    return Result;
+}
+
+inline real32
+AbsoluteValue(real32 Real32)
+{
+    real32 Result = fabsf(Real32);
+    return Result;
+}
+
 inline int32
 RoundReal32ToInt32(real32 Real32)
 {
@@ -62,6 +76,36 @@ inline real32
 Tan(real32 Angle)
 {
     real32 Result = tanf(Angle);
+    return Result;
+}
+
+struct bit_scan_result
+{
+    uint32 Index;
+    bool32 Found;
+};
+inline bit_scan_result
+FindLeastSignificantSetBit(uint32 BitMask)
+{
+    bit_scan_result Result = {};
+
+#if COMPILER_MSVC
+    Result.Found = _BitScanForward((unsigned long *)&Result.Index, BitMask);
+#else
+    for (int Test = 0;
+         Test < 32;
+         Test++)
+    {
+        if ((BitMask & 0x1))
+        {
+            Result.Found = true;
+            Result.Index = Test;
+            break;
+        }
+        BitMask = BitMask >> 1;
+    }
+#endif
+
     return Result;
 }
 

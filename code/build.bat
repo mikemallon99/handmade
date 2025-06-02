@@ -11,6 +11,8 @@ REM cl %CommonCompilerFlags% ..\game\code\win32_handmade.cpp -Fmwin32_handmade.m
 
 REM 64 bit build
 del *.pdb > NUL 2> NUL
-cl %CommonCompilerFlags% ..\game\code\handmade.cpp -Fmhandmade.map -LD /link -PDB:handmade_%random%.pdb -EXPORT:GameUpdateAndRender -EXPORT:GameGetSoundSamples
+echo WAITING FOR PDB > lock.tmp
+cl %CommonCompilerFlags% ..\game\code\handmade.cpp -Fmhandmade.map -LD /link -incremental:no -opt:ref -PDB:handmade_%random%.pdb -EXPORT:GameUpdateAndRender -EXPORT:GameGetSoundSamples
+del lock.tmp
 cl %CommonCompilerFlags% ..\game\code\win32_handmade.cpp -Fmwin32_handmade.map /link %CommonLinkerFlags%
 popd
