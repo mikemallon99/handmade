@@ -298,6 +298,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     real32 PlayerHeight = 1.4f;
     real32 PlayerWidth = 0.75f*PlayerHeight;
+     
 
     for (int ControllerIndex = 0;
          ControllerIndex < ArrayCount(Input->Controllers);
