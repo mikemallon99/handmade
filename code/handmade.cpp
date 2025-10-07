@@ -53,41 +53,71 @@ LoadBMPFile(memory_arena *Arena, game_memory *Memory, thread_context *Thread, ch
         uint32 GreenMask = 0xFF0000;
         uint32 BlueMask = 0xFF00;
         uint32 AlphaMask = 0xFF;
-        if (CompressionMethod == 3)
+        // TODO: Fix this copy paste or it will bite me in butthole
+        if (BMPFile.BitsPerPixel == 32)
         {
-            RedMask = *((uint32 *)((uint8 *)File.Contents + 0x36));
-            GreenMask = *((uint32 *)((uint8 *)File.Contents + 0x3A));
-            BlueMask = *((uint32 *)((uint8 *)File.Contents + 0x3E));
-            AlphaMask = *((uint32 *)((uint8 *)File.Contents + 0x42));
-        }
-
-        int32 RedShift = GetBitShift(RedMask);
-        int32 GreenShift = GetBitShift(GreenMask);
-        int32 BlueShift = GetBitShift(BlueMask);
-        int32 AlphaShift = GetBitShift(AlphaMask);
-
-        uint32 PixelCount = BMPFile.Width*BMPFile.Height;
-        uint32 *MemoryPixels = PushArray(Arena, PixelCount, uint32);
-        BMPFile.Pixels = MemoryPixels;
-        uint32 *CopyPixel;
-        // NOTE: It goes top to bottom, i wanna reverse it so the image pixels always starts at the top left corner
-        for (uint32 RowIdx = BMPFile.Height; 
-             RowIdx > 0; 
-             RowIdx--)
-        {
-            CopyPixel = FilePixels + BMPFile.Width*(RowIdx-1);
-            for (uint32 ColIdx = 0; 
-                ColIdx < BMPFile.Width; 
-                ColIdx++)
+            if (CompressionMethod == 3)
             {
-                // NOTE: Should this pixel flipping happen at load or at draw ?
-                uint32 Pixel = *CopyPixel++;
-                uint32 R = 0xFF & (Pixel >> RedShift);
-                uint32 G = 0xFF & (Pixel >> GreenShift);
-                uint32 B = 0xFF & (Pixel >> BlueShift);
-                uint32 A = 0xFF & (Pixel >> AlphaShift);
-                Pixel = (A << 24) | (R << 16) | (G << 8) | (B);
-                *MemoryPixels++ = Pixel;
+                RedMask = *((uint32 *)((uint8 *)File.Contents + 0x36));
+                GreenMask = *((uint32 *)((uint8 *)File.Contents + 0x3A));
+                BlueMask = *((uint32 *)((uint8 *)File.Contents + 0x3E));
+                AlphaMask = *((uint32 *)((uint8 *)File.Contents + 0x42));
+            }
+
+            int32 RedShift = GetBitShift(RedMask);
+            int32 GreenShift = GetBitShift(GreenMask);
+            int32 BlueShift = GetBitShift(BlueMask);
+            int32 AlphaShift = GetBitShift(AlphaMask);
+
+            uint32 PixelCount = BMPFile.Width*BMPFile.Height;
+            uint32 *MemoryPixels = PushArray(Arena, PixelCount, uint32);
+            BMPFile.Pixels = MemoryPixels;
+            uint32 *CopyPixel;
+            // NOTE: It goes top to bottom, i wanna reverse it so the image pixels always starts at the top left corner
+            for (uint32 RowIdx = BMPFile.Height; 
+                RowIdx > 0; 
+                RowIdx--)
+            {
+                CopyPixel = FilePixels + BMPFile.Width*(RowIdx-1);
+                for (uint32 ColIdx = 0; 
+                    ColIdx < BMPFile.Width; 
+                    ColIdx++)
+                {
+                    // NOTE: Should this pixel flipping happen at load or at draw ?
+                    uint32 Pixel = *CopyPixel++;
+                    uint32 R = 0xFF & (Pixel >> RedShift);
+                    uint32 G = 0xFF & (Pixel >> GreenShift);
+                    uint32 B = 0xFF & (Pixel >> BlueShift);
+                    uint32 A = 0xFF & (Pixel >> AlphaShift);
+                    Pixel = (A << 24) | (R << 16) | (G << 8) | (B);
+                    *MemoryPixels++ = Pixel;
+                }
+            }
+        }
+        else if (BMPFile.BitsPerPixel == 24)
+        {
+            uint32 PixelCount = BMPFile.Width*BMPFile.Height;
+            uint32 *MemoryPixels = PushArray(Arena, PixelCount, uint32);
+            BMPFile.Pixels = MemoryPixels;
+            uint8 *CopyPixel;
+            // NOTE: It goes top to bottom, i wanna reverse it so the image pixels always starts at the top left corner
+            for (uint32 RowIdx = BMPFile.Height; 
+                RowIdx > 0; 
+                RowIdx--)
+            {
+                CopyPixel = (uint8 *)FilePixels + BMPFile.Width*(RowIdx-1)*3;
+                for (uint32 ColIdx = 0; 
+                    ColIdx < BMPFile.Width; 
+                    ColIdx++)
+                {
+                    // NOTE: Should this pixel flipping happen at load or at draw ?
+                    uint32 B = 0xFF & (uint32)*CopyPixel++;
+                    uint32 G = 0xFF & (uint32)*CopyPixel++;
+                    uint32 R = 0xFF & (uint32)*CopyPixel++;
+                    uint32 A = 0xFF;
+                    uint32 Pixel = (A << 24) | (R << 16) | (G << 8) | (B);
+                    *MemoryPixels++ = Pixel;
+                }
             }
         }
 
@@ -475,7 +505,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
 
         // NOTE: We should probably start a new arena for this image? 
-        Memory->Background = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_background.bmp");
+        // Memory->Background = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_background.bmp");
+        Memory->Background = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "backgrounds_processed/kitchen.bmp");
 
         Memory->HeroFrontCape = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_front_cape.bmp");
         Memory->HeroFrontHead = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_front_head.bmp");
@@ -492,6 +523,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         Memory->HeroRightCape = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_right_cape.bmp");
         Memory->HeroRightHead = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_right_head.bmp");
         Memory->HeroRightTorso = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_right_torso.bmp");
+
+        Memory->MikeFront = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "me_sprites_processed/idle_forward.bmp");
+        Memory->MikeBack = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "me_sprites_processed/idle_backward.bmp");
+        Memory->MikeLeft = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "me_sprites_processed/idle_left.bmp");
+        Memory->MikeRight = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "me_sprites_processed/idle_right.bmp");
 
         // NOTE: maybe move this to platform layer
         Memory->IsInitialized = true;
@@ -642,33 +678,66 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     
     // Hero center in image: (72, 182)
     // Point (72, 182) in the image should meet ScreenCenterXY
-    real32 HeroCenterX = 72.0f;
-    real32 HeroCenterY = 182.0f;
-    real32 SpriteMinX = ScreenCenterX - HeroCenterX;
-    real32 SpriteMinY = ScreenCenterY - HeroCenterY;
+    // real32 HeroCenterX = 72.0f;
+    // real32 HeroCenterY = 182.0f;
+    // real32 SpriteMinX = ScreenCenterX - HeroCenterX;
+    // real32 SpriteMinY = ScreenCenterY - HeroCenterY;
     // Draw different sprite here based on hero direction
+    // if (GameState->HeroDirection == FRONT)
+    // {
+    //     DrawBMPFile(&Memory->HeroFrontTorso, Buffer, SpriteMinX, SpriteMinY);
+    //     DrawBMPFile(&Memory->HeroFrontCape, Buffer, SpriteMinX, SpriteMinY);
+    //     DrawBMPFile(&Memory->HeroFrontHead, Buffer, SpriteMinX, SpriteMinY);
+    // }
+    // else if (GameState->HeroDirection == BACK)
+    // {
+    //     DrawBMPFile(&Memory->HeroBackTorso, Buffer, SpriteMinX, SpriteMinY);
+    //     DrawBMPFile(&Memory->HeroBackCape, Buffer, SpriteMinX, SpriteMinY);
+    //     DrawBMPFile(&Memory->HeroBackHead, Buffer, SpriteMinX, SpriteMinY);
+    // }
+    // else if (GameState->HeroDirection == LEFT)
+    // {
+    //     DrawBMPFile(&Memory->HeroLeftTorso, Buffer, SpriteMinX, SpriteMinY);
+    //     DrawBMPFile(&Memory->HeroLeftCape, Buffer, SpriteMinX, SpriteMinY);
+    //     DrawBMPFile(&Memory->HeroLeftHead, Buffer, SpriteMinX, SpriteMinY);
+    // }
+    // else if (GameState->HeroDirection == RIGHT)
+    // {
+    //     DrawBMPFile(&Memory->HeroRightTorso, Buffer, SpriteMinX, SpriteMinY);
+    //     DrawBMPFile(&Memory->HeroRightCape, Buffer, SpriteMinX, SpriteMinY);
+    //     DrawBMPFile(&Memory->HeroRightHead, Buffer, SpriteMinX, SpriteMinY);
+    // }
+
     if (GameState->HeroDirection == FRONT)
     {
-        DrawBMPFile(&Memory->HeroFrontTorso, Buffer, SpriteMinX, SpriteMinY);
-        DrawBMPFile(&Memory->HeroFrontCape, Buffer, SpriteMinX, SpriteMinY);
-        DrawBMPFile(&Memory->HeroFrontHead, Buffer, SpriteMinX, SpriteMinY);
+        real32 HeroCenterX = 36.0f;
+        real32 HeroCenterY = 214.0f;
+        real32 SpriteMinX = ScreenCenterX - HeroCenterX;
+        real32 SpriteMinY = ScreenCenterY - HeroCenterY;
+        DrawBMPFile(&Memory->MikeFront, Buffer, SpriteMinX, SpriteMinY);
     }
     else if (GameState->HeroDirection == BACK)
     {
-        DrawBMPFile(&Memory->HeroBackTorso, Buffer, SpriteMinX, SpriteMinY);
-        DrawBMPFile(&Memory->HeroBackCape, Buffer, SpriteMinX, SpriteMinY);
-        DrawBMPFile(&Memory->HeroBackHead, Buffer, SpriteMinX, SpriteMinY);
+        real32 HeroCenterX = 38.0f;
+        real32 HeroCenterY = 214.0f;
+        real32 SpriteMinX = ScreenCenterX - HeroCenterX;
+        real32 SpriteMinY = ScreenCenterY - HeroCenterY;
+        DrawBMPFile(&Memory->MikeBack, Buffer, SpriteMinX, SpriteMinY);
     }
     else if (GameState->HeroDirection == LEFT)
     {
-        DrawBMPFile(&Memory->HeroLeftTorso, Buffer, SpriteMinX, SpriteMinY);
-        DrawBMPFile(&Memory->HeroLeftCape, Buffer, SpriteMinX, SpriteMinY);
-        DrawBMPFile(&Memory->HeroLeftHead, Buffer, SpriteMinX, SpriteMinY);
+        real32 HeroCenterX = 22.0f;
+        real32 HeroCenterY = 214.0f;
+        real32 SpriteMinX = ScreenCenterX - HeroCenterX;
+        real32 SpriteMinY = ScreenCenterY - HeroCenterY;
+        DrawBMPFile(&Memory->MikeLeft, Buffer, SpriteMinX, SpriteMinY);
     }
     else if (GameState->HeroDirection == RIGHT)
     {
-        DrawBMPFile(&Memory->HeroRightTorso, Buffer, SpriteMinX, SpriteMinY);
-        DrawBMPFile(&Memory->HeroRightCape, Buffer, SpriteMinX, SpriteMinY);
-        DrawBMPFile(&Memory->HeroRightHead, Buffer, SpriteMinX, SpriteMinY);
+        real32 HeroCenterX = 19.0f;
+        real32 HeroCenterY = 214.0f;
+        real32 SpriteMinX = ScreenCenterX - HeroCenterX;
+        real32 SpriteMinY = ScreenCenterY - HeroCenterY;
+        DrawBMPFile(&Memory->MikeRight, Buffer, SpriteMinX, SpriteMinY);
     }
 }

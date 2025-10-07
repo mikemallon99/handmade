@@ -192,6 +192,7 @@ struct game_memory
     debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;
 
     bmp_file Background;
+
     bmp_file HeroBackCape;
     bmp_file HeroBackHead;
     bmp_file HeroBackTorso;
@@ -205,6 +206,11 @@ struct game_memory
     bmp_file HeroRightHead;
     bmp_file HeroRightTorso;
     bmp_file HeroShadow;
+
+    bmp_file MikeFront;
+    bmp_file MikeBack;
+    bmp_file MikeLeft;
+    bmp_file MikeRight;
 };
 
 // 4 things: timing, controller/keyboard input, bitmap buffer to use, sound buffer to use
