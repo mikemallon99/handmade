@@ -1534,7 +1534,7 @@ int CALLBACK WinMain(
                         uint64 CyclesElapsed = EndCycleCount - LastCycleCount;
                         LastCycleCount = EndCycleCount;
 
-                        real64 Fps = 0.0f;
+                        real64 Fps = 1.0f/SecondsElapsedForFrame;
                         real64 Mcpf = ((real64)(CyclesElapsed) / (1000.0f * 1000.0f));
 
                         char FPSBuffer[256];

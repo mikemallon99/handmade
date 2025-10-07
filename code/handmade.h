@@ -166,6 +166,17 @@ inline game_controller_input *GetController(game_input *Input, int ControllerInd
     return Result;
 }
 
+// NOTE: future unified image format (AARRGGBB)
+
+struct bmp_file
+{
+    uint32 Width;
+    uint32 Height;
+    uint16 BitsPerPixel;
+    uint32 ImageSize;
+    uint32* Pixels;
+};
+
 struct game_memory
 {
     bool32 IsInitialized;
@@ -179,6 +190,21 @@ struct game_memory
     debug_platform_read_entire_file *DEBUGPlatformReadEntireFile;
     debug_platform_free_file_memory *DEBUGPlatformFreeFileMemory;
     debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;
+
+    bmp_file Background;
+    bmp_file HeroBackCape;
+    bmp_file HeroBackHead;
+    bmp_file HeroBackTorso;
+    bmp_file HeroFrontCape;
+    bmp_file HeroFrontHead;
+    bmp_file HeroFrontTorso;
+    bmp_file HeroLeftCape;
+    bmp_file HeroLeftHead;
+    bmp_file HeroLeftTorso;
+    bmp_file HeroRightCape;
+    bmp_file HeroRightHead;
+    bmp_file HeroRightTorso;
+    bmp_file HeroShadow;
 };
 
 // 4 things: timing, controller/keyboard input, bitmap buffer to use, sound buffer to use
@@ -228,12 +254,15 @@ struct world
     tile_map *TileMap;
 };
 
+enum hero_direction {FRONT, BACK, LEFT, RIGHT};
+
 struct game_state
 {
     memory_arena WorldArena;
     world *World;
 
     tile_map_position PlayerP;
+    hero_direction HeroDirection;
 };
 
 #endif

@@ -7,6 +7,191 @@
 struct game_offscreen_buffer;
 
 
+
+internal int32
+GetBitShift(uint32 Value)
+{
+    if (Value == 0xFF) 
+    {
+        return 0;
+    }
+    else if (Value == 0xFF00) 
+    {
+        return 8;
+    }
+    else if (Value == 0xFF0000) 
+    {
+        return 16;
+    }
+    else if (Value == 0xFF000000) 
+    {
+        return 24;
+    }
+    return 0;
+}
+
+
+internal bmp_file
+LoadBMPFile(memory_arena *Arena, game_memory *Memory, thread_context *Thread, char *Filename)
+{
+    debug_read_file_result File = Memory->DEBUGPlatformReadEntireFile(Thread, Filename);
+    bmp_file BMPFile = {};
+    if (File.Contents)
+    {
+        uint32 BMPSize = *((uint32 *)((uint8 *)File.Contents + 2));
+        uint32 Offset = *((uint32 *)((uint8 *)File.Contents + 10));
+        uint32 *FilePixels = (uint32 *)((uint8 *)File.Contents + Offset);
+
+        BMPFile.Width = *((int32 *)((uint8 *)File.Contents + 18));
+        BMPFile.Height = *((int32 *)((uint8 *)File.Contents + 22));
+        BMPFile.BitsPerPixel = *((int16 *)((uint8 *)File.Contents + 28));
+        BMPFile.ImageSize = *((uint32 *)((uint8 *)File.Contents + 34));
+        uint32 CompressionMethod = *((uint32 *)((uint8 *)File.Contents + 30));
+
+        // NOTE: These values arent tested, ive only tested using the bitmask
+        uint32 RedMask = 0xFF000000;
+        uint32 GreenMask = 0xFF0000;
+        uint32 BlueMask = 0xFF00;
+        uint32 AlphaMask = 0xFF;
+        if (CompressionMethod == 3)
+        {
+            RedMask = *((uint32 *)((uint8 *)File.Contents + 0x36));
+            GreenMask = *((uint32 *)((uint8 *)File.Contents + 0x3A));
+            BlueMask = *((uint32 *)((uint8 *)File.Contents + 0x3E));
+            AlphaMask = *((uint32 *)((uint8 *)File.Contents + 0x42));
+        }
+
+        int32 RedShift = GetBitShift(RedMask);
+        int32 GreenShift = GetBitShift(GreenMask);
+        int32 BlueShift = GetBitShift(BlueMask);
+        int32 AlphaShift = GetBitShift(AlphaMask);
+
+        uint32 PixelCount = BMPFile.Width*BMPFile.Height;
+        uint32 *MemoryPixels = PushArray(Arena, PixelCount, uint32);
+        BMPFile.Pixels = MemoryPixels;
+        uint32 *CopyPixel;
+        // NOTE: It goes top to bottom, i wanna reverse it so the image pixels always starts at the top left corner
+        for (uint32 RowIdx = BMPFile.Height; 
+             RowIdx > 0; 
+             RowIdx--)
+        {
+            CopyPixel = FilePixels + BMPFile.Width*(RowIdx-1);
+            for (uint32 ColIdx = 0; 
+                ColIdx < BMPFile.Width; 
+                ColIdx++)
+            {
+                // NOTE: Should this pixel flipping happen at load or at draw ?
+                uint32 Pixel = *CopyPixel++;
+                uint32 R = 0xFF & (Pixel >> RedShift);
+                uint32 G = 0xFF & (Pixel >> GreenShift);
+                uint32 B = 0xFF & (Pixel >> BlueShift);
+                uint32 A = 0xFF & (Pixel >> AlphaShift);
+                Pixel = (A << 24) | (R << 16) | (G << 8) | (B);
+                *MemoryPixels++ = Pixel;
+            }
+        }
+
+        Memory->DEBUGPlatformFreeFileMemory(Thread, File.Contents);
+    }
+    return BMPFile;
+}
+
+
+internal void
+DrawBMPFile(bmp_file *BMPFile, game_offscreen_buffer *Buffer,
+            real32 RealMinX, real32 RealMinY)
+{
+    int32 MinX = RoundReal32ToInt32(RealMinX);
+    int32 MinY = RoundReal32ToInt32(RealMinY);
+
+    int32 MaxX = MinX + BMPFile->Width;
+    if (MaxX > Buffer->Width) {
+        MaxX = Buffer->Width;
+    }
+    int32 MaxY = MinY + BMPFile->Height;
+    if (MaxY > Buffer->Height) {
+        MaxY = Buffer->Height;
+    }
+
+    int32 ImageMinX = 0;
+    if (MinX < 0)
+    {
+        ImageMinX = -MinX;
+    }
+    int32 ImageMaxX = BMPFile->Width;
+    if (MinX + ImageMaxX > Buffer->Width)
+    {
+        ImageMaxX = Buffer->Width - MinX;
+    }
+
+    int32 ImageMinY = 0;
+    if (MinY < 0)
+    {
+        ImageMinY = -MinY;
+    }
+    int32 ImageMaxY = BMPFile->Height;
+    if (MinY + ImageMaxY > Buffer->Height)
+    {
+        ImageMaxY = Buffer->Height - MinY;
+    }
+
+    // Should bottom to top drawing happen at load or at draw?
+    // TODO: Probably move this stuff to the load once we add in new image formats, then make a unified image struct
+    uint32 *BufferPixel = (uint32 *)Buffer->Memory;
+    uint32 *ImagePixel = (uint32 *)BMPFile->Pixels + BMPFile->Width*BMPFile->Height;
+    for (int32 RowIdx = ImageMinY;
+         RowIdx < ImageMaxY;
+         RowIdx++
+        )
+    {
+        for (int32 ColIdx = ImageMinX;
+            ColIdx < ImageMaxX;
+            ColIdx++
+            )
+        {
+            uint32 ImageOffset = RowIdx*BMPFile->Width + ColIdx;
+            ImagePixel = BMPFile->Pixels + ImageOffset;
+            uint32 BufferOffset = (MinY+RowIdx)*Buffer->Width + (MinX+ColIdx);
+            BufferPixel = (uint32 *)Buffer->Memory + BufferOffset;
+
+            uint32 AlphaMask = 0xFF000000;
+            uint32 Alpha = (*ImagePixel & AlphaMask) >> 24;
+            // No color data
+            if (Alpha == 0)
+            {
+            }
+            // All Color data
+            else if (Alpha == 0xFF)
+            {
+                *BufferPixel = *ImagePixel;
+            }
+            // Alpha blending
+            else 
+            {
+                real32 AlphaRatio = (real32)Alpha / (real32)0xFF;
+
+                // uint32 BufferA = (0xFF000000 & *BufferPixel) >> 24;
+                uint32 BufferR = (0xFF0000 & *BufferPixel) >> 16;
+                uint32 BufferG = (0xFF00 & *BufferPixel) >> 8;
+                uint32 BufferB = (0xFF & *BufferPixel) >> 0;
+
+                // uint32 ImageA = (0xFF000000 & *ImagePixel) >> 24;
+                uint32 ImageR = (0xFF0000 & *ImagePixel) >> 16;
+                uint32 ImageG = (0xFF00 & *ImagePixel) >> 8;
+                uint32 ImageB = (0xFF & *ImagePixel) >> 0;
+
+                uint32 A = 0xFF;
+                uint32 R = (uint32)(((real32)BufferR * (1.0f - AlphaRatio)) + ((real32)ImageR * (AlphaRatio)));
+                uint32 G = (uint32)(((real32)BufferG * (1.0f - AlphaRatio)) + ((real32)ImageG * (AlphaRatio)));
+                uint32 B = (uint32)(((real32)BufferB * (1.0f - AlphaRatio)) + ((real32)ImageB * (AlphaRatio)));
+                
+                *BufferPixel = (A << 24) | (R << 16) | (G << 8) | (B << 0);
+            }
+        }
+    }
+}
+
+
 internal void
 RenderWeirdGradient(game_offscreen_buffer *Buffer, int XOffset, int YOffset)
 {
@@ -289,6 +474,25 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             DoorTop = false;
         }
 
+        // NOTE: We should probably start a new arena for this image? 
+        Memory->Background = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_background.bmp");
+
+        Memory->HeroFrontCape = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_front_cape.bmp");
+        Memory->HeroFrontHead = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_front_head.bmp");
+        Memory->HeroFrontTorso = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_front_torso.bmp");
+        
+        Memory->HeroBackCape = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_back_cape.bmp");
+        Memory->HeroBackHead = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_back_head.bmp");
+        Memory->HeroBackTorso = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_back_torso.bmp");
+        
+        Memory->HeroLeftCape = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_left_cape.bmp");
+        Memory->HeroLeftHead = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_left_head.bmp");
+        Memory->HeroLeftTorso = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_left_torso.bmp");
+        
+        Memory->HeroRightCape = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_right_cape.bmp");
+        Memory->HeroRightHead = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_right_head.bmp");
+        Memory->HeroRightTorso = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_right_torso.bmp");
+
         // NOTE: maybe move this to platform layer
         Memory->IsInitialized = true;
     }
@@ -317,18 +521,22 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             if (Controller->MoveUp.EndedDown)
             {
                 dPlayerY = 1.0f;
+                GameState->HeroDirection = BACK;
             }
             if (Controller->MoveDown.EndedDown)
             {
                 dPlayerY = -1.0f;
+                GameState->HeroDirection = FRONT;
             }
             if (Controller->MoveLeft.EndedDown)
             {
                 dPlayerX = -1.0f;
+                GameState->HeroDirection = LEFT;
             }
             if (Controller->MoveRight.EndedDown)
             {
                 dPlayerX = 1.0f;
+                GameState->HeroDirection = RIGHT;
             }
 
             real32 PlayerSpeed = 2.0f;
@@ -373,8 +581,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
+    // Start drawing process
+
     DrawRectangle(Buffer, 0.0f, 0.0f, (real32)Buffer->Width, (real32)Buffer->Height, 
                   1.0f, 0.0f, 0.0f);
+
+    DrawBMPFile(&Memory->Background, Buffer, 0.0f, 0.0f);
 
     real32 ScreenCenterX = 0.5f*(real32)Buffer->Width;
     real32 ScreenCenterY = 0.5f*(real32)Buffer->Height;
@@ -391,7 +603,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             uint32 Column = GameState->PlayerP.AbsTileX + RelColumn;
             uint32 TileID = GetTileValue(TileMap, Column, Row, GameState->PlayerP.AbsTileZ);
             real32 Gray = 0.5f;
-            if (TileID > 0)
+            if (TileID > 1)
             {
                 if (TileID == 2)
                 {
@@ -427,4 +639,36 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                   PlayerLeft + TileMap->MetersToPixels*PlayerWidth, 
                   PlayerTop + TileMap->MetersToPixels*PlayerHeight,
                   PlayerR, PlayerG, PlayerB);
+    
+    // Hero center in image: (72, 182)
+    // Point (72, 182) in the image should meet ScreenCenterXY
+    real32 HeroCenterX = 72.0f;
+    real32 HeroCenterY = 182.0f;
+    real32 SpriteMinX = ScreenCenterX - HeroCenterX;
+    real32 SpriteMinY = ScreenCenterY - HeroCenterY;
+    // Draw different sprite here based on hero direction
+    if (GameState->HeroDirection == FRONT)
+    {
+        DrawBMPFile(&Memory->HeroFrontTorso, Buffer, SpriteMinX, SpriteMinY);
+        DrawBMPFile(&Memory->HeroFrontCape, Buffer, SpriteMinX, SpriteMinY);
+        DrawBMPFile(&Memory->HeroFrontHead, Buffer, SpriteMinX, SpriteMinY);
+    }
+    else if (GameState->HeroDirection == BACK)
+    {
+        DrawBMPFile(&Memory->HeroBackTorso, Buffer, SpriteMinX, SpriteMinY);
+        DrawBMPFile(&Memory->HeroBackCape, Buffer, SpriteMinX, SpriteMinY);
+        DrawBMPFile(&Memory->HeroBackHead, Buffer, SpriteMinX, SpriteMinY);
+    }
+    else if (GameState->HeroDirection == LEFT)
+    {
+        DrawBMPFile(&Memory->HeroLeftTorso, Buffer, SpriteMinX, SpriteMinY);
+        DrawBMPFile(&Memory->HeroLeftCape, Buffer, SpriteMinX, SpriteMinY);
+        DrawBMPFile(&Memory->HeroLeftHead, Buffer, SpriteMinX, SpriteMinY);
+    }
+    else if (GameState->HeroDirection == RIGHT)
+    {
+        DrawBMPFile(&Memory->HeroRightTorso, Buffer, SpriteMinX, SpriteMinY);
+        DrawBMPFile(&Memory->HeroRightCape, Buffer, SpriteMinX, SpriteMinY);
+        DrawBMPFile(&Memory->HeroRightHead, Buffer, SpriteMinX, SpriteMinY);
+    }
 }
