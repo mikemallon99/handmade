@@ -15,6 +15,7 @@
 global_variable bool32 GlobalRunning;
 global_variable bool32 GlobalPause;
 global_variable win32_offscreen_buffer GlobalBackbuffer;
+global_variable win32_window_transform GlobalWindowXform;
 global_variable LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
 global_variable int64 GlobalPerfCountFrequency;
 
@@ -298,22 +299,25 @@ GetFileLastWriteTime(char *Filename)
 }
 
 internal win32_game_code
-Win32LoadGameCode(char *SourceFilename, char *TempFilename)
+Win32LoadGameCode(char *SourceFilename, char *TempFilename, char *LockFilename)
 {
     win32_game_code Result = {};
-
-    Result.LastDLLWriteTime = GetFileLastWriteTime(SourceFilename);
     CopyFile(SourceFilename, TempFilename, FALSE);
     
-    Result.GameCodeDLL = LoadLibraryA(TempFilename);
-    if (Result.GameCodeDLL)
+    WIN32_FILE_ATTRIBUTE_DATA Ignored;
+    if (!GetFileAttributesEx(LockFilename, GetFileExInfoStandard, &Ignored))
     {
-        Result.UpdateAndRender = (game_update_and_render *)GetProcAddress(Result.GameCodeDLL, 
-                                                                          "GameUpdateAndRender");
-        Result.GetSoundSamples = (game_get_sound_samples *)GetProcAddress(Result.GameCodeDLL, 
-                                                                          "GameGetSoundSamples");
+        Result.LastDLLWriteTime = GetFileLastWriteTime(SourceFilename);
+        Result.GameCodeDLL = LoadLibraryA(TempFilename);
+        if (Result.GameCodeDLL)
+        {
+            Result.UpdateAndRender = (game_update_and_render *)GetProcAddress(Result.GameCodeDLL, 
+                                                                            "GameUpdateAndRender");
+            Result.GetSoundSamples = (game_get_sound_samples *)GetProcAddress(Result.GameCodeDLL, 
+                                                                            "GameGetSoundSamples");
 
-        Result.IsValid = (Result.UpdateAndRender && Result.GetSoundSamples);
+            Result.IsValid = (Result.UpdateAndRender && Result.GetSoundSamples);
+        }
     }
 
     if (!Result.IsValid)
@@ -586,15 +590,15 @@ Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
 
 internal void 
 Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer, HDC DeviceContext, 
-                           int WindowWidth, int WindowHeight)
+                           int WindowWidth, int WindowHeight, 
+                           int OffsetX, int OffsetY, real32 BufferScale)
 {
-    int OffsetX = 10;
-    int OffsetY = 10;
-
     PatBlt(DeviceContext, 0, 0, WindowWidth, OffsetY, BLACKNESS);
-    PatBlt(DeviceContext, 0, OffsetY + Buffer->Height, WindowWidth, WindowHeight, BLACKNESS);
+    PatBlt(DeviceContext, 0, OffsetY + Buffer->Height*3, WindowWidth, WindowHeight, BLACKNESS);
     PatBlt(DeviceContext, 0, 0, OffsetX, WindowHeight, BLACKNESS);
-    PatBlt(DeviceContext, OffsetX + Buffer->Width, 0, WindowWidth, WindowHeight, BLACKNESS);
+    PatBlt(DeviceContext, OffsetX + Buffer->Width*3, 0, WindowWidth, WindowHeight, BLACKNESS);
+
+    // TODO: Stretch our image to 4:3 so it matches whats displayed on console
 
     // NOTE: for prototyping purposes, dont stretch the window
     // so we can see the pixels 1:1 when testing the renderer
@@ -602,7 +606,7 @@ Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer, HDC DeviceContext,
         DeviceContext,
         //X, Y, Width, Height,
         //X, Y, Width, Height,
-        OffsetX, OffsetY, Buffer->Width, Buffer->Height,
+        OffsetX, OffsetY, (int)(Buffer->Width*BufferScale), (int)(Buffer->Height*BufferScale),
         0, 0, Buffer->Width, Buffer->Height,
         Buffer->Memory,
         &Buffer->Info,
@@ -659,7 +663,9 @@ LRESULT CALLBACK Win32MainWindowCallback(
 
             win32_window_dimension Dimension = Win32GetWindowDimension(Window);
             Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
-                                       Dimension.Width, Dimension.Height);
+                                       Dimension.Width, Dimension.Height,
+                                       GlobalWindowXform.OffsetX, GlobalWindowXform.OffsetY, 
+                                       GlobalWindowXform.BufferScale);
             EndPaint(Window, &Paint);
         } break;
 
@@ -997,6 +1003,10 @@ int CALLBACK WinMain(
     Win32BuildEXEPathFileName(&State, "handmade_temp.dll",
                               sizeof(TempGameCodeDLLFullPath), TempGameCodeDLLFullPath);
 
+    char GameCodeLockFilePath[WIN32_STATE_FILE_NAME_COUNT];
+    Win32BuildEXEPathFileName(&State, "lock.tmp",
+                              sizeof(GameCodeLockFilePath), GameCodeLockFilePath);
+
     // NOTE: set the windows scheduler granularity to 1ms
     // So that our Sleep() can be more granular
     UINT DesiredSchedulerMs = 1;
@@ -1007,7 +1017,7 @@ int CALLBACK WinMain(
     WNDCLASSA WindowClass = {};
 
     /*Win32ResizeDIBSection(&GlobalBackbuffer, 1920, 1080);*/
-    Win32ResizeDIBSection(&GlobalBackbuffer, 960, 540);
+    Win32ResizeDIBSection(&GlobalBackbuffer, 256, 240);
 
     WindowClass.style = CS_HREDRAW|CS_VREDRAW|CS_OWNDC;
     WindowClass.lpfnWndProc = Win32MainWindowCallback;
@@ -1015,7 +1025,14 @@ int CALLBACK WinMain(
     /*WindowClass.hIcon = ;*/
     WindowClass.lpszClassName = "BussinWindowClass";
 
+    GlobalWindowXform.OffsetX = 10;
+    GlobalWindowXform.OffsetY = 10;
+    GlobalWindowXform.BufferScale = 3.0f;
+
     if (RegisterClassA(&WindowClass)) {
+        int32 WindowWidth = GlobalWindowXform.OffsetX*2 + (int)(GlobalBackbuffer.Width*GlobalWindowXform.BufferScale);
+        int32 WindowHeight = GlobalWindowXform.OffsetY*2 + (int)(GlobalBackbuffer.Height*GlobalWindowXform.BufferScale);
+        // TODO: Figure out why this isnt making the proper size
         HWND Window = CreateWindowEx(
             0,
             WindowClass.lpszClassName,
@@ -1023,8 +1040,8 @@ int CALLBACK WinMain(
             WS_OVERLAPPEDWINDOW|WS_VISIBLE,
             CW_USEDEFAULT,
             CW_USEDEFAULT,
-            CW_USEDEFAULT,
-            CW_USEDEFAULT,
+            WindowWidth,
+            WindowHeight,
             0,
             0,
             Instance,
@@ -1125,7 +1142,8 @@ int CALLBACK WinMain(
                 real32 AudioLatencySeconds = 0;
 
                 win32_game_code Game = Win32LoadGameCode(SourceGameCodeDLLFullPath,
-                                                         TempGameCodeDLLFullPath);
+                                                         TempGameCodeDLLFullPath,
+                                                         GameCodeLockFilePath);
 
                 thread_context Thread = {};
 
@@ -1140,8 +1158,12 @@ int CALLBACK WinMain(
                     {
                         Win32UnloadGameCode(&Game);
                         Game = Win32LoadGameCode(SourceGameCodeDLLFullPath,
-                                                 TempGameCodeDLLFullPath);
-                        LoadCounter = 0;
+                                                 TempGameCodeDLLFullPath,
+                                                 GameCodeLockFilePath);
+                        if (Game.IsValid) 
+                        {
+                            LoadCounter++;
+                        }
                     }
 
                     game_controller_input *OldKeyboardController = GetController(OldInput, 0);
@@ -1497,7 +1519,9 @@ int CALLBACK WinMain(
                                               &SoundOutput, TargetSecondsPerFrame);
 #endif
                         Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
-                                                   Dimension.Width, Dimension.Height);
+                                                   Dimension.Width, Dimension.Height,
+                                                   GlobalWindowXform.OffsetX, GlobalWindowXform.OffsetY, 
+                                                   GlobalWindowXform.BufferScale);
                         FlipWallClock = Win32GetWallClock();
 
                         // NOTE: this is debug code

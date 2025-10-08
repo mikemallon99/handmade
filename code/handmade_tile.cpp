@@ -173,3 +173,138 @@ IsOnSameTile(tile_map_position PosA, tile_map_position PosB)
     return SameTile;
 }
 
+
+internal void
+GenerateTileMap(game_state *GameState, tile_map *TileMap)
+{
+    uint32 RandomNumberIndex = 0;
+    uint32 TilesPerWidth = 17;
+    uint32 TilesPerHeight = 9;
+    uint32 ScreenX = 0;
+    uint32 ScreenY = 0;
+
+    bool32 DoorLeft = false;
+    bool32 DoorRight = false;
+    bool32 DoorTop = false;
+    bool32 DoorBottom = false;
+    bool32 DoorUp = false;
+    bool32 DoorDown = false;
+    uint32 AbsTileZ = 0;
+    for (uint32 ScreenIndex = 0;
+            ScreenIndex < 32;
+            ScreenIndex++)
+    {
+        Assert(RandomNumberIndex < ArrayCount(RandomNumberTable));
+        uint32 RandomChoice;
+        if (DoorUp || DoorDown)
+        {
+            RandomChoice = RandomNumberTable[RandomNumberIndex++] % 2;
+        }
+        else
+        {
+            RandomChoice = RandomNumberTable[RandomNumberIndex++] % 3;
+        }
+
+        bool32 CreatedZDoor = false;
+        if (RandomChoice == 2)
+        {
+            CreatedZDoor = true;
+            if (AbsTileZ == 0)
+            {
+                DoorUp = true;
+            }
+            else 
+            {
+                DoorDown = true;
+            }
+        }
+        else if (RandomChoice == 1)
+        {
+            DoorRight = true;
+        }
+        else
+        {
+            DoorTop = true;
+        }
+
+        for (uint32 TileY = 0;
+                TileY < TilesPerHeight;
+                TileY++)
+        {
+            for (uint32 TileX = 0;
+                    TileX < TilesPerWidth;
+                    TileX++)
+            {
+                uint32 AbsTileX = ScreenX*TilesPerWidth + TileX;
+                uint32 AbsTileY = ScreenY*TilesPerHeight + TileY;
+
+                uint32 TileValue = 1;
+                if ((TileX == 0) && !(DoorLeft && (TileY == TilesPerHeight / 2)))
+                {
+                    TileValue = 2;
+                }
+                if ((TileX == TilesPerWidth - 1) && !(DoorRight && (TileY == TilesPerHeight / 2)))
+                {
+                    TileValue = 2;
+                }
+
+                if ((TileY == 0) && !(DoorBottom && (TileX == TilesPerWidth / 2)))
+                {
+                    TileValue = 2;
+                }
+                if ((TileY == TilesPerHeight - 1) && !(DoorTop && (TileX == TilesPerWidth / 2)))
+                {
+                    TileValue = 2;
+                }
+
+                if (DoorUp && (TileX == TilesPerWidth/2) && (TileY == TilesPerHeight/2))
+                {
+                    TileValue = 3;
+                }
+                if (DoorDown && (TileX == TilesPerWidth/2) && (TileY == TilesPerHeight/2))
+                {
+                    TileValue = 4;
+                }
+
+                SetTileValue(&GameState->WorldArena, TileMap, AbsTileX, AbsTileY, AbsTileZ,
+                                TileValue);
+            }
+        }
+
+        if (RandomChoice == 2)
+        {
+            if (AbsTileZ == 0)
+            {
+                AbsTileZ = 1;
+            }
+            else
+            {
+                AbsTileZ = 0;
+            }
+        }
+        else if (RandomChoice == 1)
+        {
+            ScreenX += 1;
+        }
+        else
+        {
+            ScreenY += 1;
+        }
+
+        if (CreatedZDoor)
+        {
+            DoorDown = !DoorDown;
+            DoorUp = !DoorUp;
+        }
+        else
+        {
+            DoorDown = false;
+            DoorUp = false;
+        }
+
+        DoorLeft = DoorRight;
+        DoorRight = false;
+        DoorBottom = DoorTop;
+        DoorTop = false;
+    }
+}

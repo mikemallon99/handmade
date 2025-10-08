@@ -13,6 +13,14 @@ struct win32_offscreen_buffer
 };
 
 
+struct win32_window_transform
+{
+    int OffsetX;
+    int OffsetY;
+    real32 BufferScale;
+};
+
+
 struct win32_window_dimension 
 {
     int Width;

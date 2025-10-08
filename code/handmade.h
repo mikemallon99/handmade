@@ -190,27 +190,6 @@ struct game_memory
     debug_platform_read_entire_file *DEBUGPlatformReadEntireFile;
     debug_platform_free_file_memory *DEBUGPlatformFreeFileMemory;
     debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;
-
-    bmp_file Background;
-
-    bmp_file HeroBackCape;
-    bmp_file HeroBackHead;
-    bmp_file HeroBackTorso;
-    bmp_file HeroFrontCape;
-    bmp_file HeroFrontHead;
-    bmp_file HeroFrontTorso;
-    bmp_file HeroLeftCape;
-    bmp_file HeroLeftHead;
-    bmp_file HeroLeftTorso;
-    bmp_file HeroRightCape;
-    bmp_file HeroRightHead;
-    bmp_file HeroRightTorso;
-    bmp_file HeroShadow;
-
-    bmp_file MikeFront;
-    bmp_file MikeBack;
-    bmp_file MikeLeft;
-    bmp_file MikeRight;
 };
 
 // 4 things: timing, controller/keyboard input, bitmap buffer to use, sound buffer to use
@@ -269,6 +248,15 @@ struct game_state
 
     tile_map_position PlayerP;
     hero_direction HeroDirection;
+
+    bmp_file Background;
+
+    bmp_file LinkFront;
+    bmp_file LinkBack;
+    bmp_file LinkLeft;
+    bmp_file LinkRight;
+    uint32 LinkWidth;
+    uint32 LinkHeight;
 };
 
 #endif

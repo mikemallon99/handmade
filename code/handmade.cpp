@@ -1,6 +1,7 @@
 #include "handmade.h"
 
 #include "handmade_random.h"
+#include "handmade_map.h"
 #include "handmade_tile.cpp"
 
 
@@ -338,8 +339,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     game_state *GameState = (game_state *)Memory->PermanentStorage;
     if (!Memory->IsInitialized)
     {
-        GameState->PlayerP.AbsTileX = 1;
-        GameState->PlayerP.AbsTileY = 3;
+        GameState->PlayerP.AbsTileX = 4;
+        GameState->PlayerP.AbsTileY = 5;
         GameState->PlayerP.TileRelX = 0.0f;
         GameState->PlayerP.TileRelY = 0.0f;
 
@@ -366,168 +367,39 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                                         TileMap->TileChunkCountZ,
                                         tile_chunk);
 
-        TileMap->TileSideInMeters = 1.4f;
-        TileMap->TileSideInPixels = 60;
+        TileMap->TileSideInMeters = 1.0f;
+        TileMap->TileSideInPixels = 16;
         TileMap->MetersToPixels = (real32)TileMap->TileSideInPixels/(real32)TileMap->TileSideInMeters;
 
-        real32 LowerLeftX = (real32)-TileMap->TileSideInPixels/2;
-        real32 LowerLeftY = (real32)Buffer->Height;
-
-        uint32 RandomNumberIndex = 0;
-        uint32 TilesPerWidth = 17;
-        uint32 TilesPerHeight = 9;
-        uint32 ScreenX = 0;
-        uint32 ScreenY = 0;
-
-        bool32 DoorLeft = false;
-        bool32 DoorRight = false;
-        bool32 DoorTop = false;
-        bool32 DoorBottom = false;
-        bool32 DoorUp = false;
-        bool32 DoorDown = false;
+        // GenerateTileMap(GameState, TileMap);
+        int32 HardcodedMapWidth = 16;
+        int32 HardcodedMapHeight = 11;
         uint32 AbsTileZ = 0;
-        for (uint32 ScreenIndex = 0;
-             ScreenIndex < 32;
-             ScreenIndex++)
+        for (int32 SourceY = HardcodedMapHeight-1;
+             SourceY >= 0;
+             SourceY--)
         {
-            Assert(RandomNumberIndex < ArrayCount(RandomNumberTable));
-            uint32 RandomChoice;
-            if (DoorUp || DoorDown)
+            for (int32 SourceX = 0;
+                SourceX < HardcodedMapWidth;
+                SourceX++)
             {
-                RandomChoice = RandomNumberTable[RandomNumberIndex++] % 2;
+                uint32 SourceIndex = SourceY*HardcodedMapWidth + SourceX;
+                uint32 TileValue = HardcodedMap[SourceIndex];
+                uint32 AbsTileX = SourceX;
+                uint32 AbsTileY = (HardcodedMapHeight-1) - SourceY;
+                SetTileValue(&GameState->WorldArena, TileMap, AbsTileX, AbsTileY, AbsTileZ,
+                                TileValue);
             }
-            else
-            {
-                RandomChoice = RandomNumberTable[RandomNumberIndex++] % 3;
-            }
-
-            bool32 CreatedZDoor = false;
-            if (RandomChoice == 2)
-            {
-                CreatedZDoor = true;
-                if (AbsTileZ == 0)
-                {
-                    DoorUp = true;
-                }
-                else 
-                {
-                    DoorDown = true;
-                }
-            }
-            else if (RandomChoice == 1)
-            {
-                DoorRight = true;
-            }
-            else
-            {
-                DoorTop = true;
-            }
-
-            for (uint32 TileY = 0;
-                 TileY < TilesPerHeight;
-                 TileY++)
-            {
-                for (uint32 TileX = 0;
-                     TileX < TilesPerWidth;
-                     TileX++)
-                {
-                    uint32 AbsTileX = ScreenX*TilesPerWidth + TileX;
-                    uint32 AbsTileY = ScreenY*TilesPerHeight + TileY;
-
-                    uint32 TileValue = 1;
-                    if ((TileX == 0) && !(DoorLeft && (TileY == TilesPerHeight / 2)))
-                    {
-                        TileValue = 2;
-                    }
-                    if ((TileX == TilesPerWidth - 1) && !(DoorRight && (TileY == TilesPerHeight / 2)))
-                    {
-                        TileValue = 2;
-                    }
-
-                    if ((TileY == 0) && !(DoorBottom && (TileX == TilesPerWidth / 2)))
-                    {
-                        TileValue = 2;
-                    }
-                    if ((TileY == TilesPerHeight - 1) && !(DoorTop && (TileX == TilesPerWidth / 2)))
-                    {
-                        TileValue = 2;
-                    }
-
-                    if (DoorUp && (TileX == TilesPerWidth/2) && (TileY == TilesPerHeight/2))
-                    {
-                        TileValue = 3;
-                    }
-                    if (DoorDown && (TileX == TilesPerWidth/2) && (TileY == TilesPerHeight/2))
-                    {
-                        TileValue = 4;
-                    }
-
-                    SetTileValue(&GameState->WorldArena, TileMap, AbsTileX, AbsTileY, AbsTileZ,
-                                 TileValue);
-                }
-            }
-
-            if (RandomChoice == 2)
-            {
-                if (AbsTileZ == 0)
-                {
-                    AbsTileZ = 1;
-                }
-                else
-                {
-                    AbsTileZ = 0;
-                }
-            }
-            else if (RandomChoice == 1)
-            {
-                ScreenX += 1;
-            }
-            else
-            {
-                ScreenY += 1;
-            }
-
-            if (CreatedZDoor)
-            {
-                DoorDown = !DoorDown;
-                DoorUp = !DoorUp;
-            }
-            else
-            {
-                DoorDown = false;
-                DoorUp = false;
-            }
-
-            DoorLeft = DoorRight;
-            DoorRight = false;
-            DoorBottom = DoorTop;
-            DoorTop = false;
         }
 
         // NOTE: We should probably start a new arena for this image? 
         // Memory->Background = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_background.bmp");
-        Memory->Background = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "backgrounds_processed/kitchen.bmp");
+        GameState->Background = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "backgrounds_processed/kitchen.bmp");
 
-        Memory->HeroFrontCape = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_front_cape.bmp");
-        Memory->HeroFrontHead = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_front_head.bmp");
-        Memory->HeroFrontTorso = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_front_torso.bmp");
-        
-        Memory->HeroBackCape = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_back_cape.bmp");
-        Memory->HeroBackHead = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_back_head.bmp");
-        Memory->HeroBackTorso = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_back_torso.bmp");
-        
-        Memory->HeroLeftCape = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_left_cape.bmp");
-        Memory->HeroLeftHead = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_left_head.bmp");
-        Memory->HeroLeftTorso = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_left_torso.bmp");
-        
-        Memory->HeroRightCape = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_right_cape.bmp");
-        Memory->HeroRightHead = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_right_head.bmp");
-        Memory->HeroRightTorso = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_hero_right_torso.bmp");
-
-        Memory->MikeFront = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "me_sprites_processed/idle_forward.bmp");
-        Memory->MikeBack = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "me_sprites_processed/idle_backward.bmp");
-        Memory->MikeLeft = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "me_sprites_processed/idle_left.bmp");
-        Memory->MikeRight = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "me_sprites_processed/idle_right.bmp");
+        GameState->LinkFront = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "sprites/link_front.bmp");
+        GameState->LinkBack = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "sprites/link_back.bmp");
+        GameState->LinkLeft = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "sprites/link_left.bmp");
+        GameState->LinkRight = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "sprites/link_right.bmp");
 
         // NOTE: maybe move this to platform layer
         Memory->IsInitialized = true;
@@ -536,15 +408,19 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     world *World = GameState->World;
     tile_map *TileMap = World->TileMap;
 
-    real32 PlayerHeight = 1.4f;
-    real32 PlayerWidth = 0.75f*PlayerHeight;
-     
+    real32 PlayerWidth = 0.75f;
+    real32 PlayerHeight = 1.0f;
 
     for (int ControllerIndex = 0;
          ControllerIndex < ArrayCount(Input->Controllers);
          ControllerIndex++)
     {
         game_controller_input *Controller = GetController(Input, ControllerIndex);
+        if (!Controller->IsConnected)
+        {
+            continue;
+        }
+
         if (Controller->IsAnalog)
         {
             // NOTE: Use analog movement tuning
@@ -575,7 +451,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 GameState->HeroDirection = RIGHT;
             }
 
-            real32 PlayerSpeed = 2.0f;
+            real32 PlayerSpeed = 5.0f;
             if (Controller->ActionUp.EndedDown)
             {
                 PlayerSpeed = 10.0f;
@@ -622,24 +498,33 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     DrawRectangle(Buffer, 0.0f, 0.0f, (real32)Buffer->Width, (real32)Buffer->Height, 
                   1.0f, 0.0f, 0.0f);
 
-    DrawBMPFile(&Memory->Background, Buffer, 0.0f, 0.0f);
+    DrawBMPFile(&GameState->Background, Buffer, 0.0f, 0.0f);
 
-    real32 ScreenCenterX = 0.5f*(real32)Buffer->Width;
-    real32 ScreenCenterY = 0.5f*(real32)Buffer->Height;
+    real32 OffsetX = 0.5f*TileMap->TileSideInPixels;
+    real32 OffsetY = 0.5f*TileMap->TileSideInPixels;
 
-    for (int32 RelRow = -10;
-         RelRow < 10;
+    // NOTE: Camera coord is the tile which will be placed in the top left coordinate of screen
+    uint32 CameraTileX = 0;
+    uint32 CameraTileY = 10;
+
+    uint32 ScreenTilesWidth = 16;
+    uint32 ScreenTilesHeight = 11;
+
+    real32 PlayAreaY = 5.0f * TileMap->TileSideInPixels;
+
+    for (uint32 RelRow = 0;
+         RelRow < ScreenTilesHeight;
          RelRow++)
     {
-        for (int32 RelColumn = -20;
-             RelColumn < 20;
+        for (uint32 RelColumn = 0;
+             RelColumn < ScreenTilesWidth;
              RelColumn++)
         {
-            uint32 Row = GameState->PlayerP.AbsTileY + RelRow;
-            uint32 Column = GameState->PlayerP.AbsTileX + RelColumn;
+            uint32 Column = CameraTileX + RelColumn;
+            uint32 Row = CameraTileY - RelRow;
             uint32 TileID = GetTileValue(TileMap, Column, Row, GameState->PlayerP.AbsTileZ);
             real32 Gray = 0.5f;
-            if (TileID > 1)
+            if (TileID > 0)
             {
                 if (TileID == 2)
                 {
@@ -653,12 +538,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 {
                     Gray = 0.0f;
                 }
-                real32 CenX = ScreenCenterX - TileMap->MetersToPixels*GameState->PlayerP.TileRelX + ((real32)RelColumn)*TileMap->TileSideInPixels;
-                real32 CenY = ScreenCenterY + TileMap->MetersToPixels*GameState->PlayerP.TileRelY - ((real32)RelRow)*TileMap->TileSideInPixels;
-                real32 MinX = CenX - 0.5f*TileMap->TileSideInPixels;
-                real32 MinY = CenY - 0.5f*TileMap->TileSideInPixels;
-                real32 MaxX = CenX + 0.5f*TileMap->TileSideInPixels;
-                real32 MaxY = CenY + 0.5f*TileMap->TileSideInPixels;
+                real32 MinX = (real32)(TileMap->TileSideInPixels * RelColumn);
+                real32 MinY = PlayAreaY + (real32)(TileMap->TileSideInPixels * RelRow);
+                real32 MaxX = MinX + (real32)TileMap->TileSideInPixels;
+                real32 MaxY = MinY + (real32)TileMap->TileSideInPixels;
                 DrawRectangle(Buffer, MinX, MinY, MaxX, MaxY,
                               Gray, Gray, Gray);
             }
@@ -668,76 +551,35 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     real32 PlayerR = 1.0f;
     real32 PlayerG = 1.0f;
     real32 PlayerB = 0.0f;
-    real32 PlayerLeft = ScreenCenterX - TileMap->MetersToPixels*0.5f*PlayerWidth;
-    real32 PlayerTop = ScreenCenterY - TileMap->MetersToPixels*PlayerHeight;
+    real32 PlayerScreenX = 0.5f*TileMap->TileSideInPixels + TileMap->TileSideInPixels*((real32)(int32)(GameState->PlayerP.AbsTileX - CameraTileX) + GameState->PlayerP.TileRelX);
+    // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
+    real32 PlayerScreenY = 0.5f*TileMap->TileSideInPixels - TileMap->TileSideInPixels*((real32)(int32)(GameState->PlayerP.AbsTileY - CameraTileY) + GameState->PlayerP.TileRelY);
+    real32 PlayerLeft = PlayerScreenX - TileMap->MetersToPixels*0.5f*PlayerWidth;
+    real32 PlayerTop = PlayerScreenY - TileMap->MetersToPixels*PlayerHeight;
     DrawRectangle(Buffer, 
                   PlayerLeft, PlayerTop, 
                   PlayerLeft + TileMap->MetersToPixels*PlayerWidth, 
                   PlayerTop + TileMap->MetersToPixels*PlayerHeight,
                   PlayerR, PlayerG, PlayerB);
-    
-    // Hero center in image: (72, 182)
-    // Point (72, 182) in the image should meet ScreenCenterXY
-    // real32 HeroCenterX = 72.0f;
-    // real32 HeroCenterY = 182.0f;
-    // real32 SpriteMinX = ScreenCenterX - HeroCenterX;
-    // real32 SpriteMinY = ScreenCenterY - HeroCenterY;
-    // Draw different sprite here based on hero direction
-    // if (GameState->HeroDirection == FRONT)
-    // {
-    //     DrawBMPFile(&Memory->HeroFrontTorso, Buffer, SpriteMinX, SpriteMinY);
-    //     DrawBMPFile(&Memory->HeroFrontCape, Buffer, SpriteMinX, SpriteMinY);
-    //     DrawBMPFile(&Memory->HeroFrontHead, Buffer, SpriteMinX, SpriteMinY);
-    // }
-    // else if (GameState->HeroDirection == BACK)
-    // {
-    //     DrawBMPFile(&Memory->HeroBackTorso, Buffer, SpriteMinX, SpriteMinY);
-    //     DrawBMPFile(&Memory->HeroBackCape, Buffer, SpriteMinX, SpriteMinY);
-    //     DrawBMPFile(&Memory->HeroBackHead, Buffer, SpriteMinX, SpriteMinY);
-    // }
-    // else if (GameState->HeroDirection == LEFT)
-    // {
-    //     DrawBMPFile(&Memory->HeroLeftTorso, Buffer, SpriteMinX, SpriteMinY);
-    //     DrawBMPFile(&Memory->HeroLeftCape, Buffer, SpriteMinX, SpriteMinY);
-    //     DrawBMPFile(&Memory->HeroLeftHead, Buffer, SpriteMinX, SpriteMinY);
-    // }
-    // else if (GameState->HeroDirection == RIGHT)
-    // {
-    //     DrawBMPFile(&Memory->HeroRightTorso, Buffer, SpriteMinX, SpriteMinY);
-    //     DrawBMPFile(&Memory->HeroRightCape, Buffer, SpriteMinX, SpriteMinY);
-    //     DrawBMPFile(&Memory->HeroRightHead, Buffer, SpriteMinX, SpriteMinY);
-    // }
 
+    real32 HeroCenterX = 8.0f;
+    real32 HeroCenterY = 16.0f;
+    real32 SpriteMinX = PlayerScreenX - HeroCenterX;
+    real32 SpriteMinY = PlayerScreenY - HeroCenterY;
     if (GameState->HeroDirection == FRONT)
     {
-        real32 HeroCenterX = 36.0f;
-        real32 HeroCenterY = 214.0f;
-        real32 SpriteMinX = ScreenCenterX - HeroCenterX;
-        real32 SpriteMinY = ScreenCenterY - HeroCenterY;
-        DrawBMPFile(&Memory->MikeFront, Buffer, SpriteMinX, SpriteMinY);
+        DrawBMPFile(&GameState->LinkFront, Buffer, SpriteMinX, SpriteMinY);
     }
     else if (GameState->HeroDirection == BACK)
     {
-        real32 HeroCenterX = 38.0f;
-        real32 HeroCenterY = 214.0f;
-        real32 SpriteMinX = ScreenCenterX - HeroCenterX;
-        real32 SpriteMinY = ScreenCenterY - HeroCenterY;
-        DrawBMPFile(&Memory->MikeBack, Buffer, SpriteMinX, SpriteMinY);
+        DrawBMPFile(&GameState->LinkBack, Buffer, SpriteMinX, SpriteMinY);
     }
     else if (GameState->HeroDirection == LEFT)
     {
-        real32 HeroCenterX = 22.0f;
-        real32 HeroCenterY = 214.0f;
-        real32 SpriteMinX = ScreenCenterX - HeroCenterX;
-        real32 SpriteMinY = ScreenCenterY - HeroCenterY;
-        DrawBMPFile(&Memory->MikeLeft, Buffer, SpriteMinX, SpriteMinY);
+        DrawBMPFile(&GameState->LinkLeft, Buffer, SpriteMinX, SpriteMinY);
     }
     else if (GameState->HeroDirection == RIGHT)
     {
-        real32 HeroCenterX = 19.0f;
-        real32 HeroCenterY = 214.0f;
-        real32 SpriteMinX = ScreenCenterX - HeroCenterX;
-        real32 SpriteMinY = ScreenCenterY - HeroCenterY;
-        DrawBMPFile(&Memory->MikeRight, Buffer, SpriteMinX, SpriteMinY);
+        DrawBMPFile(&GameState->LinkRight, Buffer, SpriteMinX, SpriteMinY);
     }
 }
