@@ -3,14 +3,19 @@
 
 enum overworld_tile_id {
     OW_Null,   // 0
+
     OW_Floor,  // 1
     OW_Floor_Dusty, // 2
+
     OW_Wall_TopLeft, // 3
     OW_Wall_TopMid, // 4
     OW_Wall_TopRight, // 5
     OW_Wall_BotLeft, // 6
     OW_Wall_BotMid, // 7
     OW_Wall_BotRight, // 8
+
+    OW_Bush, // 9
+    OW_Entrance, // 10
 
     OW_TileCount
 };

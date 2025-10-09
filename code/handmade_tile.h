@@ -1,37 +1,32 @@
 #ifndef HANDMADE_TILE_H
 #define HANDMADE_TILE_H
 
-struct tile_chunk_position
+struct tile_room_position
 {
-    uint32 TileChunkX;
-    uint32 TileChunkY;
-    uint32 TileChunkZ;
-
+    uint32 RoomX;
+    uint32 RoomY;
     uint32 OffsetX;
     uint32 OffsetY;
 };
 
-struct tile_chunk
+struct tile_room
 {
     uint32 *Tiles;
 };
 
 struct tile_map
 {
-    uint32 ChunkShift;
-    uint32 ChunkMask;
-    uint32 ChunkDim;
-
     real32 TileSideInMeters;
     int32 TileSideInPixels;
     real32 MetersToPixels;
 
-    // TODO: beginners sparseness
-    uint32 TileChunkCountX;
-    uint32 TileChunkCountY;
-    uint32 TileChunkCountZ;
+    uint32 MapWidth;
+    uint32 MapHeight;
+    uint32 RoomWidth;
+    uint32 RoomHeight;
+    uint32 NumRooms;
 
-    tile_chunk *TileChunks;
+    tile_room *TileRooms;
 };
 
 struct tile_map_position

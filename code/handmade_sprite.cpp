@@ -310,5 +310,17 @@ LoadOverworldTileset(overworld_tileset *OverworldTileset, bmp_file *BaseBMP)
         OverworldTileset->Tiles[OW_Wall_BotRight].Y = 171;
         OverworldTileset->Tiles[OW_Wall_BotRight].Width = 16;
         OverworldTileset->Tiles[OW_Wall_BotRight].Height = 16;
+
+        OverworldTileset->Tiles[OW_Bush].Tileset = OverworldTileset->BaseBMP;
+        OverworldTileset->Tiles[OW_Bush].X = 18;
+        OverworldTileset->Tiles[OW_Bush].Y = 188;
+        OverworldTileset->Tiles[OW_Bush].Width = 16;
+        OverworldTileset->Tiles[OW_Bush].Height = 16;
+
+        OverworldTileset->Tiles[OW_Entrance].Tileset = OverworldTileset->BaseBMP;
+        OverworldTileset->Tiles[OW_Entrance].X = 137;
+        OverworldTileset->Tiles[OW_Entrance].Y = 205;
+        OverworldTileset->Tiles[OW_Entrance].Width = 16;
+        OverworldTileset->Tiles[OW_Entrance].Height = 16;
 }
 

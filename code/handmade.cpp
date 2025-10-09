@@ -138,43 +138,48 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         World->TileMap = PushStruct(&GameState->WorldArena, tile_map);
 
         tile_map *TileMap = World->TileMap;
-        // NOTE: set to use 256x256 tile chunks
-        TileMap->ChunkShift = 4;
-        TileMap->ChunkMask = (1 << TileMap->ChunkShift) - 1;
-        TileMap->ChunkDim = (1 << TileMap->ChunkShift);
-
-        TileMap->TileChunkCountX = 128;
-        TileMap->TileChunkCountY = 128;
-        TileMap->TileChunkCountZ = 128;
-
-        TileMap->TileChunks = PushArray(&GameState->WorldArena, 
-                                        TileMap->TileChunkCountX*
-                                        TileMap->TileChunkCountY*
-                                        TileMap->TileChunkCountZ,
-                                        tile_chunk);
+        TileMap->MapWidth = 16;
+        TileMap->MapHeight = 16;
+        TileMap->TileRooms = PushArray(&GameState->WorldArena, 
+                                       TileMap->MapWidth*TileMap->MapHeight,
+                                       tile_room);
+        TileMap->RoomWidth = 16;
+        TileMap->RoomHeight = 11;
 
         TileMap->TileSideInMeters = 1.0f;
         TileMap->TileSideInPixels = 16;
         TileMap->MetersToPixels = (real32)TileMap->TileSideInPixels/(real32)TileMap->TileSideInMeters;
 
-        // GenerateTileMap(GameState, TileMap);
-        int32 HardcodedMapWidth = 16;
-        int32 HardcodedMapHeight = 11;
         uint32 AbsTileZ = 0;
-        for (int32 SourceY = HardcodedMapHeight-1;
+        for (int32 SourceY = (int32)TileMap->RoomHeight-1;
              SourceY >= 0;
              SourceY--)
         {
-            for (int32 SourceX = 0;
-                SourceX < HardcodedMapWidth;
+            for (uint32 SourceX = 0;
+                SourceX < TileMap->RoomWidth;
                 SourceX++)
             {
-                uint32 SourceIndex = SourceY*HardcodedMapWidth + SourceX;
+                uint32 SourceIndex = SourceY*TileMap->RoomWidth + SourceX;
                 uint32 TileValue = HardcodedMap[SourceIndex];
                 uint32 AbsTileX = SourceX;
-                uint32 AbsTileY = (HardcodedMapHeight-1) - SourceY;
-                SetTileValue(&GameState->WorldArena, TileMap, AbsTileX, AbsTileY, AbsTileZ,
-                                TileValue);
+                uint32 AbsTileY = (TileMap->RoomHeight-1) - SourceY;
+                SetTileValue(&GameState->WorldArena, TileMap, AbsTileX, AbsTileY, TileValue);
+            }
+        }
+
+        for (int32 SourceY = (int32)TileMap->RoomHeight-1;
+             SourceY >= 0;
+             SourceY--)
+        {
+            for (uint32 SourceX = 0;
+                SourceX < TileMap->RoomWidth;
+                SourceX++)
+            {
+                uint32 SourceIndex = SourceY*TileMap->RoomWidth + SourceX;
+                uint32 TileValue = HardcodedMap2[SourceIndex];
+                uint32 AbsTileX = SourceX + TileMap->RoomWidth;
+                uint32 AbsTileY = (TileMap->RoomHeight-1) - SourceY;
+                SetTileValue(&GameState->WorldArena, TileMap, AbsTileX, AbsTileY, TileValue);
             }
         }
 
@@ -289,11 +294,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     // NOTE: Camera coord is the tile which will be placed in the top left 
     //       coordinate of screen
-    uint32 CameraTileX = 0;
-    uint32 CameraTileY = 10;
-
     uint32 ScreenTilesWidth = 16;
     uint32 ScreenTilesHeight = 11;
+
+    uint32 CameraTileX = ScreenTilesWidth * (GameState->PlayerP.AbsTileX/ScreenTilesWidth);
+    uint32 CameraTileY = ScreenTilesHeight * (GameState->PlayerP.AbsTileY/ScreenTilesHeight) + 
+                         (ScreenTilesHeight - 1);
 
     real32 PlayAreaY = (real32)Buffer->Height - 11.0f * TileMap->TileSideInPixels;
 
@@ -309,7 +315,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {
             uint32 Column = CameraTileX + RelColumn;
             uint32 Row = CameraTileY - RelRow;
-            uint32 TileID = GetTileValue(TileMap, Column, Row, GameState->PlayerP.AbsTileZ);
+            uint32 TileID = GetTileValue(TileMap, Column, Row);
             if (TileID > 0)
             {
                 bmp_tile *TileSprite = &GameState->OverworldTileset.Tiles[TileID];
@@ -326,13 +332,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     real32 PlayerScreenX = 0.5f*TileMap->TileSideInPixels + TileMap->TileSideInPixels*((real32)(int32)(GameState->PlayerP.AbsTileX - CameraTileX) + GameState->PlayerP.TileRelX);
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
     real32 PlayerScreenY = PlayAreaY + 0.5f*TileMap->TileSideInPixels - TileMap->TileSideInPixels*((real32)(int32)(GameState->PlayerP.AbsTileY - CameraTileY) + GameState->PlayerP.TileRelY);
-    real32 PlayerLeft = PlayerScreenX - TileMap->MetersToPixels*0.5f*PlayerWidth;
-    real32 PlayerTop = PlayerScreenY - TileMap->MetersToPixels*PlayerHeight;
-    DrawRectangle(Buffer, 
-                  PlayerLeft, PlayerTop, 
-                  PlayerLeft + TileMap->MetersToPixels*PlayerWidth, 
-                  PlayerTop + TileMap->MetersToPixels*PlayerHeight,
-                  PlayerR, PlayerG, PlayerB);
+    // real32 PlayerLeft = PlayerScreenX - TileMap->MetersToPixels*0.5f*PlayerWidth;
+    // real32 PlayerTop = PlayerScreenY - TileMap->MetersToPixels*PlayerHeight;
+    // DrawRectangle(Buffer, 
+    //               PlayerLeft, PlayerTop, 
+    //               PlayerLeft + TileMap->MetersToPixels*PlayerWidth, 
+    //               PlayerTop + TileMap->MetersToPixels*PlayerHeight,
+    //               PlayerR, PlayerG, PlayerB);
 
     real32 HeroCenterX = 8.0f;
     real32 HeroCenterY = 16.0f;
