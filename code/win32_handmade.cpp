@@ -593,12 +593,17 @@ Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer, HDC DeviceContext,
                            int WindowWidth, int WindowHeight, 
                            int OffsetX, int OffsetY, real32 BufferScale)
 {
+    // TODO: Fix this to work with the 4:3 ratio
+    int OutputWidth = (int)(Buffer->Width*BufferScale);
+    // NOTE: This is the ratio needed for the Y denominator to fix the ratio
+    //       X/Y = 4:3
+    // X / (Y*L) = 4/3 ; L = 3*X / (4*L)
+    real32 YMultiplier = 3.0f * Buffer->Width / (4.0f * Buffer->Height);
+    int OutputHeight = (int)(Buffer->Height*BufferScale*YMultiplier);
     PatBlt(DeviceContext, 0, 0, WindowWidth, OffsetY, BLACKNESS);
-    PatBlt(DeviceContext, 0, OffsetY + Buffer->Height*3, WindowWidth, WindowHeight, BLACKNESS);
+    PatBlt(DeviceContext, 0, OffsetY + OutputHeight, WindowWidth, WindowHeight, BLACKNESS);
     PatBlt(DeviceContext, 0, 0, OffsetX, WindowHeight, BLACKNESS);
-    PatBlt(DeviceContext, OffsetX + Buffer->Width*3, 0, WindowWidth, WindowHeight, BLACKNESS);
-
-    // TODO: Stretch our image to 4:3 so it matches whats displayed on console
+    PatBlt(DeviceContext, OffsetX + OutputWidth, 0, WindowWidth, WindowHeight, BLACKNESS);
 
     // NOTE: for prototyping purposes, dont stretch the window
     // so we can see the pixels 1:1 when testing the renderer
@@ -606,8 +611,10 @@ Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer, HDC DeviceContext,
         DeviceContext,
         //X, Y, Width, Height,
         //X, Y, Width, Height,
-        OffsetX, OffsetY, (int)(Buffer->Width*BufferScale), (int)(Buffer->Height*BufferScale),
-        0, 0, Buffer->Width, Buffer->Height,
+        OffsetX, OffsetY, 
+        OutputWidth, OutputHeight,
+        0, 0, 
+        Buffer->Width, Buffer->Height,
         Buffer->Memory,
         &Buffer->Info,
         DIB_RGB_COLORS, SRCCOPY);
@@ -1030,9 +1037,13 @@ int CALLBACK WinMain(
     GlobalWindowXform.BufferScale = 3.0f;
 
     if (RegisterClassA(&WindowClass)) {
-        int32 WindowWidth = GlobalWindowXform.OffsetX*2 + (int)(GlobalBackbuffer.Width*GlobalWindowXform.BufferScale);
-        int32 WindowHeight = GlobalWindowXform.OffsetY*2 + (int)(GlobalBackbuffer.Height*GlobalWindowXform.BufferScale);
         // TODO: Figure out why this isnt making the proper size
+        //       I just added 50 for now so i dont have to scale all the time
+        int32 WindowWidth = GlobalWindowXform.OffsetX*2 + 
+                            (int)(GlobalBackbuffer.Width*GlobalWindowXform.BufferScale) +
+                            50;
+        int32 WindowHeight = GlobalWindowXform.OffsetY*2 + 
+                             (int)(GlobalBackbuffer.Height*GlobalWindowXform.BufferScale);
         HWND Window = CreateWindowEx(
             0,
             WindowClass.lpszClassName,

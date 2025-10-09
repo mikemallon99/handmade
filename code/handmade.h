@@ -158,6 +158,7 @@ struct game_input
     // 4 game controllers + 1 keyboard
     game_controller_input Controllers[5];
 };
+
 inline game_controller_input *GetController(game_input *Input, int ControllerIndex)
 {
     Assert(ControllerIndex < ArrayCount(Input->Controllers));
@@ -166,16 +167,6 @@ inline game_controller_input *GetController(game_input *Input, int ControllerInd
     return Result;
 }
 
-// NOTE: future unified image format (AARRGGBB)
-
-struct bmp_file
-{
-    uint32 Width;
-    uint32 Height;
-    uint16 BitsPerPixel;
-    uint32 ImageSize;
-    uint32* Pixels;
-};
 
 struct game_memory
 {
@@ -206,6 +197,7 @@ typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 
 #include "handmade_intrinsics.h"
 #include "handmade_tile.h"
+#include "handmade_sprite.h"
 
 struct memory_arena
 {
@@ -257,6 +249,12 @@ struct game_state
     bmp_file LinkRight;
     uint32 LinkWidth;
     uint32 LinkHeight;
+
+    bmp_file OverworldBMP;
+    overworld_tileset OverworldTileset;
+
+    bmp_tile FloorTile;
+    bmp_tile WallTile;
 };
 
 #endif
