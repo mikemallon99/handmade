@@ -273,15 +273,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 if (!IsOnSameTile(GameState->PlayerP, NewPlayerP))
                 {
                     uint32 TileValue = GetTileValue(TileMap, NewPlayerP);
-
-                    if (TileValue == 3)
-                    {
-                        NewPlayerP.AbsTileZ++;
-                    }
-                    else if (TileValue == 4)
-                    {
-                        NewPlayerP.AbsTileZ--;
-                    }
                 }
                 GameState->PlayerP = NewPlayerP;
             }

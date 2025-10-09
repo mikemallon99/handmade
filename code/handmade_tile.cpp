@@ -1,3 +1,4 @@
+#include "handmade_sprite.h"
 
 internal tile_chunk *
 GetTileChunk(tile_map *TileMap, uint32 TileChunkX, uint32 TileChunkY, uint32 TileChunkZ)
@@ -104,9 +105,7 @@ IsTileMapPointEmpty(tile_map *TileMap, tile_map_position Pos)
     bool32 Empty = false;
 
     uint32 TileChunkValue = GetTileValue(TileMap, Pos);
-    Empty = (TileChunkValue == 1 || 
-             TileChunkValue == 3 ||
-             TileChunkValue == 4);
+    Empty = (TileChunkValue == OW_Floor || TileChunkValue == OW_Floor_Dusty);
 
     return Empty;
 }

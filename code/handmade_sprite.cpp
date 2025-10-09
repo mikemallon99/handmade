@@ -161,55 +161,45 @@ DrawBMPFile(bmp_file *BMPFile, game_offscreen_buffer *Buffer,
     int32 MinX = RoundReal32ToInt32(RealMinX);
     int32 MinY = RoundReal32ToInt32(RealMinY);
 
-    int32 MaxX = MinX + BMPFile->Width;
-    if (MaxX > Buffer->Width) {
-        MaxX = Buffer->Width;
-    }
-    int32 MaxY = MinY + BMPFile->Height;
-    if (MaxY > Buffer->Height) {
-        MaxY = Buffer->Height;
-    }
-
-    int32 ImageMinX = 0;
-    if (MinX < 0)
-    {
-        ImageMinX = -MinX;
-    }
-    int32 ImageMaxX = BMPFile->Width;
-    if (MinX + ImageMaxX > Buffer->Width)
-    {
-        ImageMaxX = Buffer->Width - MinX;
-    }
-
-    int32 ImageMinY = 0;
-    if (MinY < 0)
-    {
-        ImageMinY = -MinY;
-    }
-    int32 ImageMaxY = BMPFile->Height;
-    if (MinY + ImageMaxY > Buffer->Height)
-    {
-        ImageMaxY = Buffer->Height - MinY;
-    }
-
     // Should bottom to top drawing happen at load or at draw?
     // TODO: Probably move this stuff to the load once we add in new image formats, then make a unified image struct
-    uint32 *BufferPixel = (uint32 *)Buffer->Memory;
-    uint32 *ImagePixel = (uint32 *)BMPFile->Pixels + BMPFile->Width*BMPFile->Height;
-    for (int32 RowIdx = ImageMinY;
-         RowIdx < ImageMaxY;
+    for (int32 RowIdx = 0;
+         RowIdx < (int32)BMPFile->Height;
          RowIdx++
         )
     {
-        for (int32 ColIdx = ImageMinX;
-            ColIdx < ImageMaxX;
+        for (int32 ColIdx = 0;
+            ColIdx < (int32)BMPFile->Width;
             ColIdx++
             )
         {
-            uint32 ImageOffset = RowIdx*BMPFile->Width + ColIdx;
-            ImagePixel = BMPFile->Pixels + ImageOffset;
-            uint32 BufferOffset = (MinY+RowIdx)*Buffer->Width + (MinX+ColIdx);
-            BufferPixel = (uint32 *)Buffer->Memory + BufferOffset;
+            int32 DestX = MinX + ColIdx;
+            if (DestX < 0)
+            {
+                continue;
+            }
+            if (DestX >= (int32)Buffer->Width)
+            {
+                continue;
+            }
+
+            int32 DestY = MinY + RowIdx;
+            if (DestY < 0)
+            {
+                continue;
+            }
+            if (DestY >= (int32)Buffer->Height)
+            {
+                continue;
+            }
+
+            uint32 SourceX = ColIdx;
+            uint32 SourceY = RowIdx;
+
+            uint32 ImageOffset = SourceY*BMPFile->Width + SourceX;
+            uint32 *ImagePixel = BMPFile->Pixels + ImageOffset;
+            uint32 BufferOffset = DestY*Buffer->Width + DestX;
+            uint32 *BufferPixel = (uint32 *)Buffer->Memory + BufferOffset;
             WritePixelValue(ImagePixel, BufferPixel);
         }
     }
@@ -225,7 +215,6 @@ DrawBMPTile(bmp_tile *BMPTile, game_offscreen_buffer *Buffer,
 
     // Should bottom to top drawing happen at load or at draw?
     // TODO: Probably move this stuff to the load once we add in new image formats, then make a unified image struct
-    uint32 *BufferPixel = (uint32 *)Buffer->Memory;
     bmp_file *BMPBaseFile = BMPTile->Tileset;
     for (int32 RowIdx = 0;
          RowIdx < (int32)BMPTile->Height;
@@ -263,7 +252,7 @@ DrawBMPTile(bmp_tile *BMPTile, game_offscreen_buffer *Buffer,
             uint32 ImageOffset = SourceY*BMPBaseFile->Width + SourceX;
             uint32 *ImagePixel = BMPBaseFile->Pixels + ImageOffset;
             uint32 BufferOffset = DestY*Buffer->Width + DestX;
-            BufferPixel = (uint32 *)Buffer->Memory + BufferOffset;
+            uint32 *BufferPixel = (uint32 *)Buffer->Memory + BufferOffset;
             WritePixelValue(ImagePixel, BufferPixel);
         }
     }
