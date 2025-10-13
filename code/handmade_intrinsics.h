@@ -37,6 +37,15 @@ FloorReal32ToInt32(real32 Real32)
     return Result;
 }
 
+inline uint32
+FloorReal32ToUInt32(real32 Real32)
+{
+    uint32 Result;
+    Assert(Real32 > 0.0f);
+    Result = (uint32)Real32;
+    return Result;
+}
+
 inline int32
 TruncateReal32ToInt32(real32 Real32)
 {

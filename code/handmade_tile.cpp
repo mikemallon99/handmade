@@ -3,47 +3,46 @@
 
 inline uint32
 GetTileValueUnchecked(tile_map *TileMap, tile_room *TileRoom, 
-                      uint32 TileX, uint32 TileY)
+                      uint32 TestX, uint32 TestY)
 {
     Assert(TileRoom);
-    Assert(TileX < TileMap->RoomWidth);
-    Assert(TileY < TileMap->RoomHeight);
-    uint32 TileMapValue = TileRoom->Tiles[TileY*TileMap->RoomWidth + TileX];
+    Assert(TestX < TileMap->RoomWidth);
+    Assert(TestY < TileMap->RoomHeight);
+    uint32 TileMapValue = TileRoom->Tiles[TestY*TileMap->RoomWidth + TestX];
     return TileMapValue;
 }
 
 inline void
 SetTileValueUnchecked(tile_map *TileMap, tile_room *TileRoom, 
-                      uint32 TileX, uint32 TileY,
+                      uint32 TestX, uint32 TestY,
                       uint32 TileValue)
 {
     Assert(TileRoom);
-    Assert(TileX < TileMap->RoomWidth);
-    Assert(TileY < TileMap->RoomHeight);
-    TileRoom->Tiles[TileY*TileMap->RoomWidth + TileX] = TileValue;
+    Assert(TestX < TileMap->RoomWidth);
+    Assert(TestY < TileMap->RoomHeight);
+    TileRoom->Tiles[TestY*TileMap->RoomWidth + TestX] = TileValue;
 }
 
 inline void
 SetTileValue(tile_map *TileMap, tile_room *TileRoom, 
-             uint32 RoomTileX, uint32 RoomTileY,
-             uint32 TileValue)
+             uint32 TileX, uint32 TileY, uint32 TileValue)
 {
     if (TileRoom && TileRoom->Tiles)
     {
-        SetTileValueUnchecked(TileMap, TileRoom, RoomTileX, RoomTileY, TileValue);
+        SetTileValueUnchecked(TileMap, TileRoom, TileX, TileY, TileValue);
     }
 }
 
-internal tile_room_position
-GetRoomPosFor(tile_map *TileMap, uint32 AbsTileX, uint32 AbsTileY)
+inline void
+SetTileValue(tile_map *TileMap, tile_room *TileRoom, 
+             real32 X, real32 Y, uint32 TileValue)
 {
-    tile_room_position TileRoomPos = {};
-    TileRoomPos.RoomX = AbsTileX / TileMap->RoomWidth;
-    TileRoomPos.RoomY = AbsTileY / TileMap->RoomHeight;
-    TileRoomPos.OffsetX = AbsTileX % TileMap->RoomWidth;
-    TileRoomPos.OffsetY = AbsTileY % TileMap->RoomHeight;
-
-    return TileRoomPos;
+    if (TileRoom && TileRoom->Tiles)
+    {
+        uint32 UIntX = FloorReal32ToUInt32(X);
+        uint32 UIntY = FloorReal32ToUInt32(Y);
+        SetTileValueUnchecked(TileMap, TileRoom, UIntX, UIntY, TileValue);
+    }
 }
 
 internal tile_room *
@@ -60,30 +59,51 @@ GetTileRoom(tile_map *TileMap, uint32 RoomX, uint32 RoomY)
     return TileRoom;
 }
 
-internal uint32
-GetTileValue(tile_map *TileMap, tile_room *TileRoom, uint32 TestTileX, uint32 TestTileY)
+inline uint32
+GetTileValue(tile_map *TileMap, tile_room *TileRoom, uint32 TileX, uint32 TileY)
 {
     uint32 TileValue = 0;
     if (TileRoom && TileRoom->Tiles)
     {
-        TileValue = GetTileValueUnchecked(TileMap, TileRoom, TestTileX, TestTileY);
+        TileValue = GetTileValueUnchecked(TileMap, TileRoom, TileX, TileY);
     }
     return TileValue;
 }
 
-inline uint32
-GetTileValue(tile_map *TileMap, uint32 AbsTileX, uint32 AbsTileY)
+internal uint32
+GetTileValue(tile_map *TileMap, tile_room *TileRoom, real32 X, real32 Y)
 {
-    tile_room_position RoomPos = GetRoomPosFor(TileMap, AbsTileX, AbsTileY);
-    tile_room *TileRoom = GetTileRoom(TileMap, RoomPos.RoomX, RoomPos.RoomY);
-    uint32 TileValue = GetTileValue(TileMap, TileRoom, RoomPos.OffsetX, RoomPos.OffsetY);
+    uint32 TileValue = 0;
+
+    uint32 TileX = FloorReal32ToUInt32(X);
+    uint32 TileY = FloorReal32ToUInt32(Y);
+    TileValue = GetTileValue(TileMap, TileRoom, TileX, TileY);
+
+    return TileValue;
+}
+
+inline uint32
+GetTileValue(tile_map *TileMap, uint32 RoomIDX, uint32 RoomIDY, uint32 TileX, uint32 TileY)
+{
+    tile_room *TileRoom = GetTileRoom(TileMap, RoomIDX, RoomIDY);
+    uint32 TileValue = GetTileValue(TileMap, TileRoom, TileX, TileY);
+
+    return TileValue;
+}
+
+inline uint32
+GetTileValue(tile_map *TileMap, uint32 RoomIDX, uint32 RoomIDY, tile_room_position Pos)
+{
+    tile_room *TileRoom = GetTileRoom(TileMap, RoomIDX, RoomIDY);
+    uint32 TileValue = GetTileValue(TileMap, TileRoom, Pos.X, Pos.Y);
+
     return TileValue;
 }
 
 inline uint32
 GetTileValue(tile_map *TileMap, tile_map_position Pos)
 {
-    uint32 TileValue = GetTileValue(TileMap, Pos.AbsTileX, Pos.AbsTileY);
+    uint32 TileValue = GetTileValue(TileMap, Pos.RoomIDX, Pos.RoomIDY, Pos.Pos);
 
     return TileValue;
 }
@@ -101,12 +121,10 @@ IsTileMapPointEmpty(tile_map *TileMap, tile_map_position Pos)
 
 internal void
 SetTileValue(memory_arena *Arena, tile_map *TileMap, 
-             uint32 AbsTileX, uint32 AbsTileY, 
+             tile_room *TileRoom, 
+             uint32 OffsetX, uint32 OffsetY, 
              uint32 TileValue)
 {
-    tile_room_position RoomPos = GetRoomPosFor(TileMap, AbsTileX, AbsTileY);
-    tile_room *TileRoom = GetTileRoom(TileMap, RoomPos.RoomX, RoomPos.RoomY);
-
     // TODO: On demand tile room creation
     Assert(TileRoom);
 
@@ -122,173 +140,63 @@ SetTileValue(memory_arena *Arena, tile_map *TileMap,
         }
     }
 
-    SetTileValue(TileMap, TileRoom, RoomPos.OffsetX, RoomPos.OffsetY, TileValue);
+    SetTileValue(TileMap, TileRoom, OffsetX, OffsetY, TileValue);
 }
 
-inline void
-RecanonicalizeCoord(tile_map *TileMap, uint32 *Tile, real32 *TileRel)
-{
-    // NOTE: TileMap is torodial, so if you step off one end then you end up on the other
-    int32 Offset = RoundReal32ToInt32(*TileRel / TileMap->TileSideInMeters);
-    *Tile += Offset;
-    *TileRel -= Offset*TileMap->TileSideInMeters;
+// inline void
+// RecanonicalizeCoord(tile_map *TileMap, uint32 *Tile, real32 *TileRel)
+// {
+//     // NOTE: TileMap is torodial, so if you step off one end then you end up on the other
+//     int32 Offset = RoundReal32ToInt32(*TileRel / TileMap->TileSideInMeters);
+//     *Tile += Offset;
+//     *TileRel -= Offset*TileMap->TileSideInMeters;
 
-    Assert(*TileRel >= -0.5*TileMap->TileSideInMeters);
-    Assert(*TileRel <= 0.5*TileMap->TileSideInMeters);
-}
+//     Assert(*TileRel >= -0.5*TileMap->TileSideInMeters);
+//     Assert(*TileRel <= 0.5*TileMap->TileSideInMeters);
+// }
 
-inline tile_map_position
-RecanonicalizePosition(tile_map *TileMap, tile_map_position Pos)
-{
-    tile_map_position Result = Pos;
+// inline tile_map_position
+// RecanonicalizePosition(tile_map *TileMap, tile_map_position Pos)
+// {
+//     tile_map_position Result = Pos;
 
-    RecanonicalizeCoord(TileMap, &Result.AbsTileX, &Result.TileRelX);
-    RecanonicalizeCoord(TileMap, &Result.AbsTileY, &Result.TileRelY);
+//     RecanonicalizeCoord(TileMap, &Result.AbsTileX, &Result.TileRelX);
+//     RecanonicalizeCoord(TileMap, &Result.AbsTileY, &Result.TileRelY);
 
-    return Result;
-}
+//     return Result;
+// }
 
 internal bool32
 IsOnSameTile(tile_map_position PosA, tile_map_position PosB)
 {
-    bool32 SameTile = (PosA.AbsTileX == PosB.AbsTileX &&
-                       PosA.AbsTileY == PosB.AbsTileY &&
-                       PosA.AbsTileZ == PosB.AbsTileZ);
+    bool32 SameTile = (PosA.Pos.X == PosB.Pos.X &&
+                       PosA.Pos.Y == PosB.Pos.Y &&
+                       PosA.RoomIDX == PosB.RoomIDY &&
+                       PosA.RoomIDY == PosB.RoomIDY);
 
     return SameTile;
 }
 
 
 internal void
-GenerateTileMap(game_state *GameState, tile_map *TileMap)
+LoadOverworldRoom(memory_arena *Arena, tile_map *TileMap, uint32 *SourceMap, 
+                  uint32 RoomIDX, uint32 RoomIDY)
 {
-    uint32 RandomNumberIndex = 0;
-    uint32 TilesPerWidth = 17;
-    uint32 TilesPerHeight = 9;
-    uint32 ScreenX = 0;
-    uint32 ScreenY = 0;
+    tile_room *TileRoom = GetTileRoom(TileMap, RoomIDX, RoomIDY);
 
-    bool32 DoorLeft = false;
-    bool32 DoorRight = false;
-    bool32 DoorTop = false;
-    bool32 DoorBottom = false;
-    bool32 DoorUp = false;
-    bool32 DoorDown = false;
-    uint32 AbsTileZ = 0;
-    for (uint32 ScreenIndex = 0;
-            ScreenIndex < 32;
-            ScreenIndex++)
+    for (int32 SourceY = (int32)TileMap->RoomHeight-1;
+            SourceY >= 0;
+            SourceY--)
     {
-        Assert(RandomNumberIndex < ArrayCount(RandomNumberTable));
-        uint32 RandomChoice;
-        if (DoorUp || DoorDown)
+        for (uint32 SourceX = 0;
+            SourceX < TileMap->RoomWidth;
+            SourceX++)
         {
-            RandomChoice = RandomNumberTable[RandomNumberIndex++] % 2;
+            uint32 SourceIndex = SourceY*TileMap->RoomWidth + SourceX;
+            uint32 TileValue = SourceMap[SourceIndex];
+            uint32 OffsetX = SourceX;
+            uint32 OffsetY = (TileMap->RoomHeight-1) - SourceY;
+            SetTileValue(Arena, TileMap, TileRoom, OffsetX, OffsetY, TileValue);
         }
-        else
-        {
-            RandomChoice = RandomNumberTable[RandomNumberIndex++] % 3;
-        }
-
-        bool32 CreatedZDoor = false;
-        if (RandomChoice == 2)
-        {
-            CreatedZDoor = true;
-            if (AbsTileZ == 0)
-            {
-                DoorUp = true;
-            }
-            else 
-            {
-                DoorDown = true;
-            }
-        }
-        else if (RandomChoice == 1)
-        {
-            DoorRight = true;
-        }
-        else
-        {
-            DoorTop = true;
-        }
-
-        for (uint32 TileY = 0;
-                TileY < TilesPerHeight;
-                TileY++)
-        {
-            for (uint32 TileX = 0;
-                    TileX < TilesPerWidth;
-                    TileX++)
-            {
-                uint32 AbsTileX = ScreenX*TilesPerWidth + TileX;
-                uint32 AbsTileY = ScreenY*TilesPerHeight + TileY;
-
-                uint32 TileValue = 1;
-                if ((TileX == 0) && !(DoorLeft && (TileY == TilesPerHeight / 2)))
-                {
-                    TileValue = 2;
-                }
-                if ((TileX == TilesPerWidth - 1) && !(DoorRight && (TileY == TilesPerHeight / 2)))
-                {
-                    TileValue = 2;
-                }
-
-                if ((TileY == 0) && !(DoorBottom && (TileX == TilesPerWidth / 2)))
-                {
-                    TileValue = 2;
-                }
-                if ((TileY == TilesPerHeight - 1) && !(DoorTop && (TileX == TilesPerWidth / 2)))
-                {
-                    TileValue = 2;
-                }
-
-                if (DoorUp && (TileX == TilesPerWidth/2) && (TileY == TilesPerHeight/2))
-                {
-                    TileValue = 3;
-                }
-                if (DoorDown && (TileX == TilesPerWidth/2) && (TileY == TilesPerHeight/2))
-                {
-                    TileValue = 4;
-                }
-
-                SetTileValue(&GameState->WorldArena, TileMap, AbsTileX, AbsTileY, TileValue);
-            }
-        }
-
-        if (RandomChoice == 2)
-        {
-            if (AbsTileZ == 0)
-            {
-                AbsTileZ = 1;
-            }
-            else
-            {
-                AbsTileZ = 0;
-            }
-        }
-        else if (RandomChoice == 1)
-        {
-            ScreenX += 1;
-        }
-        else
-        {
-            ScreenY += 1;
-        }
-
-        if (CreatedZDoor)
-        {
-            DoorDown = !DoorDown;
-            DoorUp = !DoorUp;
-        }
-        else
-        {
-            DoorDown = false;
-            DoorUp = false;
-        }
-
-        DoorLeft = DoorRight;
-        DoorRight = false;
-        DoorBottom = DoorTop;
-        DoorTop = false;
     }
 }

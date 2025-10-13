@@ -598,7 +598,8 @@ Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer, HDC DeviceContext,
     // NOTE: This is the ratio needed for the Y denominator to fix the ratio
     //       X/Y = 4:3
     // X / (Y*L) = 4/3 ; L = 3*X / (4*L)
-    real32 YMultiplier = 3.0f * Buffer->Width / (4.0f * Buffer->Height);
+    // real32 YMultiplier = 3.0f * Buffer->Width / (4.0f * Buffer->Height);
+    real32 YMultiplier = 1.0f;
     int OutputHeight = (int)(Buffer->Height*BufferScale*YMultiplier);
     PatBlt(DeviceContext, 0, 0, WindowWidth, OffsetY, BLACKNESS);
     PatBlt(DeviceContext, 0, OffsetY + OutputHeight, WindowWidth, WindowHeight, BLACKNESS);

@@ -3,15 +3,17 @@
 
 struct tile_room_position
 {
-    uint32 RoomX;
-    uint32 RoomY;
-    uint32 OffsetX;
-    uint32 OffsetY;
+    real32 X;
+    real32 Y;
 };
 
 struct tile_room
 {
     uint32 *Tiles;
+    tile_room_position UpOverride;
+    tile_room_position DownOverride;
+    tile_room_position LeftOverride;
+    tile_room_position RightOverride;
 };
 
 struct tile_map
@@ -31,14 +33,10 @@ struct tile_map
 
 struct tile_map_position
 {
-    uint32 AbsTileX; 
-    uint32 AbsTileY;
-    uint32 AbsTileZ;
+    uint32 RoomIDX; 
+    uint32 RoomIDY;
 
-    // NOTE: Tile relative X and Y
-    // TODO: change to offsets?
-    real32 TileRelX;
-    real32 TileRelY;
+    tile_room_position Pos;
 };
 
 
