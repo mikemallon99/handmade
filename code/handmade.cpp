@@ -235,14 +235,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             tile_map_position NewPlayerP = GameState->PlayerP;
             NewPlayerP.Pos.X += Input->dtForFrame*dPlayerX;
             NewPlayerP.Pos.Y += Input->dtForFrame*dPlayerY;
-            // NewPlayerP = RecanonicalizePosition(TileMap, NewPlayerP);
+            NewPlayerP = RecanonicalizePosition(TileMap, NewPlayerP);
 
             tile_map_position NewPlayerLeft = NewPlayerP;
             NewPlayerLeft.Pos.X -= 0.5f*PlayerWidth;
-            // NewPlayerLeft = RecanonicalizePosition(TileMap, NewPlayerLeft);
+            NewPlayerLeft = RecanonicalizePosition(TileMap, NewPlayerLeft);
             tile_map_position NewPlayerRight = NewPlayerP;
             NewPlayerRight.Pos.X += 0.5f*PlayerWidth;
-            // NewPlayerRight = RecanonicalizePosition(TileMap, NewPlayerRight);
+            NewPlayerRight = RecanonicalizePosition(TileMap, NewPlayerRight);
 
             if (IsTileMapPointEmpty(TileMap, NewPlayerP) &&
                 IsTileMapPointEmpty(TileMap, NewPlayerLeft) &&

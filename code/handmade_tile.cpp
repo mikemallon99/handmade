@@ -143,28 +143,34 @@ SetTileValue(memory_arena *Arena, tile_map *TileMap,
     SetTileValue(TileMap, TileRoom, OffsetX, OffsetY, TileValue);
 }
 
-// inline void
-// RecanonicalizeCoord(tile_map *TileMap, uint32 *Tile, real32 *TileRel)
-// {
-//     // NOTE: TileMap is torodial, so if you step off one end then you end up on the other
-//     int32 Offset = RoundReal32ToInt32(*TileRel / TileMap->TileSideInMeters);
-//     *Tile += Offset;
-//     *TileRel -= Offset*TileMap->TileSideInMeters;
+internal tile_map_position
+RecanonicalizePosition(tile_map *TileMap, tile_map_position Pos)
+{
+    tile_map_position Result = Pos;
 
-//     Assert(*TileRel >= -0.5*TileMap->TileSideInMeters);
-//     Assert(*TileRel <= 0.5*TileMap->TileSideInMeters);
-// }
+    if (Pos.Pos.X > (real32)TileMap->RoomWidth)
+    {
+        Result.RoomIDX += 1;
+        Result.Pos.X -= (real32)TileMap->RoomWidth;
+    }
+    if (Pos.Pos.X < 0.0f)
+    {
+        Result.RoomIDX -= 1;
+        Result.Pos.X += (real32)TileMap->RoomWidth;
+    }
+    if (Pos.Pos.Y > (real32)TileMap->RoomHeight)
+    {
+        Result.RoomIDY += 1;
+        Result.Pos.Y -= (real32)TileMap->RoomHeight;
+    }
+    if (Pos.Pos.Y < 0.0f)
+    {
+        Result.RoomIDY -= 1;
+        Result.Pos.Y += (real32)TileMap->RoomHeight;
+    }
 
-// inline tile_map_position
-// RecanonicalizePosition(tile_map *TileMap, tile_map_position Pos)
-// {
-//     tile_map_position Result = Pos;
-
-//     RecanonicalizeCoord(TileMap, &Result.AbsTileX, &Result.TileRelX);
-//     RecanonicalizeCoord(TileMap, &Result.AbsTileY, &Result.TileRelY);
-
-//     return Result;
-// }
+    return Result;
+}
 
 internal bool32
 IsOnSameTile(tile_map_position PosA, tile_map_position PosB)
