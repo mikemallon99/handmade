@@ -7,13 +7,18 @@ struct tile_room_position
     real32 Y;
 };
 
+struct tile_map_position
+{
+    uint32 RoomIDX; 
+    uint32 RoomIDY;
+
+    tile_room_position Pos;
+};
+
 struct tile_room
 {
     uint32 *Tiles;
-    tile_room_position UpOverride;
-    tile_room_position DownOverride;
-    tile_room_position LeftOverride;
-    tile_room_position RightOverride;
+    tile_map_position Door;
 };
 
 struct tile_map
@@ -29,14 +34,6 @@ struct tile_map
     uint32 NumRooms;
 
     tile_room *TileRooms;
-};
-
-struct tile_map_position
-{
-    uint32 RoomIDX; 
-    uint32 RoomIDY;
-
-    tile_room_position Pos;
 };
 
 

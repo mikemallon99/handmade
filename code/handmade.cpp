@@ -145,14 +145,22 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         TileMap->TileSideInPixels = 16;
         TileMap->MetersToPixels = (real32)TileMap->TileSideInPixels/(real32)TileMap->TileSideInMeters;
 
-        uint32 SpawnRoomX = 0;
+        uint32 SpawnRoomX = 7;
         uint32 SpawnRoomY = 0;
-        LoadOverworldRoom(&GameState->WorldArena, TileMap, HardcodedMap, SpawnRoomX, SpawnRoomY);
+        tile_room *TileRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, HardcodedMap, SpawnRoomX, SpawnRoomY);
         LoadOverworldRoom(&GameState->WorldArena, TileMap, HardcodedMap2, SpawnRoomX+1, SpawnRoomY);
-        // LoadOverworldRoom(&GameState->WorldArena, TileMap, CaveMap, SpawnRoomX, SpawnRoomY+1);
 
-        GameState->PlayerP.RoomIDX = 0;
-        GameState->PlayerP.RoomIDY = 0;
+        // NOTE: Overworld is 16x8 but we allocate 16x16, so we store extra rooms in the top 16x8 half
+        uint32 CaveRoomX = 0;
+        uint32 CaveRoomY = 8;
+        TileRoom->Door.Pos.X = (real32)TileMap->RoomWidth / 2.0f;
+        TileRoom->Door.Pos.Y = 0.5f;
+        TileRoom->Door.RoomIDX = CaveRoomX;
+        TileRoom->Door.RoomIDY = CaveRoomY;
+        LoadOverworldRoom(&GameState->WorldArena, TileMap, CaveMap, CaveRoomX, CaveRoomY);
+
+        GameState->PlayerP.RoomIDX = SpawnRoomX;
+        GameState->PlayerP.RoomIDY = SpawnRoomY;
         GameState->PlayerP.Pos.X = 5.0f;
         GameState->PlayerP.Pos.Y = 5.0f;
 
@@ -235,23 +243,57 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             tile_map_position NewPlayerP = GameState->PlayerP;
             NewPlayerP.Pos.X += Input->dtForFrame*dPlayerX;
             NewPlayerP.Pos.Y += Input->dtForFrame*dPlayerY;
-            NewPlayerP = RecanonicalizePosition(TileMap, NewPlayerP);
 
+            tile_map_position NewPlayerUp = NewPlayerP;
+            NewPlayerUp.Pos.Y += 0.1f*PlayerHeight;
             tile_map_position NewPlayerLeft = NewPlayerP;
             NewPlayerLeft.Pos.X -= 0.5f*PlayerWidth;
-            NewPlayerLeft = RecanonicalizePosition(TileMap, NewPlayerLeft);
             tile_map_position NewPlayerRight = NewPlayerP;
             NewPlayerRight.Pos.X += 0.5f*PlayerWidth;
-            NewPlayerRight = RecanonicalizePosition(TileMap, NewPlayerRight);
 
-            if (IsTileMapPointEmpty(TileMap, NewPlayerP) &&
+            if (IsPointOffscreen(TileMap, NewPlayerUp))
+            {
+                NewPlayerP.Pos.Y = 0.1f*PlayerHeight + 0.0001f;
+                NewPlayerP.RoomIDY += 1;
+            }
+            // NOTE: Regular center point is player down
+            else if (IsPointOffscreen(TileMap, NewPlayerP))
+            {
+                NewPlayerP.Pos.Y = (real32)TileMap->RoomHeight - 0.1f*PlayerHeight - 0.0001f;
+                NewPlayerP.RoomIDY -= 1;
+            }
+            else if (IsPointOffscreen(TileMap, NewPlayerLeft))
+            {
+                NewPlayerP.Pos.X = (real32)TileMap->RoomWidth - 0.5f*PlayerWidth - 0.0001f;
+                NewPlayerP.RoomIDX -= 1;
+            }
+            else if (IsPointOffscreen(TileMap, NewPlayerRight))
+            {
+                NewPlayerP.Pos.X = 0.5f*PlayerWidth + 0.0001f;
+                NewPlayerP.RoomIDX += 1;
+            }
+
+            NewPlayerUp = NewPlayerP;
+            NewPlayerUp.Pos.Y += 0.1f*PlayerHeight;
+            NewPlayerLeft = NewPlayerP;
+            NewPlayerLeft.Pos.X -= 0.5f*PlayerWidth;
+            NewPlayerRight = NewPlayerP;
+            NewPlayerRight.Pos.X += 0.5f*PlayerWidth;
+
+            // Collisions
+            if (IsTileMapPointEmpty(TileMap, NewPlayerUp) &&
+                IsTileMapPointEmpty(TileMap, NewPlayerP) &&
                 IsTileMapPointEmpty(TileMap, NewPlayerLeft) &&
                 IsTileMapPointEmpty(TileMap, NewPlayerRight))
             {
-                // if (!IsOnSameTile(GameState->PlayerP, NewPlayerP))
-                // {
-                //     uint32 TileValue = GetTileValue(TileMap, NewPlayerP);
-                // }
+                if (!IsOnSameTile(GameState->PlayerP, NewPlayerP))
+                {
+                    uint32 TileValue = GetTileValue(TileMap, NewPlayerP);
+                    if (TileValue == OW_Entrance)
+                    {
+                        NewPlayerP = GetDoorDestination(TileMap, NewPlayerP);
+                    }
+                }
                 GameState->PlayerP = NewPlayerP;
             }
         }

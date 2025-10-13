@@ -108,13 +108,26 @@ GetTileValue(tile_map *TileMap, tile_map_position Pos)
     return TileValue;
 }
 
+inline tile_map_position
+GetDoorDestination(tile_map *TileMap, tile_map_position Pos)
+{
+    tile_map_position Result;
+
+    Assert(GetTileValue(TileMap, Pos) == OW_Entrance);
+    tile_room *TileRoom = GetTileRoom(TileMap, Pos.RoomIDX, Pos.RoomIDY);
+    Result = TileRoom->Door;
+
+    return Result;
+}
+
 internal bool32
 IsTileMapPointEmpty(tile_map *TileMap, tile_map_position Pos)
 {
     bool32 Empty = false;
 
     uint32 TileValue = GetTileValue(TileMap, Pos);
-    Empty = (TileValue == OW_Floor || TileValue == OW_Floor_Dusty);
+    Empty = (TileValue == OW_Floor || TileValue == OW_Floor_Dusty ||
+             TileValue == OW_Entrance);
 
     return Empty;
 }
@@ -172,6 +185,42 @@ RecanonicalizePosition(tile_map *TileMap, tile_map_position Pos)
     return Result;
 }
 
+internal tile_map_position
+TruncatePosition(tile_map *TileMap, tile_map_position Pos)
+{
+    tile_map_position Result = Pos;
+
+    if (Pos.Pos.X > (real32)TileMap->RoomWidth)
+    {
+        Result.Pos.X = (real32)TileMap->RoomWidth;
+    }
+    if (Pos.Pos.X < 0.0f)
+    {
+        Result.Pos.X = 0.0f;
+    }
+    if (Pos.Pos.Y > (real32)TileMap->RoomHeight)
+    {
+        Result.Pos.Y = (real32)TileMap->RoomHeight;
+    }
+    if (Pos.Pos.Y < 0.0f)
+    {
+        Result.Pos.Y += 0.0f;
+    }
+
+    return Result;
+}
+
+internal bool32
+IsPointOffscreen(tile_map *TileMap, tile_map_position Pos)
+{
+    bool32 IsOffscreen = (Pos.Pos.X > (real32)TileMap->RoomWidth ||
+                          Pos.Pos.X < 0.0f ||
+                          Pos.Pos.Y > (real32)TileMap->RoomHeight ||
+                          Pos.Pos.Y < 0.0f);
+
+    return IsOffscreen;
+}
+
 internal bool32
 IsOnSameTile(tile_map_position PosA, tile_map_position PosB)
 {
@@ -184,7 +233,7 @@ IsOnSameTile(tile_map_position PosA, tile_map_position PosB)
 }
 
 
-internal void
+internal tile_room *
 LoadOverworldRoom(memory_arena *Arena, tile_map *TileMap, uint32 *SourceMap, 
                   uint32 RoomIDX, uint32 RoomIDY)
 {
@@ -205,4 +254,6 @@ LoadOverworldRoom(memory_arena *Arena, tile_map *TileMap, uint32 *SourceMap,
             SetTileValue(Arena, TileMap, TileRoom, OffsetX, OffsetY, TileValue);
         }
     }
+
+    return TileRoom;
 }
