@@ -18,6 +18,10 @@ struct tile_map_position
 struct tile_room
 {
     uint32 *Tiles;
+    tile_map_position *Up;
+    tile_map_position *Down;
+    tile_map_position *Left;
+    tile_map_position *Right;
     tile_map_position Door;
 };
 

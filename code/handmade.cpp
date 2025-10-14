@@ -157,7 +157,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         TileRoom->Door.Pos.Y = 0.5f;
         TileRoom->Door.RoomIDX = CaveRoomX;
         TileRoom->Door.RoomIDY = CaveRoomY;
-        LoadOverworldRoom(&GameState->WorldArena, TileMap, CaveMap, CaveRoomX, CaveRoomY);
+        tile_room *CaveRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, CaveMap, CaveRoomX, CaveRoomY);
+        CaveRoom->Down = PushStruct(&GameState->WorldArena, tile_map_position);
+        CaveRoom->Down->RoomIDX = SpawnRoomX;
+        CaveRoom->Down->RoomIDY = SpawnRoomY;
+        CaveRoom->Down->Pos.X = 4.5f;
+        CaveRoom->Down->Pos.Y = 8.5f;
 
         GameState->PlayerP.RoomIDX = SpawnRoomX;
         GameState->PlayerP.RoomIDY = SpawnRoomY;
@@ -192,6 +197,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     real32 PlayerWidth = 0.75f;
     real32 PlayerHeight = 1.0f;
 
+    real32 dPlayerX = 0.0f;
+    real32 dPlayerY = 0.0f;
+    real32 PlayerSpeed = 5.0f;
     for (int ControllerIndex = 0;
          ControllerIndex < ArrayCount(Input->Controllers);
          ControllerIndex++)
@@ -209,8 +217,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         else
         {
             // NOTE: Use digital movement tuning
-            real32 dPlayerX = 0.0f;
-            real32 dPlayerY = 0.0f;
             if (Controller->MoveUp.EndedDown)
             {
                 dPlayerY = 1.0f;
@@ -232,75 +238,119 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 GameState->HeroDirection = RIGHT;
             }
 
-            real32 PlayerSpeed = 5.0f;
             if (Controller->ActionUp.EndedDown)
             {
                 PlayerSpeed = 10.0f;
             }
-            dPlayerX *= PlayerSpeed;
-            dPlayerY *= PlayerSpeed;
-
-            tile_map_position NewPlayerP = GameState->PlayerP;
-            NewPlayerP.Pos.X += Input->dtForFrame*dPlayerX;
-            NewPlayerP.Pos.Y += Input->dtForFrame*dPlayerY;
-
-            tile_map_position NewPlayerUp = NewPlayerP;
-            NewPlayerUp.Pos.Y += 0.1f*PlayerHeight;
-            tile_map_position NewPlayerLeft = NewPlayerP;
-            NewPlayerLeft.Pos.X -= 0.5f*PlayerWidth;
-            tile_map_position NewPlayerRight = NewPlayerP;
-            NewPlayerRight.Pos.X += 0.5f*PlayerWidth;
-
-            if (IsPointOffscreen(TileMap, NewPlayerUp))
-            {
-                NewPlayerP.Pos.Y = 0.1f*PlayerHeight + 0.0001f;
-                NewPlayerP.RoomIDY += 1;
-            }
-            // NOTE: Regular center point is player down
-            else if (IsPointOffscreen(TileMap, NewPlayerP))
-            {
-                NewPlayerP.Pos.Y = (real32)TileMap->RoomHeight - 0.1f*PlayerHeight - 0.0001f;
-                NewPlayerP.RoomIDY -= 1;
-            }
-            else if (IsPointOffscreen(TileMap, NewPlayerLeft))
-            {
-                NewPlayerP.Pos.X = (real32)TileMap->RoomWidth - 0.5f*PlayerWidth - 0.0001f;
-                NewPlayerP.RoomIDX -= 1;
-            }
-            else if (IsPointOffscreen(TileMap, NewPlayerRight))
-            {
-                NewPlayerP.Pos.X = 0.5f*PlayerWidth + 0.0001f;
-                NewPlayerP.RoomIDX += 1;
-            }
-
-            NewPlayerUp = NewPlayerP;
-            NewPlayerUp.Pos.Y += 0.1f*PlayerHeight;
-            NewPlayerLeft = NewPlayerP;
-            NewPlayerLeft.Pos.X -= 0.5f*PlayerWidth;
-            NewPlayerRight = NewPlayerP;
-            NewPlayerRight.Pos.X += 0.5f*PlayerWidth;
-
-            // Collisions
-            if (IsTileMapPointEmpty(TileMap, NewPlayerUp) &&
-                IsTileMapPointEmpty(TileMap, NewPlayerP) &&
-                IsTileMapPointEmpty(TileMap, NewPlayerLeft) &&
-                IsTileMapPointEmpty(TileMap, NewPlayerRight))
-            {
-                if (!IsOnSameTile(GameState->PlayerP, NewPlayerP))
-                {
-                    uint32 TileValue = GetTileValue(TileMap, NewPlayerP);
-                    if (TileValue == OW_Entrance)
-                    {
-                        NewPlayerP = GetDoorDestination(TileMap, NewPlayerP);
-                    }
-                }
-                GameState->PlayerP = NewPlayerP;
-            }
         }
     }
 
-    // Start drawing process
+    dPlayerX *= PlayerSpeed;
+    dPlayerY *= PlayerSpeed;
 
+    tile_map_position NewPlayerP = GameState->PlayerP;
+    NewPlayerP.Pos.X += Input->dtForFrame*dPlayerX;
+    NewPlayerP.Pos.Y += Input->dtForFrame*dPlayerY;
+
+    tile_map_position NewPlayerUp = NewPlayerP;
+    NewPlayerUp.Pos.Y += 0.1f*PlayerHeight;
+    tile_map_position NewPlayerLeft = NewPlayerP;
+    NewPlayerLeft.Pos.X -= 0.5f*PlayerWidth;
+    tile_map_position NewPlayerRight = NewPlayerP;
+    NewPlayerRight.Pos.X += 0.5f*PlayerWidth;
+
+    NewPlayerUp = NewPlayerP;
+    NewPlayerUp.Pos.Y += 0.1f*PlayerHeight;
+    NewPlayerLeft = NewPlayerP;
+    NewPlayerLeft.Pos.X -= 0.5f*PlayerWidth;
+    NewPlayerRight = NewPlayerP;
+    NewPlayerRight.Pos.X += 0.5f*PlayerWidth;
+
+    // Room transitions
+    tile_room *TileRoom = GetTileRoom(TileMap, GameState->PlayerP.RoomIDX, GameState->PlayerP.RoomIDY);
+    bool32 SkipCollisions = false;
+    if (IsPointOffscreen(TileMap, NewPlayerUp))
+    {
+        SkipCollisions = true;
+        if (TileRoom->Up)
+        {
+            NewPlayerP = *TileRoom->Up;
+        }
+        else
+        {
+            NewPlayerP.Pos.Y = 0.1f*PlayerHeight + 0.0001f;
+            NewPlayerP.RoomIDY += 1;
+        }
+    }
+    // NOTE: Regular center point is player down
+    else if (IsPointOffscreen(TileMap, NewPlayerP))
+    {
+        SkipCollisions = true;
+        if (TileRoom->Down)
+        {
+            NewPlayerP = *TileRoom->Down;
+        }
+        else
+        {
+            NewPlayerP.Pos.Y = (real32)TileMap->RoomHeight - 0.1f*PlayerHeight - 0.0001f;
+            NewPlayerP.RoomIDY -= 1;
+        }
+    }
+    else if (IsPointOffscreen(TileMap, NewPlayerLeft))
+    {
+        SkipCollisions = true;
+        if (TileRoom->Left)
+        {
+            NewPlayerP = *TileRoom->Left;
+        }
+        else
+        {
+            NewPlayerP.Pos.X = (real32)TileMap->RoomWidth - 0.5f*PlayerWidth - 0.0001f;
+            NewPlayerP.RoomIDX -= 1;
+        }
+    }
+    else if (IsPointOffscreen(TileMap, NewPlayerRight))
+    {
+        SkipCollisions = true;
+        if (TileRoom->Right)
+        {
+            NewPlayerP = *TileRoom->Right;
+        }
+        else
+        {
+            NewPlayerP.Pos.X = 0.5f*PlayerWidth + 0.0001f;
+            NewPlayerP.RoomIDX += 1;
+        }
+    }
+
+    // Collisions
+    if (!SkipCollisions)
+    {
+        if (IsTileMapPointEmpty(TileMap, NewPlayerUp) &&
+            IsTileMapPointEmpty(TileMap, NewPlayerP) &&
+            IsTileMapPointEmpty(TileMap, NewPlayerLeft) &&
+            IsTileMapPointEmpty(TileMap, NewPlayerRight))
+        {
+            if (!IsOnSameTile(GameState->PlayerP, NewPlayerP))
+            {
+                uint32 TileValue = GetTileValue(TileMap, NewPlayerP);
+                if (TileValue == OW_Entrance)
+                {
+                    NewPlayerP = GetDoorDestination(TileMap, NewPlayerP);
+                }
+            }
+        }
+        else
+        {
+            // NOTE: Dont change players position
+            NewPlayerP = GameState->PlayerP;
+        }
+    }
+
+    // Lock in position
+    GameState->PlayerP = NewPlayerP;
+
+    // Start drawing process
     DrawRectangle(Buffer, 0.0f, 0.0f, (real32)Buffer->Width, (real32)Buffer->Height, 
                   1.0f, 0.0f, 0.0f);
 
