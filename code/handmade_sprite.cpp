@@ -324,3 +324,123 @@ LoadOverworldTileset(overworld_tileset *OverworldTileset, bmp_file *BaseBMP)
         OverworldTileset->Tiles[OW_Entrance].Height = 16;
 }
 
+internal void
+LoadTextTileset(text_tileset *TextTileset, bmp_file *BaseBMP)
+{
+    TextTileset->BaseBMP = BaseBMP;
+
+    uint32 Index = 0;
+    // Upper 2 rows
+    for (int32 Col = 0;
+         Col < 16;
+         Col++)
+    {
+        for (int32 Row = 0;
+            Row < 2;
+            Row++)
+        {
+            TextTileset->Tiles[Index].Tileset = TextTileset->BaseBMP;
+            TextTileset->Tiles[Index].X = 1 + 8*Col;
+            TextTileset->Tiles[Index].Y = 11 + 8*Row;
+            TextTileset->Tiles[Index].Width = 8;
+            TextTileset->Tiles[Index].Height = 8;
+            Index++;
+        }
+    }
+    // Lower 2 rows
+    for (int32 Col = 0;
+         Col < 8;
+         Col++)
+    {
+        for (int32 Row = 2;
+            Row < 4;
+            Row++)
+        {
+            TextTileset->Tiles[Index].Tileset = TextTileset->BaseBMP;
+            TextTileset->Tiles[Index].X = 1 + 8*Col;
+            TextTileset->Tiles[Index].Y = 11 + 8*Row;
+            TextTileset->Tiles[Index].Width = 8;
+            TextTileset->Tiles[Index].Height = 8;
+            Index++;
+        }
+    }
+}
+
+internal int32
+StringLength(uint8 *String)
+{
+    int32 Count = 0;
+    while (*String++)
+    {
+        Count++;
+    }
+    return Count;
+}
+
+internal void
+DrawString(game_offscreen_buffer *Buffer, 
+           text_tileset *TextTileset, uint8 *String, 
+           real32 X, real32 Y)
+{
+    for (int32 StringPos = 0;
+         StringPos < StringLength(String);
+         StringPos++)
+    {
+        uint32 CharIndex;
+        uint8 CharValue = String[StringPos];
+        // This is 0-9
+        if (CharValue >= 48 && CharValue < 58)
+        {
+            CharIndex = CharValue - 48;
+        }
+        // A-Z
+        else if (CharValue >= 65 && CharValue < 65 + 26)
+        {
+            CharIndex = CharValue - 55;
+        }
+        else if (CharValue == ',')
+        {
+            CharIndex = 40;
+        }
+        else if (CharValue == '!')
+        {
+            CharIndex = 41;
+        }
+        else if (CharValue == '\'')
+        {
+            CharIndex = 42;
+        }
+        else if (CharValue == '&')
+        {
+            CharIndex = 43;
+        }
+        else if (CharValue == '.')
+        {
+            CharIndex = 44;
+        }
+        else if (CharValue == '"')
+        {
+            CharIndex = 45;
+        }
+        else if (CharValue == '?')
+        {
+            CharIndex = 46;
+        }
+        else if (CharValue == '-')
+        {
+            CharIndex = 47;
+        }
+        else if (CharValue == ' ')
+        {
+            CharIndex = 36;
+        }
+        else
+        {
+            CharIndex = 0;
+            Assert(0);
+        }
+
+        DrawBMPTile(&TextTileset->Tiles[CharIndex], Buffer, 
+                    X + (real32)StringPos*8.0f, Y);
+    }
+}

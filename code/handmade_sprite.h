@@ -47,4 +47,11 @@ struct overworld_tileset
     bmp_tile Tiles[OW_TileCount];
 };
 
+struct text_tileset
+{
+    bmp_file *BaseBMP;
+
+    bmp_tile Tiles[48];
+};
+
 #endif

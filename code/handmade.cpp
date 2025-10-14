@@ -186,6 +186,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->OverworldBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
                                                 "tiles/overworld_tileset.bmp");
         LoadOverworldTileset(&GameState->OverworldTileset, &GameState->OverworldBMP);
+
+        LoadTextTileset(&GameState->TextTileset, &GameState->OverworldBMP);
         
         // NOTE: maybe move this to platform layer
         Memory->IsInitialized = true;
@@ -352,7 +354,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     // Start drawing process
     DrawRectangle(Buffer, 0.0f, 0.0f, (real32)Buffer->Width, (real32)Buffer->Height, 
-                  1.0f, 0.0f, 0.0f);
+                  0.0f, 0.0f, 0.0f);
 
     // NOTE: Camera coord is the tile which will be placed in the top left 
     //       coordinate of screen
@@ -424,4 +426,35 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     {
         DrawBMPFile(&GameState->LinkRight, Buffer, SpriteMinX, SpriteMinY);
     }
+
+    // Draw Coordinates UI
+    uint32 XDigit0 = FloorReal32ToUInt32(GameState->PlayerP.Pos.X) / 10;
+    uint32 XDigit1 = FloorReal32ToUInt32(GameState->PlayerP.Pos.X) % 10;
+    uint32 XDigit0ASCII = XDigit0;
+    if (XDigit0 == 0)
+    {
+        // Blank space instead of 0
+        XDigit0ASCII = 36;
+    }
+    uint32 XDigit1ASCII = XDigit1;
+    DrawBMPTile(&GameState->TextTileset.Tiles[XDigit0ASCII], Buffer, 0, 0);
+    DrawBMPTile(&GameState->TextTileset.Tiles[XDigit1ASCII], Buffer, 8, 0);
+
+    // Comma
+    DrawBMPTile(&GameState->TextTileset.Tiles[40], Buffer, 16, 0);
+
+    uint32 YDigit0 = FloorReal32ToUInt32(GameState->PlayerP.Pos.Y) / 10;
+    uint32 YDigit1 = FloorReal32ToUInt32(GameState->PlayerP.Pos.Y) % 10;
+    uint32 YDigit0ASCII = YDigit0;
+    if (YDigit0 == 0)
+    {
+        // Blank space instead of 0
+        YDigit0ASCII = 36;
+    }
+    uint32 YDigit1ASCII = YDigit1;
+    DrawBMPTile(&GameState->TextTileset.Tiles[YDigit0ASCII], Buffer, 24, 0);
+    DrawBMPTile(&GameState->TextTileset.Tiles[YDigit1ASCII], Buffer, 32, 0);
+
+    uint8 TestString[] = "IT'S DANGEROUS TO GO ALONE, 420";
+    DrawString(Buffer, &GameState->TextTileset, TestString, 0.0f, 8.0f);
 }

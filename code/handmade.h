@@ -252,6 +252,7 @@ struct game_state
 
     bmp_file OverworldBMP;
     overworld_tileset OverworldTileset;
+    text_tileset TextTileset;
 
     bmp_tile FloorTile;
     bmp_tile WallTile;
