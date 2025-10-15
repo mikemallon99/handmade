@@ -1106,6 +1106,7 @@ int CALLBACK WinMain(
             GameMemory.DEBUGPlatformReadEntireFile = DEBUGPlatformReadEntireFile;
             GameMemory.DEBUGPlatformFreeFileMemory = DEBUGPlatformFreeFileMemory;
             GameMemory.DEBUGPlatformWriteEntireFile = DEBUGPlatformWriteEntireFile;
+            GameMemory.GameUpdateHz = GameUpdateHz;
 
             State.TotalSize = GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize;
             // TODO: need to use MEM_LARGE_PAGES to take pressure off TLB

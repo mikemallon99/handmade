@@ -181,6 +181,8 @@ struct game_memory
     debug_platform_read_entire_file *DEBUGPlatformReadEntireFile;
     debug_platform_free_file_memory *DEBUGPlatformFreeFileMemory;
     debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;
+
+    real32 GameUpdateHz;
 };
 
 // 4 things: timing, controller/keyboard input, bitmap buffer to use, sound buffer to use
@@ -236,6 +238,7 @@ enum hero_direction {FRONT, BACK, LEFT, RIGHT};
 struct game_state
 {
     memory_arena WorldArena;
+    uint32 FrameCounter;
     world *World;
 
     tile_map_position PlayerP;
@@ -243,10 +246,11 @@ struct game_state
 
     bmp_file Background;
 
-    bmp_file LinkFront;
-    bmp_file LinkBack;
-    bmp_file LinkLeft;
-    bmp_file LinkRight;
+    uint32 WalkStep;
+    bmp_file LinkFront[2];
+    bmp_file LinkBack[2];
+    bmp_file LinkLeft[2];
+    bmp_file LinkRight[2];
     uint32 LinkWidth;
     uint32 LinkHeight;
 

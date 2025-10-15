@@ -174,14 +174,22 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->Background = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
                                             "backgrounds_processed/kitchen.bmp");
 
-        GameState->LinkFront = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
+        GameState->LinkFront[0] = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
                                            "sprites/link_front.bmp");
-        GameState->LinkBack = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
+        GameState->LinkFront[1] = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
+                                           "sprites/link_front2.bmp");
+        GameState->LinkBack[0] = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
                                           "sprites/link_back.bmp");
-        GameState->LinkLeft = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
+        GameState->LinkBack[1] = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
+                                          "sprites/link_back2.bmp");
+        GameState->LinkLeft[0] = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
                                           "sprites/link_left.bmp");
-        GameState->LinkRight = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
+        GameState->LinkLeft[1] = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
+                                          "sprites/link_left2.bmp");
+        GameState->LinkRight[0] = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
                                            "sprites/link_right.bmp");
+        GameState->LinkRight[1] = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
+                                           "sprites/link_right2.bmp");
 
         GameState->OverworldBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
                                                 "tiles/overworld_tileset.bmp");
@@ -244,6 +252,28 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             {
                 PlayerSpeed = 10.0f;
             }
+        }
+
+        if (Controller->MoveUp.EndedDown || 
+            Controller->MoveDown.EndedDown || 
+            Controller->MoveLeft.EndedDown || 
+            Controller->MoveRight.EndedDown)
+        {
+            if (GameState->FrameCounter % 5 == 0)
+            {
+                if (GameState->WalkStep == 0) 
+                {
+                    GameState->WalkStep = 1;
+                }
+                else
+                {
+                    GameState->WalkStep = 0;
+                }
+            }
+        }
+        else
+        {
+            GameState->WalkStep = 0;
         }
     }
 
@@ -410,24 +440,26 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     real32 HeroCenterY = 16.0f;
     real32 SpriteMinX = PlayerScreenX - HeroCenterX;
     real32 SpriteMinY = PlayerScreenY - HeroCenterY;
+
     if (GameState->HeroDirection == FRONT)
     {
-        DrawBMPFile(&GameState->LinkFront, Buffer, SpriteMinX, SpriteMinY);
+        DrawBMPFile(&GameState->LinkFront[GameState->WalkStep], Buffer, SpriteMinX, SpriteMinY);
     }
     else if (GameState->HeroDirection == BACK)
     {
-        DrawBMPFile(&GameState->LinkBack, Buffer, SpriteMinX, SpriteMinY);
+        DrawBMPFile(&GameState->LinkBack[GameState->WalkStep], Buffer, SpriteMinX, SpriteMinY);
     }
     else if (GameState->HeroDirection == LEFT)
     {
-        DrawBMPFile(&GameState->LinkLeft, Buffer, SpriteMinX, SpriteMinY);
+        DrawBMPFile(&GameState->LinkLeft[GameState->WalkStep], Buffer, SpriteMinX, SpriteMinY);
     }
     else if (GameState->HeroDirection == RIGHT)
     {
-        DrawBMPFile(&GameState->LinkRight, Buffer, SpriteMinX, SpriteMinY);
+        DrawBMPFile(&GameState->LinkRight[GameState->WalkStep], Buffer, SpriteMinX, SpriteMinY);
     }
 
     // Draw Coordinates UI
+    // TODO: Make this into a sprintf thing
     uint32 XDigit0 = FloorReal32ToUInt32(GameState->PlayerP.Pos.X) / 10;
     uint32 XDigit1 = FloorReal32ToUInt32(GameState->PlayerP.Pos.X) % 10;
     uint32 XDigit0ASCII = XDigit0;
@@ -457,4 +489,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     uint8 TestString[] = "IT'S DANGEROUS TO GO ALONE, 420";
     DrawString(Buffer, &GameState->TextTileset, TestString, 0.0f, 8.0f);
+
+    GameState->FrameCounter++;
 }
