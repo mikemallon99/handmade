@@ -235,6 +235,15 @@ struct world
 
 enum hero_direction {FRONT, BACK, LEFT, RIGHT};
 
+struct link_sprites
+{
+    bmp_file BaseBMP;
+    bmp_tile Front[2];
+    bmp_tile Back[2];
+    bmp_tile Left[2];
+    bmp_tile Right[2];
+};
+
 struct game_state
 {
     memory_arena WorldArena;
@@ -246,11 +255,8 @@ struct game_state
 
     bmp_file Background;
 
+    link_sprites LinkSprites;
     uint32 WalkStep;
-    bmp_file LinkFront[2];
-    bmp_file LinkBack[2];
-    bmp_file LinkLeft[2];
-    bmp_file LinkRight[2];
     uint32 LinkWidth;
     uint32 LinkHeight;
 
@@ -258,8 +264,9 @@ struct game_state
     overworld_tileset OverworldTileset;
     text_tileset TextTileset;
 
-    bmp_tile FloorTile;
-    bmp_tile WallTile;
+    bmp_file OWEnemiesBMP;
+    bmp_tile OctorokSprite;
+    tile_map_position OctorokP;
 };
 
 #endif

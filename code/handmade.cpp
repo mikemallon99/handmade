@@ -174,28 +174,24 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->Background = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
                                             "backgrounds_processed/kitchen.bmp");
 
-        GameState->LinkFront[0] = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                           "sprites/link_front.bmp");
-        GameState->LinkFront[1] = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                           "sprites/link_front2.bmp");
-        GameState->LinkBack[0] = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                          "sprites/link_back.bmp");
-        GameState->LinkBack[1] = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                          "sprites/link_back2.bmp");
-        GameState->LinkLeft[0] = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                          "sprites/link_left.bmp");
-        GameState->LinkLeft[1] = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                          "sprites/link_left2.bmp");
-        GameState->LinkRight[0] = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                           "sprites/link_right.bmp");
-        GameState->LinkRight[1] = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                           "sprites/link_right2.bmp");
+        GameState->LinkSprites.BaseBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
+                                           "tiles/link.bmp");
+        LoadLinkSprites(&GameState->LinkSprites);
 
         GameState->OverworldBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
                                                 "tiles/overworld_tileset.bmp");
         LoadOverworldTileset(&GameState->OverworldTileset, &GameState->OverworldBMP);
 
         LoadTextTileset(&GameState->TextTileset, &GameState->OverworldBMP);
+
+        GameState->OWEnemiesBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
+                                                "tiles/overworld_enemies.bmp");
+        
+        GameState->OctorokSprite.Tileset = &GameState->OWEnemiesBMP;
+        GameState->OctorokSprite.X = 1;
+        GameState->OctorokSprite.Y = 11;
+        GameState->OctorokSprite.Width = 16;
+        GameState->OctorokSprite.Height = 16;
         
         // NOTE: maybe move this to platform layer
         Memory->IsInitialized = true;
@@ -379,8 +375,21 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
-    // Lock in position
+    // Lock in player position
     GameState->PlayerP = NewPlayerP;
+
+    // Octorok position update
+    local_persist int32 YDirection = -1;
+    if (GameState->OctorokP.Pos.Y > 8)
+    {
+        YDirection = -1;
+    }
+    else if (GameState->OctorokP.Pos.Y < 3)
+    {
+        YDirection = 1;
+    }
+    GameState->OctorokP.Pos.X = 8;
+    GameState->OctorokP.Pos.Y += (real32)YDirection * 0.05f;
 
     // Start drawing process
     DrawRectangle(Buffer, 0.0f, 0.0f, (real32)Buffer->Width, (real32)Buffer->Height, 
@@ -422,41 +431,36 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
-    real32 PlayerR = 1.0f;
-    real32 PlayerG = 1.0f;
-    real32 PlayerB = 0.0f;
-    real32 PlayerScreenX = TileMap->TileSideInPixels*(GameState->PlayerP.Pos.X - (real32)CameraTileX);
+    real32 HeroOriginX = TileMap->TileSideInPixels*(GameState->PlayerP.Pos.X - (real32)CameraTileX);
+    real32 HeroOriginY = PlayAreaY - TileMap->TileSideInPixels*(GameState->PlayerP.Pos.Y - 11.0f);
+    real32 PlayerScreenX = HeroOriginX;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
-    real32 PlayerScreenY = PlayAreaY - TileMap->TileSideInPixels*(GameState->PlayerP.Pos.Y - 11.0f);
-    // real32 PlayerLeft = PlayerScreenX - TileMap->MetersToPixels*0.5f*PlayerWidth;
-    // real32 PlayerTop = PlayerScreenY - TileMap->MetersToPixels*PlayerHeight;
-    // DrawRectangle(Buffer, 
-    //               PlayerLeft, PlayerTop, 
-    //               PlayerLeft + TileMap->MetersToPixels*PlayerWidth, 
-    //               PlayerTop + TileMap->MetersToPixels*PlayerHeight,
-    //               PlayerR, PlayerG, PlayerB);
+    real32 PlayerScreenY = HeroOriginY - TileMap->TileSideInPixels*1.0f;
 
-    real32 HeroCenterX = 8.0f;
-    real32 HeroCenterY = 16.0f;
-    real32 SpriteMinX = PlayerScreenX - HeroCenterX;
-    real32 SpriteMinY = PlayerScreenY - HeroCenterY;
+    // real32 HeroCenterX = 8.0f;
+    // real32 HeroCenterY = 16.0f;
+    real32 SpriteMinX = PlayerScreenX;
+    real32 SpriteMinY = PlayerScreenY;
 
     if (GameState->HeroDirection == FRONT)
     {
-        DrawBMPFile(&GameState->LinkFront[GameState->WalkStep], Buffer, SpriteMinX, SpriteMinY);
+        DrawBMPTile(&GameState->LinkSprites.Front[GameState->WalkStep], Buffer, SpriteMinX, SpriteMinY);
     }
     else if (GameState->HeroDirection == BACK)
     {
-        DrawBMPFile(&GameState->LinkBack[GameState->WalkStep], Buffer, SpriteMinX, SpriteMinY);
+        DrawBMPTile(&GameState->LinkSprites.Back[GameState->WalkStep], Buffer, SpriteMinX, SpriteMinY);
     }
     else if (GameState->HeroDirection == LEFT)
     {
-        DrawBMPFile(&GameState->LinkLeft[GameState->WalkStep], Buffer, SpriteMinX, SpriteMinY);
+        DrawBMPTile(&GameState->LinkSprites.Left[GameState->WalkStep], Buffer, SpriteMinX, SpriteMinY);
     }
     else if (GameState->HeroDirection == RIGHT)
     {
-        DrawBMPFile(&GameState->LinkRight[GameState->WalkStep], Buffer, SpriteMinX, SpriteMinY);
+        DrawBMPTile(&GameState->LinkSprites.Right[GameState->WalkStep], Buffer, SpriteMinX, SpriteMinY);
     }
+    // Origin
+    DrawRectangle(Buffer, HeroOriginX, HeroOriginY-2, HeroOriginX+2, HeroOriginY, 
+                  1.0f, 0.0f, 0.0f);
 
     // Draw Coordinates UI
     // TODO: Make this into a sprintf thing
@@ -489,6 +493,17 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     uint8 TestString[] = "IT'S DANGEROUS TO GO ALONE, 420";
     DrawString(Buffer, &GameState->TextTileset, TestString, 0.0f, 8.0f);
+
+
+    real32 OctoOriginX = TileMap->TileSideInPixels*(GameState->OctorokP.Pos.X - (real32)CameraTileX);
+    real32 OctoOriginY = PlayAreaY - TileMap->TileSideInPixels*(GameState->OctorokP.Pos.Y - 11.0f);
+    real32 OctoScreenX = OctoOriginX;
+    // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
+    real32 OctoScreenY = OctoOriginY - TileMap->TileSideInPixels*1.0f;
+    DrawBMPTile(&GameState->OctorokSprite, Buffer, OctoScreenX, OctoScreenY);
+    // Origin
+    DrawRectangle(Buffer, OctoOriginX, OctoOriginY-2, OctoOriginX+2, OctoOriginY, 
+                  1.0f, 0.0f, 0.0f);
 
     GameState->FrameCounter++;
 }
