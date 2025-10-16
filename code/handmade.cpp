@@ -84,6 +84,28 @@ DrawRectangle(game_offscreen_buffer *Buffer,
     }
 }
 
+internal bool32
+IsHitboxPointActive(game_state* GameState, tile_map *TileMap, tile_map_position Pos)
+{
+    bool32 Active = false;
+
+    tile_map_position OctorokBotLeft = GameState->OctorokP;
+    tile_map_position OctorokTopRight = GameState->OctorokP;
+    OctorokTopRight.Pos.X += 1.0f;
+    OctorokTopRight.Pos.Y += 1.0f;
+
+    // AABB checking
+    if (Pos.Pos.X >= OctorokBotLeft.Pos.X && 
+        Pos.Pos.X <= OctorokTopRight.Pos.X &&
+        Pos.Pos.Y >= OctorokBotLeft.Pos.Y &&
+        Pos.Pos.Y <= OctorokTopRight.Pos.Y)
+    {
+        Active = true;
+    }
+
+    return Active;
+}
+
 
 internal void 
 GameOutputSound(game_sound_output_buffer *SoundBuffer, game_state *GameState, int ToneHz)
@@ -163,6 +185,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         CaveRoom->Down->RoomIDY = SpawnRoomY;
         CaveRoom->Down->Pos.X = 4.5f;
         CaveRoom->Down->Pos.Y = 8.5f;
+
+        GameState->PlayerHealth = 9;
 
         GameState->PlayerP.RoomIDX = SpawnRoomX;
         GameState->PlayerP.RoomIDY = SpawnRoomY;
@@ -248,6 +272,18 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             {
                 PlayerSpeed = 10.0f;
             }
+
+            // B
+            GameState->PlayerUsingSword = false;
+            if (Controller->ActionLeft.EndedDown)
+            {
+                GameState->PlayerUsingSword = true;
+            }
+            // A
+            if (Controller->ActionDown.EndedDown)
+            {
+                // PlayerSpeed = 10.0f;
+            }
         }
 
         if (Controller->MoveUp.EndedDown || 
@@ -276,7 +312,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     dPlayerX *= PlayerSpeed;
     dPlayerY *= PlayerSpeed;
 
-    tile_map_position NewPlayerP = GameState->PlayerP;
+    // NOTE: Translate origin to the center of player cuz of legacy calculations
+    tile_map_position NewPlayerOrigin = GameState->PlayerP;
+    tile_map_position NewPlayerP = NewPlayerOrigin;
+    NewPlayerP.Pos.X += 0.5f;
+
     NewPlayerP.Pos.X += Input->dtForFrame*dPlayerX;
     NewPlayerP.Pos.Y += Input->dtForFrame*dPlayerY;
 
@@ -354,6 +394,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     // Collisions
     if (!SkipCollisions)
     {
+        // Wall Collisions
         if (IsTileMapPointEmpty(TileMap, NewPlayerUp) &&
             IsTileMapPointEmpty(TileMap, NewPlayerP) &&
             IsTileMapPointEmpty(TileMap, NewPlayerLeft) &&
@@ -371,12 +412,31 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         else
         {
             // NOTE: Dont change players position
-            NewPlayerP = GameState->PlayerP;
+            NewPlayerP = NewPlayerOrigin;
+            NewPlayerP.Pos.X += 0.5f;
+        }
+
+        // Enemy Collisions
+        // TODO: Make the player hitbox aabb also
+        if (GameState->InvincibilityTimer == 0)
+        {
+            bool32 IsHit = IsHitboxPointActive(GameState, TileMap, NewPlayerP);
+            if (IsHit)
+            {
+                GameState->InvincibilityTimer = 60;
+                GameState->PlayerHealth -= 1;
+            }
+        }
+        else
+        {
+            GameState->InvincibilityTimer -= 1;
         }
     }
 
     // Lock in player position
-    GameState->PlayerP = NewPlayerP;
+    NewPlayerOrigin = NewPlayerP;
+    NewPlayerOrigin.Pos.X -= 0.5f;
+    GameState->PlayerP = NewPlayerOrigin;
 
     // Octorok position update
     local_persist int32 YDirection = -1;
@@ -442,21 +502,80 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     real32 SpriteMinX = PlayerScreenX;
     real32 SpriteMinY = PlayerScreenY;
 
-    if (GameState->HeroDirection == FRONT)
+    bmp_tile *LinkSprite;
+    if (GameState->PlayerUsingSword)
     {
-        DrawBMPTile(&GameState->LinkSprites.Front[GameState->WalkStep], Buffer, SpriteMinX, SpriteMinY);
+        if (GameState->HeroDirection == FRONT)
+        {
+            LinkSprite = &GameState->LinkSprites.SwordFront[0];
+        }
+        else if (GameState->HeroDirection == BACK)
+        {
+            LinkSprite = &GameState->LinkSprites.SwordBack[0];
+        }
+        else if (GameState->HeroDirection == LEFT)
+        {
+            LinkSprite = &GameState->LinkSprites.SwordLeft[0];
+        }
+        else if (GameState->HeroDirection == RIGHT)
+        {
+            LinkSprite = &GameState->LinkSprites.SwordRight[0];
+        }
+        else
+        {
+            LinkSprite = 0;
+            Assert(0);
+        }
     }
-    else if (GameState->HeroDirection == BACK)
+    else
     {
-        DrawBMPTile(&GameState->LinkSprites.Back[GameState->WalkStep], Buffer, SpriteMinX, SpriteMinY);
+        if (GameState->HeroDirection == FRONT)
+        {
+            LinkSprite = &GameState->LinkSprites.Front[GameState->WalkStep];
+        }
+        else if (GameState->HeroDirection == BACK)
+        {
+            LinkSprite = &GameState->LinkSprites.Back[GameState->WalkStep];
+        }
+        else if (GameState->HeroDirection == LEFT)
+        {
+            LinkSprite = &GameState->LinkSprites.Left[GameState->WalkStep];
+        }
+        else if (GameState->HeroDirection == RIGHT)
+        {
+            LinkSprite = &GameState->LinkSprites.Right[GameState->WalkStep];
+        }
+        else
+        {
+            LinkSprite = 0;
+            Assert(0);
+        }
     }
-    else if (GameState->HeroDirection == LEFT)
+
+    // Invincibility rendering
+    local_persist bool32 IFramesFlicker = false;
+    if (GameState->InvincibilityTimer > 0)
     {
-        DrawBMPTile(&GameState->LinkSprites.Left[GameState->WalkStep], Buffer, SpriteMinX, SpriteMinY);
+        if (GameState->InvincibilityTimer % 6 == 0)
+        {
+            if (IFramesFlicker)
+            {
+                IFramesFlicker = false;
+            }
+            else
+            {
+                IFramesFlicker = true;
+            }
+        }
     }
-    else if (GameState->HeroDirection == RIGHT)
+    else 
     {
-        DrawBMPTile(&GameState->LinkSprites.Right[GameState->WalkStep], Buffer, SpriteMinX, SpriteMinY);
+        IFramesFlicker = false;
+    }
+
+    if (!IFramesFlicker)
+    {
+        DrawBMPTile(LinkSprite, Buffer, SpriteMinX, SpriteMinY);
     }
     // Origin
     DrawRectangle(Buffer, HeroOriginX, HeroOriginY-2, HeroOriginX+2, HeroOriginY, 
@@ -464,8 +583,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     // Draw Coordinates UI
     // TODO: Make this into a sprintf thing
-    uint32 XDigit0 = FloorReal32ToUInt32(GameState->PlayerP.Pos.X) / 10;
-    uint32 XDigit1 = FloorReal32ToUInt32(GameState->PlayerP.Pos.X) % 10;
+    uint32 XDigit0 = 0;
+    uint32 XDigit1 = 0;
+    if (GameState->PlayerP.Pos.X >= 0)
+    {
+        XDigit0 = FloorReal32ToUInt32(GameState->PlayerP.Pos.X) / 10;
+        XDigit1 = FloorReal32ToUInt32(GameState->PlayerP.Pos.X) % 10;
+    }
     uint32 XDigit0ASCII = XDigit0;
     if (XDigit0 == 0)
     {
@@ -479,8 +603,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     // Comma
     DrawBMPTile(&GameState->TextTileset.Tiles[40], Buffer, 16, 0);
 
-    uint32 YDigit0 = FloorReal32ToUInt32(GameState->PlayerP.Pos.Y) / 10;
-    uint32 YDigit1 = FloorReal32ToUInt32(GameState->PlayerP.Pos.Y) % 10;
+    uint32 YDigit0 = 0;
+    uint32 YDigit1 = 0;
+    if (GameState->PlayerP.Pos.Y >= 0)
+    {
+        YDigit0 = FloorReal32ToUInt32(GameState->PlayerP.Pos.Y) / 10;
+        YDigit1 = FloorReal32ToUInt32(GameState->PlayerP.Pos.Y) % 10;
+    }
     uint32 YDigit0ASCII = YDigit0;
     if (YDigit0 == 0)
     {
@@ -494,6 +623,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     uint8 TestString[] = "IT'S DANGEROUS TO GO ALONE, 420";
     DrawString(Buffer, &GameState->TextTileset, TestString, 0.0f, 8.0f);
 
+    DrawBMPTile(&GameState->TextTileset.Tiles[GameState->PlayerHealth], Buffer, 0, 16);
 
     real32 OctoOriginX = TileMap->TileSideInPixels*(GameState->OctorokP.Pos.X - (real32)CameraTileX);
     real32 OctoOriginY = PlayAreaY - TileMap->TileSideInPixels*(GameState->OctorokP.Pos.Y - 11.0f);

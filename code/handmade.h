@@ -242,6 +242,10 @@ struct link_sprites
     bmp_tile Back[2];
     bmp_tile Left[2];
     bmp_tile Right[2];
+    bmp_tile SwordFront[3];
+    bmp_tile SwordRight[3];
+    bmp_tile SwordBack[3];
+    bmp_tile SwordLeft[3];
 };
 
 struct game_state
@@ -251,6 +255,9 @@ struct game_state
     world *World;
 
     tile_map_position PlayerP;
+    uint32 PlayerHealth;
+    uint32 InvincibilityTimer;
+    bool32 PlayerUsingSword;
     hero_direction HeroDirection;
 
     bmp_file Background;

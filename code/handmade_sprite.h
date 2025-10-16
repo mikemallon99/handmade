@@ -37,6 +37,7 @@ struct bmp_tile
     uint32 Y;
     uint32 Width;
     uint32 Height;
+    bool32 FlipX;
 };
 
 struct overworld_tileset

@@ -821,13 +821,6 @@ Win32ProcessPendingMessages(win32_state *State, game_controller_input *KeyboardC
                                 &KeyboardController->MoveUp,
                                 IsDown);
                     }
-                    // dvorak
-                    if (VKCode == VK_OEM_COMMA) 
-                    {
-                        Win32ProcessKeyboardMessage(
-                                &KeyboardController->MoveUp,
-                                IsDown);
-                    }
                     else if (VKCode == 'A') 
                     {
                         Win32ProcessKeyboardMessage(
@@ -840,21 +833,7 @@ Win32ProcessPendingMessages(win32_state *State, game_controller_input *KeyboardC
                                 &KeyboardController->MoveDown,
                                 IsDown);
                     }
-                    // DVORAK
-                    else if (VKCode == 'O') 
-                    {
-                        Win32ProcessKeyboardMessage(
-                                &KeyboardController->MoveDown,
-                                IsDown);
-                    }
                     else if (VKCode == 'D') 
-                    {
-                        Win32ProcessKeyboardMessage(
-                                &KeyboardController->MoveRight,
-                                IsDown);
-                    }
-                    // DVORAK
-                    else if (VKCode == 'E') 
                     {
                         Win32ProcessKeyboardMessage(
                                 &KeyboardController->MoveRight,

@@ -38,7 +38,8 @@ LoadBMPFile(memory_arena *Arena, game_memory *Memory, thread_context *Thread, ch
         BMPFile.ImageSize = *((uint32 *)((uint8 *)File.Contents + 34));
         uint32 CompressionMethod = *((uint32 *)((uint8 *)File.Contents + 30));
 
-        uint32 TransparentColor = 0xFF747474;
+        uint32 TransparentColor1 = 0xFF747474;
+        uint32 TransparentColor2 = 0xFF008000;
 
         // NOTE: These values arent tested, ive only tested using the bitmask
         uint32 RedMask = 0xFF000000;
@@ -82,7 +83,7 @@ LoadBMPFile(memory_arena *Arena, game_memory *Memory, thread_context *Thread, ch
                     uint32 B = 0xFF & (Pixel >> BlueShift);
                     uint32 A = 0xFF & (Pixel >> AlphaShift);
                     Pixel = (A << 24) | (R << 16) | (G << 8) | (B);
-                    if (Pixel == TransparentColor)
+                    if (Pixel == TransparentColor1 || Pixel == TransparentColor2)
                     {
                         Pixel = 0;
                     }
@@ -112,7 +113,7 @@ LoadBMPFile(memory_arena *Arena, game_memory *Memory, thread_context *Thread, ch
                     uint32 R = 0xFF & (uint32)*CopyPixel++;
                     uint32 A = 0xFF;
                     uint32 Pixel = (A << 24) | (R << 16) | (G << 8) | (B);
-                    if (Pixel == TransparentColor)
+                    if (Pixel == TransparentColor1 || Pixel == TransparentColor2)
                     {
                         Pixel = 0;
                     }
@@ -237,6 +238,11 @@ DrawBMPTile(bmp_tile *BMPTile, game_offscreen_buffer *Buffer,
             )
         {
             int32 DestX = MinX + ColIdx;
+            if (BMPTile->FlipX)
+            {
+                DestX = MinX + BMPTile->Width - ColIdx;
+            }
+
             if (DestX < 0)
             {
                 continue;
@@ -420,12 +426,39 @@ LoadLinkSprites(link_sprites *LinkSprites)
         LinkSprites->Left[0].Y = 11;
         LinkSprites->Left[0].Width = 16;
         LinkSprites->Left[0].Height = 16;
+        LinkSprites->Left[0].FlipX = true;
 
         LinkSprites->Left[1].Tileset = &LinkSprites->BaseBMP;
         LinkSprites->Left[1].X = 52;
         LinkSprites->Left[1].Y = 11;
         LinkSprites->Left[1].Width = 16;
         LinkSprites->Left[1].Height = 16;
+        LinkSprites->Left[1].FlipX = true;
+
+        LinkSprites->SwordFront[0].Tileset = &LinkSprites->BaseBMP;
+        LinkSprites->SwordFront[0].X = 18;
+        LinkSprites->SwordFront[0].Y = 47;
+        LinkSprites->SwordFront[0].Width = 16;
+        LinkSprites->SwordFront[0].Height = 27;
+
+        LinkSprites->SwordRight[0].Tileset = &LinkSprites->BaseBMP;
+        LinkSprites->SwordRight[0].X = 18;
+        LinkSprites->SwordRight[0].Y = 77;
+        LinkSprites->SwordRight[0].Width = 27;
+        LinkSprites->SwordRight[0].Height = 16;
+
+        LinkSprites->SwordBack[0].Tileset = &LinkSprites->BaseBMP;
+        LinkSprites->SwordBack[0].X = 18;
+        LinkSprites->SwordBack[0].Y = 97;
+        LinkSprites->SwordBack[0].Width = 16;
+        LinkSprites->SwordBack[0].Height = 27;
+
+        LinkSprites->SwordLeft[0].Tileset = &LinkSprites->BaseBMP;
+        LinkSprites->SwordLeft[0].X = 18;
+        LinkSprites->SwordLeft[0].Y = 77;
+        LinkSprites->SwordLeft[0].Width = 27;
+        LinkSprites->SwordLeft[0].Height = 16;
+        LinkSprites->SwordLeft[0].FlipX = true;
 }
 
 internal int32
