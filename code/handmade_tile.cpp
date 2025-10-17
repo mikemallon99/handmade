@@ -132,6 +132,16 @@ IsTileMapPointEmpty(tile_map *TileMap, tile_map_position Pos)
     return Empty;
 }
 
+internal bool32
+IsInSameTileRoom(tile_map_position PosA, tile_map_position PosB)
+{
+    bool32 SameRoom = false;
+
+    SameRoom = (PosA.RoomIDX == PosB.RoomIDX && PosA.RoomIDY == PosB.RoomIDY);
+
+    return SameRoom;
+}
+
 internal void
 SetTileValue(memory_arena *Arena, tile_map *TileMap, 
              tile_room *TileRoom, 

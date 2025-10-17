@@ -224,6 +224,17 @@ DrawBMPTile(bmp_tile *BMPTile, game_offscreen_buffer *Buffer,
     int32 MinX = RoundReal32ToInt32(RealMinX);
     int32 MinY = RoundReal32ToInt32(RealMinY);
 
+    int32 OffsetX = 0;
+    if (BMPTile->AnchorX)
+    {
+        OffsetX = BMPTile->AnchorX - BMPTile->X;
+    }
+    int32 OffsetY = 0;
+    if (BMPTile->AnchorY)
+    {
+        OffsetY = BMPTile->AnchorY - BMPTile->Y;
+    }
+
     // Should bottom to top drawing happen at load or at draw?
     // TODO: Probably move this stuff to the load once we add in new image formats, then make a unified image struct
     bmp_file *BMPBaseFile = BMPTile->Tileset;
@@ -242,6 +253,7 @@ DrawBMPTile(bmp_tile *BMPTile, game_offscreen_buffer *Buffer,
             {
                 DestX = MinX + BMPTile->Width - ColIdx;
             }
+            DestX -= OffsetX;
 
             if (DestX < 0)
             {
@@ -253,6 +265,7 @@ DrawBMPTile(bmp_tile *BMPTile, game_offscreen_buffer *Buffer,
             }
 
             int32 DestY = MinY + RowIdx;
+            DestY -= OffsetY;
             if (DestY < 0)
             {
                 continue;
@@ -383,82 +396,146 @@ LoadTextTileset(text_tileset *TextTileset, bmp_file *BaseBMP)
 }
 
 internal void
-LoadLinkSprites(link_sprites *LinkSprites)
+LoadOctorokSprites(octorok_sprites *OctorokSprites, bmp_file *BaseBMP)
 {
-        LinkSprites->Front[0].Tileset = &LinkSprites->BaseBMP;
-        LinkSprites->Front[0].X = 1;
-        LinkSprites->Front[0].Y = 11;
-        LinkSprites->Front[0].Width = 16;
-        LinkSprites->Front[0].Height = 16;
+    OctorokSprites->BaseBMP = BaseBMP;
 
-        LinkSprites->Front[1].Tileset = &LinkSprites->BaseBMP;
-        LinkSprites->Front[1].X = 18;
-        LinkSprites->Front[1].Y = 11;
-        LinkSprites->Front[1].Width = 16;
-        LinkSprites->Front[1].Height = 16;
+    OctorokSprites->Front[0].Tileset = BaseBMP;
+    OctorokSprites->Front[0].X = 1;
+    OctorokSprites->Front[0].Y = 11;
+    OctorokSprites->Front[0].Width = 16;
+    OctorokSprites->Front[0].Height = 16;
 
-        LinkSprites->Right[0].Tileset = &LinkSprites->BaseBMP;
-        LinkSprites->Right[0].X = 35;
-        LinkSprites->Right[0].Y = 11;
-        LinkSprites->Right[0].Width = 16;
-        LinkSprites->Right[0].Height = 16;
+    OctorokSprites->Front[1].Tileset = BaseBMP;
+    OctorokSprites->Front[1].X = 18;
+    OctorokSprites->Front[1].Y = 11;
+    OctorokSprites->Front[1].Width = 16;
+    OctorokSprites->Front[1].Height = 16;
 
-        LinkSprites->Right[1].Tileset = &LinkSprites->BaseBMP;
-        LinkSprites->Right[1].X = 52;
-        LinkSprites->Right[1].Y = 11;
-        LinkSprites->Right[1].Width = 16;
-        LinkSprites->Right[1].Height = 16;
+    OctorokSprites->Back[0].Tileset = BaseBMP;
+    OctorokSprites->Back[0].X = 1;
+    OctorokSprites->Back[0].Y = 11;
+    OctorokSprites->Back[0].Width = 16;
+    OctorokSprites->Back[0].Height = 16;
+    OctorokSprites->Back[0].FlipY = true;
 
-        LinkSprites->Back[0].Tileset = &LinkSprites->BaseBMP;
-        LinkSprites->Back[0].X = 69;
-        LinkSprites->Back[0].Y = 11;
-        LinkSprites->Back[0].Width = 16;
-        LinkSprites->Back[0].Height = 16;
+    OctorokSprites->Back[1].Tileset = BaseBMP;
+    OctorokSprites->Back[1].X = 18;
+    OctorokSprites->Back[1].Y = 11;
+    OctorokSprites->Back[1].Width = 16;
+    OctorokSprites->Back[1].Height = 16;
+    OctorokSprites->Back[1].FlipY = true;
 
-        LinkSprites->Back[1].Tileset = &LinkSprites->BaseBMP;
-        LinkSprites->Back[1].X = 86;
-        LinkSprites->Back[1].Y = 11;
-        LinkSprites->Back[1].Width = 16;
-        LinkSprites->Back[1].Height = 16;
+    OctorokSprites->Left[0].Tileset = BaseBMP;
+    OctorokSprites->Left[0].X = 35;
+    OctorokSprites->Left[0].Y = 11;
+    OctorokSprites->Left[0].Width = 16;
+    OctorokSprites->Left[0].Height = 16;
 
-        LinkSprites->Left[0].Tileset = &LinkSprites->BaseBMP;
-        LinkSprites->Left[0].X = 35;
-        LinkSprites->Left[0].Y = 11;
-        LinkSprites->Left[0].Width = 16;
-        LinkSprites->Left[0].Height = 16;
-        LinkSprites->Left[0].FlipX = true;
+    OctorokSprites->Left[1].Tileset = BaseBMP;
+    OctorokSprites->Left[1].X = 52;
+    OctorokSprites->Left[1].Y = 11;
+    OctorokSprites->Left[1].Width = 16;
+    OctorokSprites->Left[1].Height = 16;
 
-        LinkSprites->Left[1].Tileset = &LinkSprites->BaseBMP;
-        LinkSprites->Left[1].X = 52;
-        LinkSprites->Left[1].Y = 11;
-        LinkSprites->Left[1].Width = 16;
-        LinkSprites->Left[1].Height = 16;
-        LinkSprites->Left[1].FlipX = true;
+    OctorokSprites->Right[0].Tileset = BaseBMP;
+    OctorokSprites->Right[0].X = 35;
+    OctorokSprites->Right[0].Y = 11;
+    OctorokSprites->Right[0].Width = 16;
+    OctorokSprites->Right[0].Height = 16;
+    OctorokSprites->Right[0].FlipX = true;
 
-        LinkSprites->SwordFront[0].Tileset = &LinkSprites->BaseBMP;
-        LinkSprites->SwordFront[0].X = 18;
-        LinkSprites->SwordFront[0].Y = 47;
-        LinkSprites->SwordFront[0].Width = 16;
-        LinkSprites->SwordFront[0].Height = 27;
+    OctorokSprites->Right[1].Tileset = BaseBMP;
+    OctorokSprites->Right[1].X = 52;
+    OctorokSprites->Right[1].Y = 11;
+    OctorokSprites->Right[1].Width = 16;
+    OctorokSprites->Right[1].Height = 16;
+    OctorokSprites->Right[1].FlipX = true;
+}
 
-        LinkSprites->SwordRight[0].Tileset = &LinkSprites->BaseBMP;
-        LinkSprites->SwordRight[0].X = 18;
-        LinkSprites->SwordRight[0].Y = 77;
-        LinkSprites->SwordRight[0].Width = 27;
-        LinkSprites->SwordRight[0].Height = 16;
+internal void
+LoadLinkSprites(link_sprites *LinkSprites, bmp_file *BaseBMP)
+{
+    LinkSprites->BaseBMP = BaseBMP;
 
-        LinkSprites->SwordBack[0].Tileset = &LinkSprites->BaseBMP;
-        LinkSprites->SwordBack[0].X = 18;
-        LinkSprites->SwordBack[0].Y = 97;
-        LinkSprites->SwordBack[0].Width = 16;
-        LinkSprites->SwordBack[0].Height = 27;
+    LinkSprites->Front[0].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->Front[0].X = 1;
+    LinkSprites->Front[0].Y = 11;
+    LinkSprites->Front[0].Width = 16;
+    LinkSprites->Front[0].Height = 16;
 
-        LinkSprites->SwordLeft[0].Tileset = &LinkSprites->BaseBMP;
-        LinkSprites->SwordLeft[0].X = 18;
-        LinkSprites->SwordLeft[0].Y = 77;
-        LinkSprites->SwordLeft[0].Width = 27;
-        LinkSprites->SwordLeft[0].Height = 16;
-        LinkSprites->SwordLeft[0].FlipX = true;
+    LinkSprites->Front[1].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->Front[1].X = 18;
+    LinkSprites->Front[1].Y = 11;
+    LinkSprites->Front[1].Width = 16;
+    LinkSprites->Front[1].Height = 16;
+
+    LinkSprites->Right[0].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->Right[0].X = 35;
+    LinkSprites->Right[0].Y = 11;
+    LinkSprites->Right[0].Width = 16;
+    LinkSprites->Right[0].Height = 16;
+
+    LinkSprites->Right[1].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->Right[1].X = 52;
+    LinkSprites->Right[1].Y = 11;
+    LinkSprites->Right[1].Width = 16;
+    LinkSprites->Right[1].Height = 16;
+
+    LinkSprites->Back[0].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->Back[0].X = 69;
+    LinkSprites->Back[0].Y = 11;
+    LinkSprites->Back[0].Width = 16;
+    LinkSprites->Back[0].Height = 16;
+
+    LinkSprites->Back[1].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->Back[1].X = 86;
+    LinkSprites->Back[1].Y = 11;
+    LinkSprites->Back[1].Width = 16;
+    LinkSprites->Back[1].Height = 16;
+
+    LinkSprites->Left[0].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->Left[0].X = 35;
+    LinkSprites->Left[0].Y = 11;
+    LinkSprites->Left[0].Width = 16;
+    LinkSprites->Left[0].Height = 16;
+    LinkSprites->Left[0].FlipX = true;
+
+    LinkSprites->Left[1].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->Left[1].X = 52;
+    LinkSprites->Left[1].Y = 11;
+    LinkSprites->Left[1].Width = 16;
+    LinkSprites->Left[1].Height = 16;
+    LinkSprites->Left[1].FlipX = true;
+
+    LinkSprites->SwordFront[0].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->SwordFront[0].X = 18;
+    LinkSprites->SwordFront[0].Y = 47;
+    LinkSprites->SwordFront[0].Width = 16;
+    LinkSprites->SwordFront[0].Height = 27;
+
+    LinkSprites->SwordRight[0].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->SwordRight[0].X = 18;
+    LinkSprites->SwordRight[0].Y = 77;
+    LinkSprites->SwordRight[0].Width = 27;
+    LinkSprites->SwordRight[0].Height = 16;
+
+    LinkSprites->SwordBack[0].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->SwordBack[0].X = 18;
+    LinkSprites->SwordBack[0].Y = 97;
+    LinkSprites->SwordBack[0].AnchorX = 18;
+    LinkSprites->SwordBack[0].AnchorY = 109;
+    LinkSprites->SwordBack[0].Width = 16;
+    LinkSprites->SwordBack[0].Height = 27;
+
+    LinkSprites->SwordLeft[0].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->SwordLeft[0].X = 18;
+    LinkSprites->SwordLeft[0].Y = 77;
+    LinkSprites->SwordLeft[0].AnchorX = 33;
+    LinkSprites->SwordLeft[0].AnchorY = 77;
+    LinkSprites->SwordLeft[0].Width = 27;
+    LinkSprites->SwordLeft[0].Height = 16;
+    LinkSprites->SwordLeft[0].FlipX = true;
 }
 
 internal int32

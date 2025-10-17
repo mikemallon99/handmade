@@ -35,9 +35,12 @@ struct bmp_tile
     bmp_file *Tileset;
     uint32 X;
     uint32 Y;
+    uint32 AnchorX;
+    uint32 AnchorY;
     uint32 Width;
     uint32 Height;
     bool32 FlipX;
+    bool32 FlipY;
 };
 
 struct overworld_tileset
@@ -53,6 +56,28 @@ struct text_tileset
     bmp_file *BaseBMP;
 
     bmp_tile Tiles[48];
+};
+
+struct link_sprites
+{
+    bmp_file *BaseBMP;
+    bmp_tile Front[2];
+    bmp_tile Back[2];
+    bmp_tile Left[2];
+    bmp_tile Right[2];
+    bmp_tile SwordFront[3];
+    bmp_tile SwordRight[3];
+    bmp_tile SwordBack[3];
+    bmp_tile SwordLeft[3];
+};
+
+struct octorok_sprites
+{
+    bmp_file *BaseBMP;
+    bmp_tile Front[2];
+    bmp_tile Back[2];
+    bmp_tile Left[2];
+    bmp_tile Right[2];
 };
 
 #endif
