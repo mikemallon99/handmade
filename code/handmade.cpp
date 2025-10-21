@@ -94,20 +94,21 @@ DrawDebugPoint(game_offscreen_buffer *Buffer, tile_map *TileMap, real32 PlayArea
 }
 
 internal bool32
-IsHitboxPointActive(game_state* GameState, tile_map *TileMap, tile_map_position Pos)
+IsHitboxPointActive(tile_map_position PlayerP, tile_map_position HitboxP, 
+                    real32 HitboxWidth, real32 HitboxHeight)
 {
     bool32 Active = false;
 
-    tile_map_position OctorokBotLeft = GameState->OctorokP;
-    tile_map_position OctorokTopRight = GameState->OctorokP;
-    OctorokTopRight.Pos.X += 1.0f;
-    OctorokTopRight.Pos.Y += 1.0f;
+    tile_map_position HitboxBotLeft = HitboxP;
+    tile_map_position HitboxTopRight = HitboxP;
+    HitboxTopRight.Pos.X += HitboxWidth;
+    HitboxTopRight.Pos.Y += HitboxHeight;
 
     // AABB checking
-    if (Pos.Pos.X >= OctorokBotLeft.Pos.X && 
-        Pos.Pos.X <= OctorokTopRight.Pos.X &&
-        Pos.Pos.Y >= OctorokBotLeft.Pos.Y &&
-        Pos.Pos.Y <= OctorokTopRight.Pos.Y)
+    if (PlayerP.Pos.X >= HitboxBotLeft.Pos.X && 
+        PlayerP.Pos.X <= HitboxTopRight.Pos.X &&
+        PlayerP.Pos.Y >= HitboxBotLeft.Pos.Y &&
+        PlayerP.Pos.Y <= HitboxTopRight.Pos.Y)
     {
         Active = true;
     }
@@ -197,17 +198,19 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         CaveRoom->Down->Pos.Y = 8.5f;
 
         GameState->PlayerHealth = 9;
-        GameState->OctorokHealth = 3;
+        GameState->Octorok.Health = 3;
 
         GameState->PlayerP.RoomIDX = SpawnRoomX;
         GameState->PlayerP.RoomIDY = SpawnRoomY;
         GameState->PlayerP.Pos.X = 5.0f;
         GameState->PlayerP.Pos.Y = 5.0f;
 
-        GameState->OctorokP.Pos.X = 8;
-        GameState->OctorokP.Pos.Y = 5.0f;
-        GameState->OctorokP.RoomIDX = SpawnRoomX;
-        GameState->OctorokP.RoomIDY = SpawnRoomY;
+        GameState->Octorok.P.Pos.X = 8;
+        GameState->Octorok.P.Pos.Y = 5.0f;
+        GameState->Octorok.P.RoomIDX = SpawnRoomX;
+        GameState->Octorok.P.RoomIDY = SpawnRoomY;
+
+        GameState->OctorokProjectile.FireFrequency = 60;
 
         // NOTE: We should probably start a new arena for this image? 
         // Memory->Background = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_background.bmp");
@@ -227,7 +230,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->OWEnemiesBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
                                                 "tiles/overworld_enemies.bmp");
         
-        LoadOctorokSprites(&GameState->OctorokSprites, &GameState->OWEnemiesBMP);
+        LoadOctorokSprites(&GameState->Octorok.Sprites, &GameState->OWEnemiesBMP);
+
+        GameState->OctorokProjectile.Sprite.Tileset = &GameState->OWEnemiesBMP;
+        GameState->OctorokProjectile.Sprite.X = 69;
+        GameState->OctorokProjectile.Sprite.Y = 11;
+        GameState->OctorokProjectile.Sprite.Width = 8;
+        GameState->OctorokProjectile.Sprite.Height = 16;
 
         // NOTE: maybe move this to platform layer
         Memory->IsInitialized = true;
@@ -286,10 +295,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             }
 
             // B
-            GameState->PlayerUsingSword = false;
             if (Controller->ActionLeft.EndedDown)
             {
-                GameState->PlayerUsingSword = true;
+                if (!GameState->PlayerUsingSword)
+                {
+                    GameState->PlayerUsingSword = true;
+                    GameState->SwordUsageFrame = -1;
+                }
             }
             // A
             if (Controller->ActionDown.EndedDown)
@@ -321,6 +333,18 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
+    // Player logic stuff
+    if (GameState->PlayerUsingSword)
+    {
+        GameState->SwordUsageFrame += 1;
+
+        if (GameState->SwordUsageFrame > 30)
+        {
+            GameState->PlayerUsingSword = false;
+        }
+    }
+
+    // Player movement stuff
     dPlayerX *= PlayerSpeed;
     dPlayerY *= PlayerSpeed;
 
@@ -329,8 +353,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     tile_map_position NewPlayerP = NewPlayerOrigin;
     NewPlayerP.Pos.X += 0.5f;
 
-    NewPlayerP.Pos.X += Input->dtForFrame*dPlayerX;
-    NewPlayerP.Pos.Y += Input->dtForFrame*dPlayerY;
+    if (!GameState->PlayerUsingSword)
+    {
+        NewPlayerP.Pos.X += Input->dtForFrame*dPlayerX;
+        NewPlayerP.Pos.Y += Input->dtForFrame*dPlayerY;
+    }
 
     tile_map_position NewPlayerUp = NewPlayerP;
     NewPlayerUp.Pos.Y += 0.1f*PlayerHeight;
@@ -428,26 +455,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             NewPlayerP.Pos.X += 0.5f;
         }
 
-        // Enemy Collisions
-        // TODO: Make the player hitbox aabb also
-        if (GameState->InvincibilityTimer == 0)
-        {
-            // TODO: Make it so i dont have to check this everywhere
-            if (GameState->OctorokHealth)
-            {
-                bool32 IsHit = IsHitboxPointActive(GameState, TileMap, NewPlayerP);
-                if (IsHit)
-                {
-                    GameState->InvincibilityTimer = 60;
-                    GameState->PlayerHealth -= 1;
-                }
-            }
-        }
-        else
-        {
-            GameState->InvincibilityTimer -= 1;
-        }
-
         if (GameState->PlayerUsingSword)
         {
             tile_map_position SwordPoint = NewPlayerOrigin;
@@ -477,23 +484,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             }
             SwordPoint.Pos.X += (real32)PixelOffsetX / TileMap->MetersToPixels;
             SwordPoint.Pos.Y -= (real32)PixelOffsetY / TileMap->MetersToPixels;
-            GameState->DebugSwordPoint = SwordPoint;
-
-            // Octorok hit checking
-            if (GameState->OctoInvincibilityTimer == 0 && GameState->OctorokHealth > 0)
-            {
-                bool32 IsEnemyHit = IsHitboxPointActive(GameState, TileMap, SwordPoint);
-                if (IsEnemyHit)
-                {
-                    GameState->OctoInvincibilityTimer = 60;
-                    GameState->OctorokHealth -= 1;
-                }
-            }
-        }
-
-        if (GameState->OctoInvincibilityTimer > 0)
-        {
-            GameState->OctoInvincibilityTimer -= 1;
+            GameState->SwordPoint = SwordPoint;
         }
     }
 
@@ -503,21 +494,91 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     GameState->PlayerP = NewPlayerOrigin;
 
     // Octorok position update
-    if (IsInSameTileRoom(GameState->PlayerP, GameState->OctorokP))
+    if (IsInSameTileRoom(GameState->PlayerP, GameState->Octorok.P))
     {
         local_persist int32 YDirection = -1;
-        if (GameState->OctorokP.Pos.Y > 8)
+        if (GameState->Octorok.P.Pos.Y > 8)
         {
             YDirection = -1;
         }
-        else if (GameState->OctorokP.Pos.Y < 3)
+        else if (GameState->Octorok.P.Pos.Y < 3)
         {
             YDirection = 1;
         }
-        GameState->OctorokP.Pos.Y += (real32)YDirection * 0.05f;
+        GameState->Octorok.P.Pos.Y += (real32)YDirection * 0.05f;
     }
 
-    // Start drawing process
+    // Octorok fire projectile
+    if (!GameState->OctorokProjectile.IsActive && 
+        GameState->Octorok.Health > 0 &&
+        GameState->FrameCounter % GameState->OctorokProjectile.FireFrequency == 0)
+    {
+        GameState->OctorokProjectile.IsActive = true;
+        GameState->OctorokProjectile.VelocityX = 0.0;
+        GameState->OctorokProjectile.VelocityY = -5.0;
+        GameState->OctorokProjectile.P = GameState->Octorok.P;
+    }
+
+    if (GameState->OctorokProjectile.IsActive)
+    {
+        GameState->OctorokProjectile.P.Pos.X += GameState->OctorokProjectile.VelocityX/60.0f;
+        GameState->OctorokProjectile.P.Pos.Y += GameState->OctorokProjectile.VelocityY/60.0f;
+
+        if (GameState->OctorokProjectile.P.Pos.Y < 0)
+        {
+            GameState->OctorokProjectile.IsActive = false;
+        }
+    }
+
+    // Checking if octorok hit player
+    // NOTE: I chose to do this after the octo position update, so were not using pos from last frame
+    if (GameState->InvincibilityTimer == 0)
+    {
+        // TODO: Make it so i dont have to check this everywhere
+        if (GameState->Octorok.Health)
+        {
+            bool32 IsHit = IsHitboxPointActive(NewPlayerP, GameState->Octorok.P, 1.0f, 1.0f);
+            if (IsHit)
+            {
+                GameState->InvincibilityTimer = 60;
+                GameState->PlayerHealth -= 1;
+            }
+        }
+
+        // Is projectile hitting the player?
+        if (GameState->OctorokProjectile.IsActive)
+        {
+            bool32 IsHit = IsHitboxPointActive(NewPlayerP, GameState->OctorokProjectile.P, 0.5f, 1.0f);
+            if (IsHit)
+            {
+                GameState->InvincibilityTimer = 60;
+                GameState->PlayerHealth -= 1;
+                GameState->OctorokProjectile.IsActive = false;
+            }
+        }
+    }
+    else
+    {
+        GameState->InvincibilityTimer -= 1;
+    }
+
+    // Player sword hitting Octorok checking
+    if (GameState->Octorok.InvincibilityTimer == 0 && GameState->Octorok.Health > 0)
+    {
+        bool32 IsEnemyHit = IsHitboxPointActive(GameState->SwordPoint, GameState->Octorok.P, 1.0f, 1.0f);
+        if (IsEnemyHit)
+        {
+            GameState->Octorok.InvincibilityTimer = 60;
+            GameState->Octorok.Health -= 1;
+        }
+    }
+    if (GameState->Octorok.InvincibilityTimer > 0)
+    {
+        GameState->Octorok.InvincibilityTimer -= 1;
+    }
+
+    // RENDERING
+
     DrawRectangle(Buffer, 0.0f, 0.0f, (real32)Buffer->Width, (real32)Buffer->Height, 
                   0.0f, 0.0f, 0.0f);
 
@@ -571,21 +632,41 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     bmp_tile *LinkSprite;
     if (GameState->PlayerUsingSword)
     {
+        uint32 SwordSpriteIndex;
+        if (GameState->SwordUsageFrame < 10)
+        {
+            SwordSpriteIndex = 0;
+        }
+        else if (GameState->SwordUsageFrame < 20)
+        {
+            SwordSpriteIndex = 1;
+        }
+        else if (GameState->SwordUsageFrame <= 30)
+        {
+            // SwordSpriteIndex = (uint32)GameState->SwordUsageFrame - 4 + 2;
+            SwordSpriteIndex = 3;
+        }
+        else
+        {
+            SwordSpriteIndex = 0;
+            Assert(0);
+        }
+
         if (GameState->HeroDirection == FRONT)
         {
-            LinkSprite = &GameState->LinkSprites.SwordFront[0];
+            LinkSprite = &GameState->LinkSprites.SwordFront[SwordSpriteIndex];
         }
         else if (GameState->HeroDirection == BACK)
         {
-            LinkSprite = &GameState->LinkSprites.SwordBack[0];
+            LinkSprite = &GameState->LinkSprites.SwordBack[SwordSpriteIndex];
         }
         else if (GameState->HeroDirection == LEFT)
         {
-            LinkSprite = &GameState->LinkSprites.SwordLeft[0];
+            LinkSprite = &GameState->LinkSprites.SwordLeft[SwordSpriteIndex];
         }
         else if (GameState->HeroDirection == RIGHT)
         {
-            LinkSprite = &GameState->LinkSprites.SwordRight[0];
+            LinkSprite = &GameState->LinkSprites.SwordRight[SwordSpriteIndex];
         }
         else
         {
@@ -645,10 +726,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     DrawDebugPoint(Buffer, TileMap, PlayAreaY, GameState->PlayerP);
 
-    if (GameState->PlayerUsingSword)
-    {
-        DrawDebugPoint(Buffer, TileMap, PlayAreaY, GameState->DebugSwordPoint);
-    }
+    // if (GameState->PlayerUsingSword)
+    // {
+    //     DrawDebugPoint(Buffer, TileMap, PlayAreaY, GameState->SwordPoint);
+    // }
 
     // Draw Coordinates UI
     // TODO: Make this into a sprintf thing
@@ -693,12 +774,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     DrawString(Buffer, &GameState->TextTileset, TestString, 0.0f, 8.0f);
 
     DrawBMPTile(&GameState->TextTileset.Tiles[GameState->PlayerHealth], Buffer, 0, 16);
-    DrawBMPTile(&GameState->TextTileset.Tiles[GameState->OctorokHealth], Buffer, 32, 16);
+    DrawBMPTile(&GameState->TextTileset.Tiles[GameState->Octorok.Health], Buffer, 32, 16);
 
-    if (IsInSameTileRoom(GameState->PlayerP, GameState->OctorokP) && GameState->OctorokHealth > 0)
+    if (IsInSameTileRoom(GameState->PlayerP, GameState->Octorok.P) && GameState->Octorok.Health > 0)
     {
-        real32 OctoOriginX = TileMap->TileSideInPixels*(GameState->OctorokP.Pos.X - (real32)CameraTileX);
-        real32 OctoOriginY = PlayAreaY - TileMap->TileSideInPixels*(GameState->OctorokP.Pos.Y - 11.0f);
+        real32 OctoOriginX = TileMap->TileSideInPixels*(GameState->Octorok.P.Pos.X - (real32)CameraTileX);
+        real32 OctoOriginY = PlayAreaY - TileMap->TileSideInPixels*(GameState->Octorok.P.Pos.Y - 11.0f);
         real32 OctoScreenX = OctoOriginX;
         // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
         real32 OctoScreenY = OctoOriginY - TileMap->TileSideInPixels*1.0f;
@@ -707,30 +788,41 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                       1.0f, 0.0f, 0.0f);
 
         // Hurt/Invincible rendering
-        if (GameState->OctoInvincibilityTimer > 0)
+        if (GameState->Octorok.InvincibilityTimer > 0)
         {
-            if (GameState->OctoInvincibilityTimer % 6 == 0)
+            if (GameState->Octorok.InvincibilityTimer % 6 == 0)
             {
-                if (GameState->OctoIFramesFlicker)
+                if (GameState->Octorok.IFramesFlicker)
                 {
-                    GameState->OctoIFramesFlicker = false;
+                    GameState->Octorok.IFramesFlicker = false;
                 }
                 else
                 {
-                    GameState->OctoIFramesFlicker = true;
+                    GameState->Octorok.IFramesFlicker = true;
                 }
             }
         }
         else 
         {
-            GameState->OctoIFramesFlicker = false;
+            GameState->Octorok.IFramesFlicker = false;
         }
 
-        if (!GameState->OctoIFramesFlicker)
+        if (!GameState->Octorok.IFramesFlicker)
         {
             uint32 OctoSpriteIndex = (GameState->FrameCounter & 0x10) == 0x10;
-            DrawBMPTile(&GameState->OctorokSprites.Front[OctoSpriteIndex], Buffer, OctoScreenX, OctoScreenY);
+            DrawBMPTile(&GameState->Octorok.Sprites.Front[OctoSpriteIndex], Buffer, OctoScreenX, OctoScreenY);
         }
+    }
+
+    if (IsInSameTileRoom(GameState->PlayerP, GameState->OctorokProjectile.P) && 
+        GameState->OctorokProjectile.IsActive)
+    {
+        real32 ProjOriginX = TileMap->TileSideInPixels*(GameState->OctorokProjectile.P.Pos.X - (real32)CameraTileX);
+        real32 ProjOriginY = PlayAreaY - TileMap->TileSideInPixels*(GameState->OctorokProjectile.P.Pos.Y - 11.0f);
+        real32 ProjScreenX = ProjOriginX;
+        // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
+        real32 ProjScreenY = ProjOriginY - TileMap->TileSideInPixels*1.0f;
+        DrawBMPTile(&GameState->OctorokProjectile.Sprite, Buffer, ProjScreenX, ProjScreenY);
     }
 
     GameState->FrameCounter++;

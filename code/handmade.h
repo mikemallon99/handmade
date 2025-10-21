@@ -235,6 +235,26 @@ struct world
 
 enum hero_direction {FRONT, BACK, LEFT, RIGHT};
 
+struct octorok
+{
+    // NOTE: Theres only 1 sprite for these guys, not a good reason to load it 4 times
+    octorok_sprites Sprites;
+    uint32 Health;
+    tile_map_position P;
+    uint32 InvincibilityTimer;
+    bool32 IFramesFlicker;
+};
+
+struct octorok_projectile
+{
+    tile_map_position P;
+    real32 VelocityX;
+    real32 VelocityY;
+    bool32 IsActive;
+    uint32 FireFrequency;
+    bmp_tile Sprite;
+};
+
 struct game_state
 {
     memory_arena WorldArena;
@@ -244,11 +264,11 @@ struct game_state
     tile_map_position PlayerP;
     uint32 PlayerHealth;
     bool32 PlayerUsingSword;
+    int32 SwordUsageFrame;
+    tile_map_position SwordPoint;
     hero_direction HeroDirection;
     uint32 InvincibilityTimer;
     bool32 IFramesFlicker;
-
-    tile_map_position DebugSwordPoint;
 
     bmp_file Background;
 
@@ -263,12 +283,9 @@ struct game_state
     text_tileset TextTileset;
 
     bmp_file OWEnemiesBMP;
-    // NOTE: Theres only 1 sprite for these guys, not a good reason to load it 4 times
-    octorok_sprites OctorokSprites;
-    uint32 OctorokHealth;
-    tile_map_position OctorokP;
-    uint32 OctoInvincibilityTimer;
-    bool32 OctoIFramesFlicker;
+
+    octorok Octorok;
+    octorok_projectile OctorokProjectile;
 };
 
 #endif

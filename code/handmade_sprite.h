@@ -65,10 +65,10 @@ struct link_sprites
     bmp_tile Back[2];
     bmp_tile Left[2];
     bmp_tile Right[2];
-    bmp_tile SwordFront[3];
-    bmp_tile SwordRight[3];
-    bmp_tile SwordBack[3];
-    bmp_tile SwordLeft[3];
+    bmp_tile SwordFront[4];
+    bmp_tile SwordRight[4];
+    bmp_tile SwordBack[4];
+    bmp_tile SwordLeft[4];
 };
 
 struct octorok_sprites

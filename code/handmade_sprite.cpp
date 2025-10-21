@@ -227,7 +227,14 @@ DrawBMPTile(bmp_tile *BMPTile, game_offscreen_buffer *Buffer,
     int32 OffsetX = 0;
     if (BMPTile->AnchorX)
     {
-        OffsetX = BMPTile->AnchorX - BMPTile->X;
+        if (BMPTile->FlipX)
+        {
+            OffsetX = (BMPTile->X + BMPTile->Width) - BMPTile->AnchorX;
+        }
+        else
+        {
+            OffsetX = BMPTile->AnchorX - BMPTile->X;
+        }
     }
     int32 OffsetY = 0;
     if (BMPTile->AnchorY)
@@ -249,10 +256,6 @@ DrawBMPTile(bmp_tile *BMPTile, game_offscreen_buffer *Buffer,
             )
         {
             int32 DestX = MinX + ColIdx;
-            if (BMPTile->FlipX)
-            {
-                DestX = MinX + BMPTile->Width - ColIdx;
-            }
             DestX -= OffsetX;
 
             if (DestX < 0)
@@ -276,6 +279,11 @@ DrawBMPTile(bmp_tile *BMPTile, game_offscreen_buffer *Buffer,
             }
 
             uint32 SourceX = BMPTile->X + ColIdx;
+            // NOTE: If X is flipped, then grab from buffer in reverse order
+            if (BMPTile->FlipX)
+            {
+                SourceX = BMPTile->X + BMPTile->Width - ColIdx;
+            }
             uint32 SourceY = BMPTile->Y + RowIdx;
 
             uint32 ImageOffset = SourceY*BMPBaseFile->Width + SourceX;
@@ -509,33 +517,120 @@ LoadLinkSprites(link_sprites *LinkSprites, bmp_file *BaseBMP)
     LinkSprites->Left[1].FlipX = true;
 
     LinkSprites->SwordFront[0].Tileset = LinkSprites->BaseBMP;
-    LinkSprites->SwordFront[0].X = 18;
+    LinkSprites->SwordFront[0].X = 1;
     LinkSprites->SwordFront[0].Y = 47;
     LinkSprites->SwordFront[0].Width = 16;
     LinkSprites->SwordFront[0].Height = 27;
 
+    LinkSprites->SwordFront[1].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->SwordFront[1].X = 18;
+    LinkSprites->SwordFront[1].Y = 47;
+    LinkSprites->SwordFront[1].Width = 16;
+    LinkSprites->SwordFront[1].Height = 27;
+
+    LinkSprites->SwordFront[2].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->SwordFront[2].X = 35;
+    LinkSprites->SwordFront[2].Y = 47;
+    LinkSprites->SwordFront[2].Width = 16;
+    LinkSprites->SwordFront[2].Height = 27;
+
+    LinkSprites->SwordFront[3].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->SwordFront[3].X = 52;
+    LinkSprites->SwordFront[3].Y = 47;
+    LinkSprites->SwordFront[3].Width = 16;
+    LinkSprites->SwordFront[3].Height = 27;
+
     LinkSprites->SwordRight[0].Tileset = LinkSprites->BaseBMP;
-    LinkSprites->SwordRight[0].X = 18;
+    LinkSprites->SwordRight[0].X = 1;
     LinkSprites->SwordRight[0].Y = 77;
-    LinkSprites->SwordRight[0].Width = 27;
+    LinkSprites->SwordRight[0].Width = 16;
     LinkSprites->SwordRight[0].Height = 16;
 
+    LinkSprites->SwordRight[1].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->SwordRight[1].X = 18;
+    LinkSprites->SwordRight[1].Y = 77;
+    LinkSprites->SwordRight[1].Width = 27;
+    LinkSprites->SwordRight[1].Height = 16;
+
+    LinkSprites->SwordRight[2].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->SwordRight[2].X = 46;
+    LinkSprites->SwordRight[2].Y = 77;
+    LinkSprites->SwordRight[2].Width = 70 - 46;
+    LinkSprites->SwordRight[2].Height = 16;
+
+    LinkSprites->SwordRight[3].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->SwordRight[3].X = 70;
+    LinkSprites->SwordRight[3].Y = 77;
+    LinkSprites->SwordRight[3].Width = 89 - 70;
+    LinkSprites->SwordRight[3].Height = 16;
+
     LinkSprites->SwordBack[0].Tileset = LinkSprites->BaseBMP;
-    LinkSprites->SwordBack[0].X = 18;
+    LinkSprites->SwordBack[0].X = 1;
     LinkSprites->SwordBack[0].Y = 97;
-    LinkSprites->SwordBack[0].AnchorX = 18;
+    LinkSprites->SwordBack[0].AnchorX = 1;
     LinkSprites->SwordBack[0].AnchorY = 109;
     LinkSprites->SwordBack[0].Width = 16;
     LinkSprites->SwordBack[0].Height = 27;
 
+    LinkSprites->SwordBack[1].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->SwordBack[1].X = 18;
+    LinkSprites->SwordBack[1].Y = 97;
+    LinkSprites->SwordBack[1].AnchorX = 18;
+    LinkSprites->SwordBack[1].AnchorY = 109;
+    LinkSprites->SwordBack[1].Width = 16;
+    LinkSprites->SwordBack[1].Height = 27;
+
+    LinkSprites->SwordBack[2].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->SwordBack[2].X = 35;
+    LinkSprites->SwordBack[2].Y = 97;
+    LinkSprites->SwordBack[2].AnchorX = 35;
+    LinkSprites->SwordBack[2].AnchorY = 109;
+    LinkSprites->SwordBack[2].Width = 16;
+    LinkSprites->SwordBack[2].Height = 27;
+
+    LinkSprites->SwordBack[3].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->SwordBack[3].X = 52;
+    LinkSprites->SwordBack[3].Y = 97;
+    LinkSprites->SwordBack[3].AnchorX = 52;
+    LinkSprites->SwordBack[3].AnchorY = 109;
+    LinkSprites->SwordBack[3].Width = 16;
+    LinkSprites->SwordBack[3].Height = 27;
+
     LinkSprites->SwordLeft[0].Tileset = LinkSprites->BaseBMP;
-    LinkSprites->SwordLeft[0].X = 18;
+    LinkSprites->SwordLeft[0].X = 1;
     LinkSprites->SwordLeft[0].Y = 77;
-    LinkSprites->SwordLeft[0].AnchorX = 33;
-    LinkSprites->SwordLeft[0].AnchorY = 77;
-    LinkSprites->SwordLeft[0].Width = 27;
+    LinkSprites->SwordLeft[0].Width = 16;
     LinkSprites->SwordLeft[0].Height = 16;
+    LinkSprites->SwordLeft[0].AnchorX = 17;
+    LinkSprites->SwordLeft[0].AnchorY = 77;
     LinkSprites->SwordLeft[0].FlipX = true;
+
+    LinkSprites->SwordLeft[1].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->SwordLeft[1].X = 18;
+    LinkSprites->SwordLeft[1].Y = 77;
+    LinkSprites->SwordLeft[1].Width = 27;
+    LinkSprites->SwordLeft[1].Height = 16;
+    LinkSprites->SwordLeft[1].AnchorX = 34;
+    LinkSprites->SwordLeft[1].AnchorY = 77;
+    LinkSprites->SwordLeft[1].FlipX = true;
+
+    LinkSprites->SwordLeft[2].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->SwordLeft[2].X = 46;
+    LinkSprites->SwordLeft[2].Y = 77;
+    LinkSprites->SwordLeft[2].Width = 70 - 46;
+    LinkSprites->SwordLeft[2].Height = 16;
+    LinkSprites->SwordLeft[2].AnchorX = 62;
+    LinkSprites->SwordLeft[2].AnchorY = 77;
+    LinkSprites->SwordLeft[2].FlipX = true;
+
+    LinkSprites->SwordLeft[3].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->SwordLeft[3].X = 70;
+    LinkSprites->SwordLeft[3].Y = 77;
+    LinkSprites->SwordLeft[3].Width = 89 - 70;
+    LinkSprites->SwordLeft[3].Height = 16;
+    LinkSprites->SwordLeft[3].AnchorX = 86;
+    LinkSprites->SwordLeft[3].AnchorY = 77;
+    LinkSprites->SwordLeft[3].FlipX = true;
 }
 
 internal int32
