@@ -255,6 +255,25 @@ struct octorok_projectile
     bmp_tile Sprite;
 };
 
+struct moblin
+{
+    moblin_sprites Sprites;
+    uint32 Health;
+    tile_map_position P;
+    uint32 InvincibilityTimer;
+    bool32 IFramesFlicker;
+};
+
+struct moblin_projectile
+{
+    tile_map_position P;
+    real32 VelocityX;
+    real32 VelocityY;
+    bool32 IsActive;
+    uint32 FireFrequency;
+    bmp_tile Sprite;
+};
+
 struct game_state
 {
     memory_arena WorldArena;
@@ -286,6 +305,9 @@ struct game_state
 
     octorok Octorok;
     octorok_projectile OctorokProjectile;
+
+    moblin Moblin;
+    moblin_projectile MoblinProjectile;
 };
 
 #endif

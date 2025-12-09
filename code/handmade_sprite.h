@@ -80,4 +80,13 @@ struct octorok_sprites
     bmp_tile Right[2];
 };
 
+struct moblin_sprites
+{
+    bmp_file *BaseBMP;
+    bmp_tile Front[2];
+    bmp_tile Back[2];
+    bmp_tile Left[2];
+    bmp_tile Right[2];
+};
+
 #endif

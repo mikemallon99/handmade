@@ -462,6 +462,64 @@ LoadOctorokSprites(octorok_sprites *OctorokSprites, bmp_file *BaseBMP)
 }
 
 internal void
+LoadMoblinSprites(moblin_sprites *MoblinSprites, bmp_file *BaseBMP)
+{
+    MoblinSprites->BaseBMP = BaseBMP;
+
+    MoblinSprites->Front[0].Tileset = BaseBMP;
+    MoblinSprites->Front[0].X = 82;
+    MoblinSprites->Front[0].Y = 11;
+    MoblinSprites->Front[0].Width = 16;
+    MoblinSprites->Front[0].Height = 16;
+
+    MoblinSprites->Front[1].Tileset = BaseBMP;
+    MoblinSprites->Front[1].X = 82;
+    MoblinSprites->Front[1].Y = 11;
+    MoblinSprites->Front[1].Width = 16;
+    MoblinSprites->Front[1].Height = 16;
+    MoblinSprites->Front[1].FlipX = true;
+
+    MoblinSprites->Back[0].Tileset = BaseBMP;
+    MoblinSprites->Back[0].X = 99;
+    MoblinSprites->Back[0].Y = 11;
+    MoblinSprites->Back[0].Width = 16;
+    MoblinSprites->Back[0].Height = 16;
+
+    MoblinSprites->Back[1].Tileset = BaseBMP;
+    MoblinSprites->Back[1].X = 99;
+    MoblinSprites->Back[1].Y = 11;
+    MoblinSprites->Back[1].Width = 16;
+    MoblinSprites->Back[1].Height = 16;
+    MoblinSprites->Back[1].FlipX = true;
+
+    MoblinSprites->Left[0].Tileset = BaseBMP;
+    MoblinSprites->Left[0].X = 116;
+    MoblinSprites->Left[0].Y = 11;
+    MoblinSprites->Left[0].Width = 16;
+    MoblinSprites->Left[0].Height = 16;
+    MoblinSprites->Left[0].FlipX = true;
+
+    MoblinSprites->Left[1].Tileset = BaseBMP;
+    MoblinSprites->Left[1].X = 133;
+    MoblinSprites->Left[1].Y = 11;
+    MoblinSprites->Left[1].Width = 16;
+    MoblinSprites->Left[1].Height = 16;
+    MoblinSprites->Left[0].FlipX = true;
+
+    MoblinSprites->Right[0].Tileset = BaseBMP;
+    MoblinSprites->Right[0].X = 116;
+    MoblinSprites->Right[0].Y = 11;
+    MoblinSprites->Right[0].Width = 16;
+    MoblinSprites->Right[0].Height = 16;
+
+    MoblinSprites->Right[1].Tileset = BaseBMP;
+    MoblinSprites->Right[1].X = 133;
+    MoblinSprites->Right[1].Y = 11;
+    MoblinSprites->Right[1].Width = 16;
+    MoblinSprites->Right[1].Height = 16;
+}
+
+internal void
 LoadLinkSprites(link_sprites *LinkSprites, bmp_file *BaseBMP)
 {
     LinkSprites->BaseBMP = BaseBMP;
