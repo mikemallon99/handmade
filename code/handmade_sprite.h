@@ -87,6 +87,10 @@ struct moblin_sprites
     bmp_tile Back[2];
     bmp_tile Left[2];
     bmp_tile Right[2];
+    bmp_tile ArrowFront;
+    bmp_tile ArrowBack;
+    bmp_tile ArrowLeft;
+    bmp_tile ArrowRight;
 };
 
 #endif

@@ -517,6 +517,32 @@ LoadMoblinSprites(moblin_sprites *MoblinSprites, bmp_file *BaseBMP)
     MoblinSprites->Right[1].Y = 11;
     MoblinSprites->Right[1].Width = 16;
     MoblinSprites->Right[1].Height = 16;
+
+    MoblinSprites->ArrowFront.Tileset = BaseBMP;
+    MoblinSprites->ArrowFront.X = 150;
+    MoblinSprites->ArrowFront.Y = 11;
+    MoblinSprites->ArrowFront.Width = 8;
+    MoblinSprites->ArrowFront.Height = 16;
+    MoblinSprites->ArrowFront.FlipY = true;
+
+    MoblinSprites->ArrowBack.Tileset = BaseBMP;
+    MoblinSprites->ArrowBack.X = 150;
+    MoblinSprites->ArrowBack.Y = 11;
+    MoblinSprites->ArrowBack.Width = 8;
+    MoblinSprites->ArrowBack.Height = 16;
+
+    MoblinSprites->ArrowLeft.Tileset = BaseBMP;
+    MoblinSprites->ArrowLeft.X = 159;
+    MoblinSprites->ArrowLeft.Y = 11;
+    MoblinSprites->ArrowLeft.Width = 16;
+    MoblinSprites->ArrowLeft.Height = 16;
+    MoblinSprites->ArrowLeft.FlipX = true;
+
+    MoblinSprites->ArrowRight.Tileset = BaseBMP;
+    MoblinSprites->ArrowRight.X = 159;
+    MoblinSprites->ArrowRight.Y = 11;
+    MoblinSprites->ArrowRight.Width = 16;
+    MoblinSprites->ArrowRight.Height = 16;
 }
 
 internal void

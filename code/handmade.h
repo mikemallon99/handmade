@@ -233,7 +233,7 @@ struct world
     tile_map *TileMap;
 };
 
-enum hero_direction {FRONT, BACK, LEFT, RIGHT};
+enum direction {FRONT, BACK, LEFT, RIGHT};
 
 struct octorok
 {
@@ -262,6 +262,7 @@ struct moblin
     tile_map_position P;
     uint32 InvincibilityTimer;
     bool32 IFramesFlicker;
+    direction Direction;
 };
 
 struct moblin_projectile
@@ -271,7 +272,7 @@ struct moblin_projectile
     real32 VelocityY;
     bool32 IsActive;
     uint32 FireFrequency;
-    bmp_tile Sprite;
+    direction Direction;
 };
 
 struct game_state
@@ -285,7 +286,7 @@ struct game_state
     bool32 PlayerUsingSword;
     int32 SwordUsageFrame;
     tile_map_position SwordPoint;
-    hero_direction HeroDirection;
+    direction HeroDirection;
     uint32 InvincibilityTimer;
     bool32 IFramesFlicker;
 
