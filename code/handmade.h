@@ -235,29 +235,8 @@ struct world
 
 enum direction {FRONT, BACK, LEFT, RIGHT};
 
-struct octorok
+struct enemy_base
 {
-    // NOTE: Theres only 1 sprite for these guys, not a good reason to load it 4 times
-    octorok_sprites Sprites;
-    uint32 Health;
-    tile_map_position P;
-    uint32 InvincibilityTimer;
-    bool32 IFramesFlicker;
-};
-
-struct octorok_projectile
-{
-    tile_map_position P;
-    real32 VelocityX;
-    real32 VelocityY;
-    bool32 IsActive;
-    uint32 FireFrequency;
-    bmp_tile Sprite;
-};
-
-struct moblin
-{
-    moblin_sprites Sprites;
     uint32 Health;
     tile_map_position P;
     uint32 InvincibilityTimer;
@@ -265,13 +244,37 @@ struct moblin
     direction Direction;
 };
 
-struct moblin_projectile
+struct octorok
+{
+    // NOTE: Theres only 1 sprite for these guys, not a good reason to load it 4 times
+    enemy_base Base;
+    octorok_sprites Sprites;
+};
+
+struct enemy_projectile_base
 {
     tile_map_position P;
     real32 VelocityX;
     real32 VelocityY;
     bool32 IsActive;
     uint32 FireFrequency;
+};
+
+struct octorok_projectile
+{
+    enemy_projectile_base Base;
+    bmp_tile Sprite;
+};
+
+struct moblin
+{
+    enemy_base Base;
+    moblin_sprites Sprites;
+};
+
+struct moblin_projectile
+{
+    enemy_projectile_base Base;
     direction Direction;
 };
 
