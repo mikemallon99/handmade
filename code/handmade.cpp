@@ -116,6 +116,92 @@ IsHitboxPointActive(tile_map_position PlayerP, tile_map_position HitboxP,
     return Active;
 }
 
+internal void
+UpdateOctorok(game_state *GameState)
+{
+    // Octorok position update
+    if (IsInSameTileRoom(GameState->PlayerP, GameState->Octorok.Base.P))
+    {
+        local_persist int32 YDirection = -1;
+        if (GameState->Octorok.Base.P.Pos.Y > 8)
+        {
+            YDirection = -1;
+        }
+        else if (GameState->Octorok.Base.P.Pos.Y < 3)
+        {
+            YDirection = 1;
+        }
+        GameState->Octorok.Base.P.Pos.Y += (real32)YDirection * 0.05f;
+    }
+
+    // Octorok fire projectile
+    if (!GameState->OctorokProjectile.Base.IsActive && 
+        GameState->Octorok.Base.Health > 0 &&
+        GameState->FrameCounter % GameState->OctorokProjectile.Base.FireFrequency == 0)
+    {
+        GameState->OctorokProjectile.Base.IsActive = true;
+        GameState->OctorokProjectile.Base.VelocityX = 0.0;
+        GameState->OctorokProjectile.Base.VelocityY = -5.0;
+        GameState->OctorokProjectile.Base.P = GameState->Octorok.Base.P;
+    }
+}
+
+internal void
+UpdateOctorokProjectile(octorok_projectile *Projectile)
+{
+    Projectile->Base.P.Pos.X += Projectile->Base.VelocityX/60.0f;
+    Projectile->Base.P.Pos.Y += Projectile->Base.VelocityY/60.0f;
+
+    if (Projectile->Base.P.Pos.Y < 0)
+    {
+        Projectile->Base.IsActive = false;
+    }
+}
+
+internal void
+UpdateMoblin(game_state *GameState)
+{
+    // Moblin position update
+    if (IsInSameTileRoom(GameState->PlayerP, GameState->Moblin.Base.P))
+    {
+        local_persist int32 YDirection = -1;
+        if (GameState->Moblin.Base.P.Pos.Y > 8)
+        {
+            YDirection = -1;
+            GameState->Moblin.Base.Direction = FRONT;
+        }
+        else if (GameState->Moblin.Base.P.Pos.Y < 3)
+        {
+            YDirection = 1;
+            GameState->Moblin.Base.Direction = BACK;
+        }
+        GameState->Moblin.Base.P.Pos.Y += (real32)YDirection * 0.05f;
+    }
+
+    // Moblin fire projectile
+    if (!GameState->MoblinProjectile.Base.IsActive && 
+        GameState->Moblin.Base.Health > 0 &&
+        GameState->FrameCounter % GameState->MoblinProjectile.Base.FireFrequency == 0)
+    {
+        GameState->MoblinProjectile.Base.IsActive = true;
+        GameState->MoblinProjectile.Base.VelocityX = 0.0;
+        GameState->MoblinProjectile.Base.VelocityY = -5.0;
+        GameState->MoblinProjectile.Base.P = GameState->Moblin.Base.P;
+        GameState->MoblinProjectile.Direction = GameState->Moblin.Base.Direction;
+    }
+}
+
+internal void
+UpdateMoblinProjectile(moblin_projectile *Projectile)
+{
+    Projectile->Base.P.Pos.X += Projectile->Base.VelocityX/60.0f;
+    Projectile->Base.P.Pos.Y += Projectile->Base.VelocityY/60.0f;
+
+    if (Projectile->Base.P.Pos.Y < 0)
+    {
+        Projectile->Base.IsActive = false;
+    }
+}
 
 internal void 
 GameOutputSound(game_sound_output_buffer *SoundBuffer, game_state *GameState, int ToneHz)
@@ -501,41 +587,18 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     NewPlayerOrigin.Pos.X -= 0.5f;
     GameState->PlayerP = NewPlayerOrigin;
 
-    // Octorok position update
-    if (IsInSameTileRoom(GameState->PlayerP, GameState->Octorok.Base.P))
-    {
-        local_persist int32 YDirection = -1;
-        if (GameState->Octorok.Base.P.Pos.Y > 8)
-        {
-            YDirection = -1;
-        }
-        else if (GameState->Octorok.Base.P.Pos.Y < 3)
-        {
-            YDirection = 1;
-        }
-        GameState->Octorok.Base.P.Pos.Y += (real32)YDirection * 0.05f;
-    }
-
-    // Octorok fire projectile
-    if (!GameState->OctorokProjectile.Base.IsActive && 
-        GameState->Octorok.Base.Health > 0 &&
-        GameState->FrameCounter % GameState->OctorokProjectile.Base.FireFrequency == 0)
-    {
-        GameState->OctorokProjectile.Base.IsActive = true;
-        GameState->OctorokProjectile.Base.VelocityX = 0.0;
-        GameState->OctorokProjectile.Base.VelocityY = -5.0;
-        GameState->OctorokProjectile.Base.P = GameState->Octorok.Base.P;
-    }
-
+    UpdateOctorok(GameState);
+    
     if (GameState->OctorokProjectile.Base.IsActive)
     {
-        GameState->OctorokProjectile.Base.P.Pos.X += GameState->OctorokProjectile.Base.VelocityX/60.0f;
-        GameState->OctorokProjectile.Base.P.Pos.Y += GameState->OctorokProjectile.Base.VelocityY/60.0f;
+        UpdateOctorokProjectile(&GameState->OctorokProjectile);
+    }
 
-        if (GameState->OctorokProjectile.Base.P.Pos.Y < 0)
-        {
-            GameState->OctorokProjectile.Base.IsActive = false;
-        }
+    UpdateMoblin(GameState);
+    
+    if (GameState->MoblinProjectile.Base.IsActive)
+    {
+        UpdateMoblinProjectile(&GameState->MoblinProjectile);
     }
 
     // Checking if octorok hit player
@@ -570,62 +633,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->InvincibilityTimer -= 1;
     }
 
-    // Player sword hitting Octorok checking
-    if (GameState->Octorok.Base.InvincibilityTimer == 0 && GameState->Octorok.Base.Health > 0)
-    {
-        bool32 IsEnemyHit = IsHitboxPointActive(GameState->SwordPoint, GameState->Octorok.Base.P, 1.0f, 1.0f);
-        if (IsEnemyHit)
-        {
-            GameState->Octorok.Base.InvincibilityTimer = 60;
-            GameState->Octorok.Base.Health -= 1;
-        }
-    }
-    if (GameState->Octorok.Base.InvincibilityTimer > 0)
-    {
-        GameState->Octorok.Base.InvincibilityTimer -= 1;
-    }
-
-    // Moblin position update
-    if (IsInSameTileRoom(GameState->PlayerP, GameState->Moblin.Base.P))
-    {
-        local_persist int32 YDirection = -1;
-        if (GameState->Moblin.Base.P.Pos.Y > 8)
-        {
-            YDirection = -1;
-            GameState->Moblin.Base.Direction = FRONT;
-        }
-        else if (GameState->Moblin.Base.P.Pos.Y < 3)
-        {
-            YDirection = 1;
-            GameState->Moblin.Base.Direction = BACK;
-        }
-        GameState->Moblin.Base.P.Pos.Y += (real32)YDirection * 0.05f;
-    }
-
-    // Moblin fire projectile
-    if (!GameState->MoblinProjectile.Base.IsActive && 
-        GameState->Moblin.Base.Health > 0 &&
-        GameState->FrameCounter % GameState->MoblinProjectile.Base.FireFrequency == 0)
-    {
-        GameState->MoblinProjectile.Base.IsActive = true;
-        GameState->MoblinProjectile.Base.VelocityX = 0.0;
-        GameState->MoblinProjectile.Base.VelocityY = -5.0;
-        GameState->MoblinProjectile.Base.P = GameState->Moblin.Base.P;
-        GameState->MoblinProjectile.Direction = GameState->Moblin.Base.Direction;
-    }
-
-    if (GameState->MoblinProjectile.Base.IsActive)
-    {
-        GameState->MoblinProjectile.Base.P.Pos.X += GameState->MoblinProjectile.Base.VelocityX/60.0f;
-        GameState->MoblinProjectile.Base.P.Pos.Y += GameState->MoblinProjectile.Base.VelocityY/60.0f;
-
-        if (GameState->MoblinProjectile.Base.P.Pos.Y < 0)
-        {
-            GameState->MoblinProjectile.Base.IsActive = false;
-        }
-    }
-
-    // Checking if octorok hit player
+    // Checking if moblin hit player
     // NOTE: I chose to do this after the octo position update, so were not using pos from last frame
     if (GameState->InvincibilityTimer == 0)
     {
@@ -658,6 +666,21 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     // {
     //     GameState->InvincibilityTimer -= 1;
     // }
+
+    // Player sword hitting Octorok checking
+    if (GameState->Octorok.Base.InvincibilityTimer == 0 && GameState->Octorok.Base.Health > 0)
+    {
+        bool32 IsEnemyHit = IsHitboxPointActive(GameState->SwordPoint, GameState->Octorok.Base.P, 1.0f, 1.0f);
+        if (IsEnemyHit)
+        {
+            GameState->Octorok.Base.InvincibilityTimer = 60;
+            GameState->Octorok.Base.Health -= 1;
+        }
+    }
+    if (GameState->Octorok.Base.InvincibilityTimer > 0)
+    {
+        GameState->Octorok.Base.InvincibilityTimer -= 1;
+    }
 
     // Player sword hitting Moblin checking
     if (GameState->Moblin.Base.InvincibilityTimer == 0 && GameState->Moblin.Base.Health > 0)
