@@ -447,6 +447,32 @@ DrawMoblinProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile_
     }
 }
 
+internal void
+DrawEntity(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
+           real32 PlayAreaY, uint32 CameraTileX, entity *Entity)
+{
+    if (Entity->Type == EntityType_Octorok)
+    {
+        DrawOctorok(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
+                   (octorok *)Entity, &GameState->OctorokSprites);
+    }
+    else if (Entity->Type == EntityType_OctorokRock)
+    {
+        DrawOctorokProjectile(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
+                             (octorok_projectile *)Entity, &GameState->OctorokSprites);
+    }
+    else if (Entity->Type == EntityType_Moblin)
+    {
+        DrawMoblin(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
+                  (moblin *)Entity, &GameState->MoblinSprites);
+    }
+    else if (Entity->Type == EntityType_MoblinArrow)
+    {
+        DrawMoblinProjectile(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
+                            (moblin_projectile *)Entity, &GameState->MoblinSprites);
+    }
+}
+
 internal void 
 GameOutputSound(game_sound_output_buffer *SoundBuffer, game_state *GameState, int ToneHz)
 {
@@ -1130,20 +1156,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     DrawBMPTile(&GameState->TextTileset.Tiles[GameState->PlayerHealth], Buffer, 0, 16);
     DrawBMPTile(&GameState->TextTileset.Tiles[GameState->Octorok1->Health], Buffer, 32, 16);
 
-    DrawOctorok(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
-                GameState->Octorok1, &GameState->OctorokSprites);
-    DrawOctorokProjectile(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
-                          GameState->OctorokProjectile1, &GameState->OctorokSprites);
-
-    DrawOctorok(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
-                GameState->Octorok2, &GameState->OctorokSprites);
-    DrawOctorokProjectile(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
-                          GameState->OctorokProjectile2, &GameState->OctorokSprites);
-
-    DrawMoblin(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
-               GameState->Moblin, &GameState->MoblinSprites);
-    DrawMoblinProjectile(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
-                         GameState->MoblinProjectile, &GameState->MoblinSprites);
+    // Draw all entities
+    for (uint32 EntityIndex = 0; EntityIndex < GameState->EntityCount; EntityIndex++)
+    {
+        entity *Entity = &GameState->Entities[EntityIndex];
+        DrawEntity(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, Entity);
+    }
 
     GameState->FrameCounter++;
 }
