@@ -120,41 +120,137 @@ internal void
 UpdateOctorok(game_state *GameState, octorok *Octorok, octorok_projectile *Projectile)
 {
     // Octorok position update
-    if (IsInSameTileRoom(GameState->PlayerP, Octorok->Base.P))
+    if (IsInSameTileRoom(GameState->PlayerP, Octorok->P))
     {
         local_persist int32 YDirection = -1;
-        if (Octorok->Base.P.Pos.Y > 8)
+        if (Octorok->P.Pos.Y > 8)
         {
             YDirection = -1;
         }
-        else if (Octorok->Base.P.Pos.Y < 3)
+        else if (Octorok->P.Pos.Y < 3)
         {
             YDirection = 1;
         }
-        Octorok->Base.P.Pos.Y += (real32)YDirection * 0.05f;
+        Octorok->P.Pos.Y += (real32)YDirection * 0.05f;
     }
 
     // Octorok fire projectile
-    if (!Projectile->Base.IsActive && 
-        Octorok->Base.Health > 0 &&
-        GameState->FrameCounter % Projectile->Base.FireFrequency == 0)
+    if (!Projectile->IsActive && 
+        Octorok->Health > 0 &&
+        GameState->FrameCounter % Projectile->FireFrequency == 0)
     {
-        Projectile->Base.IsActive = true;
-        Projectile->Base.VelocityX = 0.0;
-        Projectile->Base.VelocityY = -5.0;
-        Projectile->Base.P = Octorok->Base.P;
+        Projectile->IsActive = true;
+        Projectile->VelocityX = 0.0;
+        Projectile->VelocityY = -5.0;
+        Projectile->P = Octorok->P;
     }
 }
 
 internal void
 UpdateOctorokProjectile(octorok_projectile *Projectile)
 {
-    Projectile->Base.P.Pos.X += Projectile->Base.VelocityX/60.0f;
-    Projectile->Base.P.Pos.Y += Projectile->Base.VelocityY/60.0f;
+    Projectile->P.Pos.X += Projectile->VelocityX/60.0f;
+    Projectile->P.Pos.Y += Projectile->VelocityY/60.0f;
 
-    if (Projectile->Base.P.Pos.Y < 0)
+    if (Projectile->P.Pos.Y < 0)
     {
-        Projectile->Base.IsActive = false;
+        Projectile->IsActive = false;
+    }
+}
+
+internal void
+UpdateMoblin(game_state *GameState)
+{
+    // Moblin position update
+    if (IsInSameTileRoom(GameState->PlayerP, GameState->Moblin->P))
+    {
+        local_persist int32 YDirection = -1;
+        if (GameState->Moblin->P.Pos.Y > 8)
+        {
+            YDirection = -1;
+            GameState->Moblin->Direction = FRONT;
+        }
+        else if (GameState->Moblin->P.Pos.Y < 3)
+        {
+            YDirection = 1;
+            GameState->Moblin->Direction = BACK;
+        }
+        GameState->Moblin->P.Pos.Y += (real32)YDirection * 0.05f;
+    }
+
+    // Moblin fire projectile
+    if (!GameState->MoblinProjectile->IsActive && 
+        GameState->Moblin->Health > 0 &&
+        GameState->FrameCounter % GameState->MoblinProjectile->FireFrequency == 0)
+    {
+        GameState->MoblinProjectile->IsActive = true;
+        GameState->MoblinProjectile->VelocityX = 0.0;
+        GameState->MoblinProjectile->VelocityY = -5.0;
+        GameState->MoblinProjectile->P = GameState->Moblin->P;
+        GameState->MoblinProjectile->Direction = GameState->Moblin->Direction;
+    }
+}
+
+internal void
+UpdateMoblinProjectile(moblin_projectile *Projectile)
+{
+    Projectile->P.Pos.X += Projectile->VelocityX/60.0f;
+    Projectile->P.Pos.Y += Projectile->VelocityY/60.0f;
+
+    if (Projectile->P.Pos.Y < 0)
+    {
+        Projectile->IsActive = false;
+    }
+}
+
+internal void
+UpdateEntities(game_state *GameState)
+{
+    for (uint32 EntityIndex = 0; EntityIndex < GameState->EntityCount; EntityIndex++)
+    {
+        entity *Entity = &GameState->Entities[EntityIndex];
+        
+        if (Entity->Type == EntityType_Octorok)
+        {
+            // TODO: Make this not weird
+            // Find associated projectile - check if this is Octorok1 or Octorok2
+            octorok_projectile *Projectile = 0;
+            if (Entity == GameState->Octorok1)
+            {
+                Projectile = GameState->OctorokProjectile1;
+            }
+            else if (Entity == GameState->Octorok2)
+            {
+                Projectile = GameState->OctorokProjectile2;
+            }
+            
+            if (Projectile)
+            {
+                UpdateOctorok(GameState, (octorok *)Entity, Projectile);
+            }
+        }
+        else if (Entity->Type == EntityType_Moblin)
+        {
+            // Moblin update uses frontend pointers, so just call it
+            // (It will use GameState->Moblin and GameState->MoblinProjectile)
+            UpdateMoblin(GameState);
+        }
+        else if (Entity->Type == EntityType_OctorokRock)
+        {
+            // Update projectile if active
+            if (Entity->IsActive)
+            {
+                UpdateOctorokProjectile((octorok_projectile *)Entity);
+            }
+        }
+        else if (Entity->Type == EntityType_MoblinArrow)
+        {
+            // Update projectile if active
+            if (Entity->IsActive)
+            {
+                UpdateMoblinProjectile((moblin_projectile *)Entity);
+            }
+        }
     }
 }
 
@@ -162,10 +258,10 @@ internal void
 DrawOctorok(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
             real32 PlayAreaY, uint32 CameraTileX, octorok *Octorok, octorok_sprites *OctorokSprites)
 {
-    if (IsInSameTileRoom(GameState->PlayerP, Octorok->Base.P) && Octorok->Base.Health > 0)
+    if (IsInSameTileRoom(GameState->PlayerP, Octorok->P) && Octorok->Health > 0)
     {
-        real32 OctoOriginX = TileMap->TileSideInPixels*(Octorok->Base.P.Pos.X - (real32)CameraTileX);
-        real32 OctoOriginY = PlayAreaY - TileMap->TileSideInPixels*(Octorok->Base.P.Pos.Y - 11.0f);
+        real32 OctoOriginX = TileMap->TileSideInPixels*(Octorok->P.Pos.X - (real32)CameraTileX);
+        real32 OctoOriginY = PlayAreaY - TileMap->TileSideInPixels*(Octorok->P.Pos.Y - 11.0f);
         real32 OctoScreenX = OctoOriginX;
         // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
         real32 OctoScreenY = OctoOriginY - TileMap->TileSideInPixels*1.0f;
@@ -174,26 +270,26 @@ DrawOctorok(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *Tile
                       1.0f, 0.0f, 0.0f);
 
         // Hurt/Invincible rendering
-        if (Octorok->Base.InvincibilityTimer > 0)
+        if (Octorok->InvincibilityTimer > 0)
         {
-            if (Octorok->Base.InvincibilityTimer % 6 == 0)
+            if (Octorok->InvincibilityTimer % 6 == 0)
             {
-                if (Octorok->Base.IFramesFlicker)
+                if (Octorok->IFramesFlicker)
                 {
-                    Octorok->Base.IFramesFlicker = false;
+                    Octorok->IFramesFlicker = false;
                 }
                 else
                 {
-                    Octorok->Base.IFramesFlicker = true;
+                    Octorok->IFramesFlicker = true;
                 }
             }
         }
         else 
         {
-            Octorok->Base.IFramesFlicker = false;
+            Octorok->IFramesFlicker = false;
         }
 
-        if (!Octorok->Base.IFramesFlicker)
+        if (!Octorok->IFramesFlicker)
         {
             uint32 OctoSpriteIndex = (GameState->FrameCounter & 0x10) == 0x10;
             DrawBMPTile(&OctorokSprites->Front[OctoSpriteIndex], Buffer, OctoScreenX, OctoScreenY);
@@ -205,11 +301,11 @@ internal void
 DrawOctorokProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
                       real32 PlayAreaY, uint32 CameraTileX, octorok_projectile *Projectile, octorok_sprites *OctorokSprites)
 {
-    if (IsInSameTileRoom(GameState->PlayerP, Projectile->Base.P) && 
-        Projectile->Base.IsActive)
+    if (IsInSameTileRoom(GameState->PlayerP, Projectile->P) && 
+        Projectile->IsActive)
     {
-        real32 ProjOriginX = TileMap->TileSideInPixels*(Projectile->Base.P.Pos.X - (real32)CameraTileX);
-        real32 ProjOriginY = PlayAreaY - TileMap->TileSideInPixels*(Projectile->Base.P.Pos.Y - 11.0f);
+        real32 ProjOriginX = TileMap->TileSideInPixels*(Projectile->P.Pos.X - (real32)CameraTileX);
+        real32 ProjOriginY = PlayAreaY - TileMap->TileSideInPixels*(Projectile->P.Pos.Y - 11.0f);
         real32 ProjScreenX = ProjOriginX;
         // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
         real32 ProjScreenY = ProjOriginY - TileMap->TileSideInPixels*1.0f;
@@ -219,12 +315,12 @@ DrawOctorokProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile
 
 internal void
 DrawMoblin(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
-           real32 PlayAreaY, uint32 CameraTileX, moblin *Moblin)
+           real32 PlayAreaY, uint32 CameraTileX, moblin *Moblin, moblin_sprites *MoblinSprites)
 {
-    if (IsInSameTileRoom(GameState->PlayerP, Moblin->Base.P) && Moblin->Base.Health > 0)
+    if (IsInSameTileRoom(GameState->PlayerP, Moblin->P) && Moblin->Health > 0)
     {
-        real32 MoblinOriginX = TileMap->TileSideInPixels*(Moblin->Base.P.Pos.X - (real32)CameraTileX);
-        real32 MoblinOriginY = PlayAreaY - TileMap->TileSideInPixels*(Moblin->Base.P.Pos.Y - 11.0f);
+        real32 MoblinOriginX = TileMap->TileSideInPixels*(Moblin->P.Pos.X - (real32)CameraTileX);
+        real32 MoblinOriginY = PlayAreaY - TileMap->TileSideInPixels*(Moblin->P.Pos.Y - 11.0f);
         real32 MoblinScreenX = MoblinOriginX;
         // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
         real32 MoblinScreenY = MoblinOriginY - TileMap->TileSideInPixels*1.0f;
@@ -233,44 +329,44 @@ DrawMoblin(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileM
                       1.0f, 0.0f, 0.0f);
 
         // Hurt/Invincible rendering
-        if (Moblin->Base.InvincibilityTimer > 0)
+        if (Moblin->InvincibilityTimer > 0)
         {
-            if (Moblin->Base.InvincibilityTimer % 6 == 0)
+            if (Moblin->InvincibilityTimer % 6 == 0)
             {
-                if (Moblin->Base.IFramesFlicker)
+                if (Moblin->IFramesFlicker)
                 {
-                    Moblin->Base.IFramesFlicker = false;
+                    Moblin->IFramesFlicker = false;
                 }
                 else
                 {
-                    Moblin->Base.IFramesFlicker = true;
+                    Moblin->IFramesFlicker = true;
                 }
             }
         }
         else 
         {
-            Moblin->Base.IFramesFlicker = false;
+            Moblin->IFramesFlicker = false;
         }
 
-        if (!Moblin->Base.IFramesFlicker)
+        if (!Moblin->IFramesFlicker)
         {
-            direction MoblinDir = Moblin->Base.Direction;
+            direction MoblinDir = Moblin->Direction;
             bmp_tile *MoblinDirSprite;
             if (MoblinDir == FRONT)
             {
-                MoblinDirSprite = (bmp_tile *)&Moblin->Sprites.Front;
+                MoblinDirSprite = (bmp_tile *)&MoblinSprites->Front;
             }
             else if (MoblinDir == BACK)
             {
-                MoblinDirSprite = (bmp_tile *)&Moblin->Sprites.Back;
+                MoblinDirSprite = (bmp_tile *)&MoblinSprites->Back;
             }
             else if (MoblinDir == LEFT)
             {
-                MoblinDirSprite = (bmp_tile *)&Moblin->Sprites.Left;
+                MoblinDirSprite = (bmp_tile *)&MoblinSprites->Left;
             }
             else if (MoblinDir == RIGHT)
             {
-                MoblinDirSprite = (bmp_tile *)&Moblin->Sprites.Right;
+                MoblinDirSprite = (bmp_tile *)&MoblinSprites->Right;
             }
             else
             {
@@ -287,13 +383,13 @@ DrawMoblin(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileM
 
 internal void
 DrawMoblinProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
-                     real32 PlayAreaY, uint32 CameraTileX, moblin_projectile *Projectile, moblin *Moblin)
+                     real32 PlayAreaY, uint32 CameraTileX, moblin_projectile *Projectile, moblin_sprites *MoblinSprites)
 {
-    if (IsInSameTileRoom(GameState->PlayerP, Projectile->Base.P) && 
-        Projectile->Base.IsActive)
+    if (IsInSameTileRoom(GameState->PlayerP, Projectile->P) && 
+        Projectile->IsActive)
     {
-        real32 ProjOriginX = TileMap->TileSideInPixels*(Projectile->Base.P.Pos.X - (real32)CameraTileX);
-        real32 ProjOriginY = PlayAreaY - TileMap->TileSideInPixels*(Projectile->Base.P.Pos.Y - 11.0f);
+        real32 ProjOriginX = TileMap->TileSideInPixels*(Projectile->P.Pos.X - (real32)CameraTileX);
+        real32 ProjOriginY = PlayAreaY - TileMap->TileSideInPixels*(Projectile->P.Pos.Y - 11.0f);
         real32 ProjScreenX = ProjOriginX;
         // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
         real32 ProjScreenY = ProjOriginY - TileMap->TileSideInPixels*1.0f;
@@ -302,19 +398,19 @@ DrawMoblinProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile_
         bmp_tile *ArrowSprite;
         if (ArrowDir == FRONT)
         {
-            ArrowSprite = &Moblin->Sprites.ArrowFront;
+            ArrowSprite = &MoblinSprites->ArrowFront;
         }
         else if (ArrowDir == BACK)
         {
-            ArrowSprite = &Moblin->Sprites.ArrowBack;
+            ArrowSprite = &MoblinSprites->ArrowBack;
         }
         else if (ArrowDir == LEFT)
         {
-            ArrowSprite = &Moblin->Sprites.ArrowLeft;
+            ArrowSprite = &MoblinSprites->ArrowLeft;
         }
         else if (ArrowDir == RIGHT)
         {
-            ArrowSprite = &Moblin->Sprites.ArrowRight;
+            ArrowSprite = &MoblinSprites->ArrowRight;
         }
         else
         {
@@ -323,51 +419,6 @@ DrawMoblinProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile_
         }
 
         DrawBMPTile(ArrowSprite, Buffer, ProjScreenX, ProjScreenY);
-    }
-}
-
-internal void
-UpdateMoblin(game_state *GameState)
-{
-    // Moblin position update
-    if (IsInSameTileRoom(GameState->PlayerP, GameState->Moblin.Base.P))
-    {
-        local_persist int32 YDirection = -1;
-        if (GameState->Moblin.Base.P.Pos.Y > 8)
-        {
-            YDirection = -1;
-            GameState->Moblin.Base.Direction = FRONT;
-        }
-        else if (GameState->Moblin.Base.P.Pos.Y < 3)
-        {
-            YDirection = 1;
-            GameState->Moblin.Base.Direction = BACK;
-        }
-        GameState->Moblin.Base.P.Pos.Y += (real32)YDirection * 0.05f;
-    }
-
-    // Moblin fire projectile
-    if (!GameState->MoblinProjectile.Base.IsActive && 
-        GameState->Moblin.Base.Health > 0 &&
-        GameState->FrameCounter % GameState->MoblinProjectile.Base.FireFrequency == 0)
-    {
-        GameState->MoblinProjectile.Base.IsActive = true;
-        GameState->MoblinProjectile.Base.VelocityX = 0.0;
-        GameState->MoblinProjectile.Base.VelocityY = -5.0;
-        GameState->MoblinProjectile.Base.P = GameState->Moblin.Base.P;
-        GameState->MoblinProjectile.Direction = GameState->Moblin.Base.Direction;
-    }
-}
-
-internal void
-UpdateMoblinProjectile(moblin_projectile *Projectile)
-{
-    Projectile->Base.P.Pos.X += Projectile->Base.VelocityX/60.0f;
-    Projectile->Base.P.Pos.Y += Projectile->Base.VelocityY/60.0f;
-
-    if (Projectile->Base.P.Pos.Y < 0)
-    {
-        Projectile->Base.IsActive = false;
     }
 }
 
@@ -457,27 +508,60 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->PlayerP.Pos.X = 5.0f;
         GameState->PlayerP.Pos.Y = 5.0f;
 
-        GameState->Octorok1.Base.Health = 3;
-        GameState->Octorok1.Base.P.Pos.X = 8;
-        GameState->Octorok1.Base.P.Pos.Y = 5.0f;
-        GameState->Octorok1.Base.P.RoomIDX = SpawnRoomX;
-        GameState->Octorok1.Base.P.RoomIDY = SpawnRoomY;
-        GameState->OctorokProjectile1.Base.FireFrequency = 60;
+        // Initialize entity array
+        GameState->EntityCount = 0;
 
-        GameState->Octorok2.Base.Health = 3;
-        GameState->Octorok2.Base.P.Pos.X = 9;
-        GameState->Octorok2.Base.P.Pos.Y = 5.0f;
-        GameState->Octorok2.Base.P.RoomIDX = SpawnRoomX;
-        GameState->Octorok2.Base.P.RoomIDY = SpawnRoomY;
-        GameState->OctorokProjectile2.Base.FireFrequency = 60;
+        // Add Octorok1 to entity array
+        GameState->Octorok1 = &GameState->Entities[GameState->EntityCount++];
+        GameState->Octorok1->Type = EntityType_Octorok;
+        GameState->Octorok1->Health = 3;
+        GameState->Octorok1->P.Pos.X = 8;
+        GameState->Octorok1->P.Pos.Y = 5.0f;
+        GameState->Octorok1->P.RoomIDX = SpawnRoomX;
+        GameState->Octorok1->P.RoomIDY = SpawnRoomY;
+        GameState->Octorok1->InvincibilityTimer = 0;
+        GameState->Octorok1->IFramesFlicker = false;
 
-        GameState->Moblin.Base.Health = 3;
-        GameState->Moblin.Base.P.Pos.X = 6;
-        GameState->Moblin.Base.P.Pos.Y = 5.0f;
-        GameState->Moblin.Base.P.RoomIDX = SpawnRoomX;
-        GameState->Moblin.Base.P.RoomIDY = SpawnRoomY;
-        GameState->Moblin.Base.Direction = FRONT;
-        GameState->MoblinProjectile.Base.FireFrequency = 60;
+        // Add OctorokProjectile1 to entity array
+        GameState->OctorokProjectile1 = &GameState->Entities[GameState->EntityCount++];
+        GameState->OctorokProjectile1->Type = EntityType_OctorokRock;
+        GameState->OctorokProjectile1->FireFrequency = 60;
+        GameState->OctorokProjectile1->IsActive = false;
+
+        // Add Octorok2 to entity array
+        GameState->Octorok2 = &GameState->Entities[GameState->EntityCount++];
+        GameState->Octorok2->Type = EntityType_Octorok;
+        GameState->Octorok2->Health = 3;
+        GameState->Octorok2->P.Pos.X = 9;
+        GameState->Octorok2->P.Pos.Y = 5.0f;
+        GameState->Octorok2->P.RoomIDX = SpawnRoomX;
+        GameState->Octorok2->P.RoomIDY = SpawnRoomY;
+        GameState->Octorok2->InvincibilityTimer = 0;
+        GameState->Octorok2->IFramesFlicker = false;
+
+        // Add OctorokProjectile2 to entity array
+        GameState->OctorokProjectile2 = &GameState->Entities[GameState->EntityCount++];
+        GameState->OctorokProjectile2->Type = EntityType_OctorokRock;
+        GameState->OctorokProjectile2->FireFrequency = 60;
+        GameState->OctorokProjectile2->IsActive = false;
+
+        // Add Moblin to entity array
+        GameState->Moblin = &GameState->Entities[GameState->EntityCount++];
+        GameState->Moblin->Type = EntityType_Moblin;
+        GameState->Moblin->Health = 3;
+        GameState->Moblin->P.Pos.X = 6;
+        GameState->Moblin->P.Pos.Y = 5.0f;
+        GameState->Moblin->P.RoomIDX = SpawnRoomX;
+        GameState->Moblin->P.RoomIDY = SpawnRoomY;
+        GameState->Moblin->Direction = FRONT;
+        GameState->Moblin->InvincibilityTimer = 0;
+        GameState->Moblin->IFramesFlicker = false;
+
+        // Add MoblinProjectile to entity array
+        GameState->MoblinProjectile = &GameState->Entities[GameState->EntityCount++];
+        GameState->MoblinProjectile->Type = EntityType_MoblinArrow;
+        GameState->MoblinProjectile->FireFrequency = 60;
+        GameState->MoblinProjectile->IsActive = false;
 
         // NOTE: We should probably start a new arena for this image? 
         // Memory->Background = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_background.bmp");
@@ -499,7 +583,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         
         LoadOctorokSprites(&GameState->OctorokSprites, &GameState->OWEnemiesBMP);
 
-        LoadMoblinSprites(&GameState->Moblin.Sprites, &GameState->OWEnemiesBMP);
+        LoadMoblinSprites(&GameState->MoblinSprites, &GameState->OWEnemiesBMP);
 
         // NOTE: maybe move this to platform layer
         Memory->IsInitialized = true;
@@ -756,35 +840,17 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     NewPlayerOrigin.Pos.X -= 0.5f;
     GameState->PlayerP = NewPlayerOrigin;
 
-    UpdateOctorok(GameState, &GameState->Octorok1, &GameState->OctorokProjectile1);
-    
-    if (GameState->OctorokProjectile1.Base.IsActive)
-    {
-        UpdateOctorokProjectile(&GameState->OctorokProjectile1);
-    }
-
-    UpdateOctorok(GameState, &GameState->Octorok2, &GameState->OctorokProjectile2);
-    
-    if (GameState->OctorokProjectile2.Base.IsActive)
-    {
-        UpdateOctorokProjectile(&GameState->OctorokProjectile2);
-    }
-
-    UpdateMoblin(GameState);
-    
-    if (GameState->MoblinProjectile.Base.IsActive)
-    {
-        UpdateMoblinProjectile(&GameState->MoblinProjectile);
-    }
+    // Update all entities
+    UpdateEntities(GameState);
 
     // Checking if octorok hit player
     // NOTE: I chose to do this after the octo position update, so were not using pos from last frame
     if (GameState->InvincibilityTimer == 0)
     {
         // TODO: Make it so i dont have to check this everywhere
-        if (GameState->Octorok1.Base.Health)
+        if (GameState->Octorok1->Health)
         {
-            bool32 IsHit = IsHitboxPointActive(NewPlayerP, GameState->Octorok1.Base.P, 1.0f, 1.0f);
+            bool32 IsHit = IsHitboxPointActive(NewPlayerP, GameState->Octorok1->P, 1.0f, 1.0f);
             if (IsHit)
             {
                 GameState->InvincibilityTimer = 60;
@@ -793,21 +859,21 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
 
         // Is projectile hitting the player?
-        if (GameState->OctorokProjectile1.Base.IsActive)
+        if (GameState->OctorokProjectile1->IsActive)
         {
-            bool32 IsHit = IsHitboxPointActive(NewPlayerP, GameState->OctorokProjectile1.Base.P, 0.5f, 1.0f);
+            bool32 IsHit = IsHitboxPointActive(NewPlayerP, GameState->OctorokProjectile1->P, 0.5f, 1.0f);
             if (IsHit)
             {
                 GameState->InvincibilityTimer = 60;
                 GameState->PlayerHealth -= 1;
-                GameState->OctorokProjectile1.Base.IsActive = false;
+                GameState->OctorokProjectile1->IsActive = false;
             }
         }
 
         // TODO: Make it so i dont have to check this everywhere
-        if (GameState->Octorok2.Base.Health)
+        if (GameState->Octorok2->Health)
         {
-            bool32 IsHit = IsHitboxPointActive(NewPlayerP, GameState->Octorok2.Base.P, 1.0f, 1.0f);
+            bool32 IsHit = IsHitboxPointActive(NewPlayerP, GameState->Octorok2->P, 1.0f, 1.0f);
             if (IsHit)
             {
                 GameState->InvincibilityTimer = 60;
@@ -816,21 +882,21 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
 
         // Is projectile hitting the player?
-        if (GameState->OctorokProjectile2.Base.IsActive)
+        if (GameState->OctorokProjectile2->IsActive)
         {
-            bool32 IsHit = IsHitboxPointActive(NewPlayerP, GameState->OctorokProjectile2.Base.P, 0.5f, 1.0f);
+            bool32 IsHit = IsHitboxPointActive(NewPlayerP, GameState->OctorokProjectile2->P, 0.5f, 1.0f);
             if (IsHit)
             {
                 GameState->InvincibilityTimer = 60;
                 GameState->PlayerHealth -= 1;
-                GameState->OctorokProjectile2.Base.IsActive = false;
+                GameState->OctorokProjectile2->IsActive = false;
             }
         }
 
         // TODO: Make it so i dont have to check this everywhere
-        if (GameState->Moblin.Base.Health)
+        if (GameState->Moblin->Health)
         {
-            bool32 IsHit = IsHitboxPointActive(NewPlayerP, GameState->Moblin.Base.P, 1.0f, 1.0f);
+            bool32 IsHit = IsHitboxPointActive(NewPlayerP, GameState->Moblin->P, 1.0f, 1.0f);
             if (IsHit)
             {
                 GameState->InvincibilityTimer = 60;
@@ -839,14 +905,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
 
         // Is projectile hitting the player?
-        if (GameState->MoblinProjectile.Base.IsActive)
+        if (GameState->MoblinProjectile->IsActive)
         {
-            bool32 IsHit = IsHitboxPointActive(NewPlayerP, GameState->MoblinProjectile.Base.P, 0.5f, 1.0f);
+            bool32 IsHit = IsHitboxPointActive(NewPlayerP, GameState->MoblinProjectile->P, 0.5f, 1.0f);
             if (IsHit)
             {
                 GameState->InvincibilityTimer = 60;
                 GameState->PlayerHealth -= 1;
-                GameState->MoblinProjectile.Base.IsActive = false;
+                GameState->MoblinProjectile->IsActive = false;
             }
         }
     }
@@ -859,57 +925,57 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     if (GameState->PlayerUsingSword)
     {
         // Player sword hitting Octorok checking
-        if (GameState->Octorok1.Base.InvincibilityTimer == 0 && GameState->Octorok1.Base.Health > 0)
+        if (GameState->Octorok1->InvincibilityTimer == 0 && GameState->Octorok1->Health > 0)
         {
             bool32 IsEnemyHit = IsHitboxPointActive(GameState->SwordPoint, 
-                                                    GameState->Octorok1.Base.P, 
+                                                    GameState->Octorok1->P, 
                                                     1.0f, 1.0f);
             if (IsEnemyHit)
             {
-                GameState->Octorok1.Base.InvincibilityTimer = 60;
-                GameState->Octorok1.Base.Health -= 1;
+                GameState->Octorok1->InvincibilityTimer = 60;
+                GameState->Octorok1->Health -= 1;
             }
         }
 
         // Player sword hitting Octorok checking
-        if (GameState->Octorok2.Base.InvincibilityTimer == 0 && GameState->Octorok2.Base.Health > 0)
+        if (GameState->Octorok2->InvincibilityTimer == 0 && GameState->Octorok2->Health > 0)
         {
             bool32 IsEnemyHit = IsHitboxPointActive(GameState->SwordPoint, 
-                                                    GameState->Octorok2.Base.P, 
+                                                    GameState->Octorok2->P, 
                                                     1.0f, 1.0f);
             if (IsEnemyHit)
             {
-                GameState->Octorok2.Base.InvincibilityTimer = 60;
-                GameState->Octorok2.Base.Health -= 1;
+                GameState->Octorok2->InvincibilityTimer = 60;
+                GameState->Octorok2->Health -= 1;
             }
         }
 
         // Player sword hitting Moblin check
-        if (GameState->Moblin.Base.InvincibilityTimer == 0 && GameState->Moblin.Base.Health > 0)
+        if (GameState->Moblin->InvincibilityTimer == 0 && GameState->Moblin->Health > 0)
         {
             bool32 IsEnemyHit = IsHitboxPointActive(GameState->SwordPoint, 
-                                                    GameState->Moblin.Base.P, 
+                                                    GameState->Moblin->P, 
                                                     1.0f, 1.0f);
             if (IsEnemyHit)
             {
-                GameState->Moblin.Base.InvincibilityTimer = 60;
-                GameState->Moblin.Base.Health -= 1;
+                GameState->Moblin->InvincibilityTimer = 60;
+                GameState->Moblin->Health -= 1;
             }
         }
     }
 
     // Update invincibility timers
-    if (GameState->Octorok1.Base.InvincibilityTimer > 0)
+    if (GameState->Octorok1->InvincibilityTimer > 0)
     {
-        GameState->Octorok1.Base.InvincibilityTimer -= 1;
+        GameState->Octorok1->InvincibilityTimer -= 1;
     }
-    if (GameState->Octorok2.Base.InvincibilityTimer > 0)
+    if (GameState->Octorok2->InvincibilityTimer > 0)
     {
-        GameState->Octorok2.Base.InvincibilityTimer -= 1;
+        GameState->Octorok2->InvincibilityTimer -= 1;
     }
-    if (GameState->Moblin.Base.InvincibilityTimer > 0)
+    if (GameState->Moblin->InvincibilityTimer > 0)
     {
-        GameState->Moblin.Base.InvincibilityTimer -= 1;
+        GameState->Moblin->InvincibilityTimer -= 1;
     }
 
     // RENDERING
@@ -1109,22 +1175,22 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     DrawString(Buffer, &GameState->TextTileset, TestString, 0.0f, 8.0f);
 
     DrawBMPTile(&GameState->TextTileset.Tiles[GameState->PlayerHealth], Buffer, 0, 16);
-    DrawBMPTile(&GameState->TextTileset.Tiles[GameState->Octorok1.Base.Health], Buffer, 32, 16);
+    DrawBMPTile(&GameState->TextTileset.Tiles[GameState->Octorok1->Health], Buffer, 32, 16);
 
     DrawOctorok(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
-                &GameState->Octorok1, &GameState->OctorokSprites);
+                GameState->Octorok1, &GameState->OctorokSprites);
     DrawOctorokProjectile(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
-                          &GameState->OctorokProjectile1, &GameState->OctorokSprites);
+                          GameState->OctorokProjectile1, &GameState->OctorokSprites);
 
     DrawOctorok(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
-                &GameState->Octorok2, &GameState->OctorokSprites);
+                GameState->Octorok2, &GameState->OctorokSprites);
     DrawOctorokProjectile(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
-                          &GameState->OctorokProjectile2, &GameState->OctorokSprites);
+                          GameState->OctorokProjectile2, &GameState->OctorokSprites);
 
     DrawMoblin(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
-               &GameState->Moblin);
+               GameState->Moblin, &GameState->MoblinSprites);
     DrawMoblinProjectile(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
-                         &GameState->MoblinProjectile, &GameState->Moblin);
+                         GameState->MoblinProjectile, &GameState->MoblinSprites);
 
     GameState->FrameCounter++;
 }

@@ -235,6 +235,45 @@ struct world
 
 enum direction {FRONT, BACK, LEFT, RIGHT};
 
+enum entity_type
+{
+    EntityType_Octorok,
+    EntityType_Moblin,
+    EntityType_OctorokRock,
+    EntityType_MoblinArrow
+};
+
+// Unified entity structure - used by all enemies and projectiles
+struct entity
+{
+    entity_type Type;
+    
+    // Position (all entities have this)
+    tile_map_position P;
+    
+    // Health system (enemies only, projectiles use IsActive instead)
+    uint32 Health;
+    uint32 InvincibilityTimer;
+    bool32 IFramesFlicker;
+    
+    // Movement (projectiles use velocity, enemies use direction for AI)
+    real32 VelocityX;
+    real32 VelocityY;
+    direction Direction;
+    
+    // Projectile system
+    bool32 IsActive;
+    uint32 FireFrequency;
+};
+
+// Type aliases for backward compatibility - these are just entities
+typedef entity octorok;
+typedef entity moblin;
+typedef entity octorok_projectile;
+typedef entity moblin_projectile;
+
+// Legacy structs for compatibility - these just wrap entity
+// (Keeping for any code that accesses .Base)
 struct enemy_base
 {
     uint32 Health;
@@ -244,12 +283,6 @@ struct enemy_base
     direction Direction;
 };
 
-struct octorok
-{
-    // NOTE: Theres only 1 sprite for these guys, not a good reason to load it 4 times
-    enemy_base Base;
-};
-
 struct enemy_projectile_base
 {
     tile_map_position P;
@@ -257,23 +290,6 @@ struct enemy_projectile_base
     real32 VelocityY;
     bool32 IsActive;
     uint32 FireFrequency;
-};
-
-struct octorok_projectile
-{
-    enemy_projectile_base Base;
-};
-
-struct moblin
-{
-    enemy_base Base;
-    moblin_sprites Sprites;
-};
-
-struct moblin_projectile
-{
-    enemy_projectile_base Base;
-    direction Direction;
 };
 
 struct game_state
@@ -306,15 +322,22 @@ struct game_state
     bmp_file OWEnemiesBMP;
 
     octorok_sprites OctorokSprites;
+    moblin_sprites MoblinSprites;
 
-    octorok Octorok1;
-    octorok_projectile OctorokProjectile1;
+    // Entity array - backend storage
+    #define MAX_ENTITIES 64
+    entity Entities[MAX_ENTITIES];
+    uint32 EntityCount;
 
-    octorok Octorok2;
-    octorok_projectile OctorokProjectile2;
+    // Frontend pointers - point into Entities array
+    octorok *Octorok1;
+    octorok_projectile *OctorokProjectile1;
 
-    moblin Moblin;
-    moblin_projectile MoblinProjectile;
+    octorok *Octorok2;
+    octorok_projectile *OctorokProjectile2;
+
+    moblin *Moblin;
+    moblin_projectile *MoblinProjectile;
 };
 
 #endif
