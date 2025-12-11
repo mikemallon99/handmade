@@ -116,6 +116,36 @@ IsHitboxPointActive(tile_map_position PlayerP, tile_map_position HitboxP,
     return Active;
 }
 
+internal bool32
+IsEntityCollidingWithPlayer(entity *Entity, tile_map_position NewPlayerP)
+{
+    real32 HitboxWidth = 1.0f;
+    real32 HitboxHeight = 1.0f;
+    
+    // Determine hitbox size and if entity should be checked
+    if (Entity->Type == EntityType_Octorok || Entity->Type == EntityType_Moblin)
+    {
+        // Enemies - check if they have health
+        if (Entity->Health == 0) return false;
+        HitboxWidth = 1.0f;
+        HitboxHeight = 1.0f;
+    }
+    else if (Entity->Type == EntityType_OctorokRock || Entity->Type == EntityType_MoblinArrow)
+    {
+        // Projectiles - check if active
+        if (!Entity->IsActive) return false;
+        HitboxWidth = 0.5f;
+        HitboxHeight = 1.0f;
+    }
+    else
+    {
+        return false;
+    }
+    
+    // Check collision
+    return IsHitboxPointActive(NewPlayerP, Entity->P, HitboxWidth, HitboxHeight);
+}
+
 internal void
 UpdateOctorok(game_state *GameState, octorok *Octorok, octorok_projectile *Projectile)
 {
@@ -204,52 +234,47 @@ UpdateMoblinProjectile(moblin_projectile *Projectile)
 }
 
 internal void
-UpdateEntities(game_state *GameState)
+UpdateEntity(game_state *GameState, entity *Entity)
 {
-    for (uint32 EntityIndex = 0; EntityIndex < GameState->EntityCount; EntityIndex++)
+    if (Entity->Type == EntityType_Octorok)
     {
-        entity *Entity = &GameState->Entities[EntityIndex];
+        // TODO: Make this not weird
+        // Find associated projectile - check if this is Octorok1 or Octorok2
+        octorok_projectile *Projectile = 0;
+        if (Entity == GameState->Octorok1)
+        {
+            Projectile = GameState->OctorokProjectile1;
+        }
+        else if (Entity == GameState->Octorok2)
+        {
+            Projectile = GameState->OctorokProjectile2;
+        }
         
-        if (Entity->Type == EntityType_Octorok)
+        if (Projectile)
         {
-            // TODO: Make this not weird
-            // Find associated projectile - check if this is Octorok1 or Octorok2
-            octorok_projectile *Projectile = 0;
-            if (Entity == GameState->Octorok1)
-            {
-                Projectile = GameState->OctorokProjectile1;
-            }
-            else if (Entity == GameState->Octorok2)
-            {
-                Projectile = GameState->OctorokProjectile2;
-            }
-            
-            if (Projectile)
-            {
-                UpdateOctorok(GameState, (octorok *)Entity, Projectile);
-            }
+            UpdateOctorok(GameState, (octorok *)Entity, Projectile);
         }
-        else if (Entity->Type == EntityType_Moblin)
+    }
+    else if (Entity->Type == EntityType_Moblin)
+    {
+        // Moblin update uses frontend pointers, so just call it
+        // (It will use GameState->Moblin and GameState->MoblinProjectile)
+        UpdateMoblin(GameState);
+    }
+    else if (Entity->Type == EntityType_OctorokRock)
+    {
+        // Update projectile if active
+        if (Entity->IsActive)
         {
-            // Moblin update uses frontend pointers, so just call it
-            // (It will use GameState->Moblin and GameState->MoblinProjectile)
-            UpdateMoblin(GameState);
+            UpdateOctorokProjectile((octorok_projectile *)Entity);
         }
-        else if (Entity->Type == EntityType_OctorokRock)
+    }
+    else if (Entity->Type == EntityType_MoblinArrow)
+    {
+        // Update projectile if active
+        if (Entity->IsActive)
         {
-            // Update projectile if active
-            if (Entity->IsActive)
-            {
-                UpdateOctorokProjectile((octorok_projectile *)Entity);
-            }
-        }
-        else if (Entity->Type == EntityType_MoblinArrow)
-        {
-            // Update projectile if active
-            if (Entity->IsActive)
-            {
-                UpdateMoblinProjectile((moblin_projectile *)Entity);
-            }
+            UpdateMoblinProjectile((moblin_projectile *)Entity);
         }
     }
 }
@@ -841,78 +866,28 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     GameState->PlayerP = NewPlayerOrigin;
 
     // Update all entities
-    UpdateEntities(GameState);
+    for (uint32 EntityIndex = 0; EntityIndex < GameState->EntityCount; EntityIndex++)
+    {
+        UpdateEntity(GameState, &GameState->Entities[EntityIndex]);
+    }
 
-    // Checking if octorok hit player
-    // NOTE: I chose to do this after the octo position update, so were not using pos from last frame
+    // Check entity collisions with player
+    // NOTE: I chose to do this after the entity position update, so were not using pos from last frame
     if (GameState->InvincibilityTimer == 0)
     {
-        // TODO: Make it so i dont have to check this everywhere
-        if (GameState->Octorok1->Health)
+        for (uint32 EntityIndex = 0; EntityIndex < GameState->EntityCount; EntityIndex++)
         {
-            bool32 IsHit = IsHitboxPointActive(NewPlayerP, GameState->Octorok1->P, 1.0f, 1.0f);
-            if (IsHit)
+            entity *Entity = &GameState->Entities[EntityIndex];
+            if (IsEntityCollidingWithPlayer(Entity, NewPlayerP))
             {
                 GameState->InvincibilityTimer = 60;
                 GameState->PlayerHealth -= 1;
-            }
-        }
-
-        // Is projectile hitting the player?
-        if (GameState->OctorokProjectile1->IsActive)
-        {
-            bool32 IsHit = IsHitboxPointActive(NewPlayerP, GameState->OctorokProjectile1->P, 0.5f, 1.0f);
-            if (IsHit)
-            {
-                GameState->InvincibilityTimer = 60;
-                GameState->PlayerHealth -= 1;
-                GameState->OctorokProjectile1->IsActive = false;
-            }
-        }
-
-        // TODO: Make it so i dont have to check this everywhere
-        if (GameState->Octorok2->Health)
-        {
-            bool32 IsHit = IsHitboxPointActive(NewPlayerP, GameState->Octorok2->P, 1.0f, 1.0f);
-            if (IsHit)
-            {
-                GameState->InvincibilityTimer = 60;
-                GameState->PlayerHealth -= 1;
-            }
-        }
-
-        // Is projectile hitting the player?
-        if (GameState->OctorokProjectile2->IsActive)
-        {
-            bool32 IsHit = IsHitboxPointActive(NewPlayerP, GameState->OctorokProjectile2->P, 0.5f, 1.0f);
-            if (IsHit)
-            {
-                GameState->InvincibilityTimer = 60;
-                GameState->PlayerHealth -= 1;
-                GameState->OctorokProjectile2->IsActive = false;
-            }
-        }
-
-        // TODO: Make it so i dont have to check this everywhere
-        if (GameState->Moblin->Health)
-        {
-            bool32 IsHit = IsHitboxPointActive(NewPlayerP, GameState->Moblin->P, 1.0f, 1.0f);
-            if (IsHit)
-            {
-                GameState->InvincibilityTimer = 60;
-                GameState->PlayerHealth -= 1;
-            }
-        }
-
-        // Is projectile hitting the player?
-        if (GameState->MoblinProjectile->IsActive)
-        {
-            bool32 IsHit = IsHitboxPointActive(NewPlayerP, GameState->MoblinProjectile->P, 0.5f, 1.0f);
-            if (IsHit)
-            {
-                GameState->InvincibilityTimer = 60;
-                GameState->PlayerHealth -= 1;
-                GameState->MoblinProjectile->IsActive = false;
+                
+                // Deactivate projectiles on hit
+                if (Entity->Type == EntityType_OctorokRock || Entity->Type == EntityType_MoblinArrow)
+                {
+                    Entity->IsActive = false;
+                }
             }
         }
     }
@@ -921,61 +896,39 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->InvincibilityTimer -= 1;
     }
 
-    // Player sword hitting Moblin checking
+    // Player sword hitting entities
     if (GameState->PlayerUsingSword)
     {
-        // Player sword hitting Octorok checking
-        if (GameState->Octorok1->InvincibilityTimer == 0 && GameState->Octorok1->Health > 0)
+        for (uint32 EntityIndex = 0; EntityIndex < GameState->EntityCount; EntityIndex++)
         {
-            bool32 IsEnemyHit = IsHitboxPointActive(GameState->SwordPoint, 
-                                                    GameState->Octorok1->P, 
-                                                    1.0f, 1.0f);
-            if (IsEnemyHit)
+            entity *Entity = &GameState->Entities[EntityIndex];
+            
+            // Only check enemy types (not projectiles)
+            if (Entity->Type == EntityType_Octorok || Entity->Type == EntityType_Moblin)
             {
-                GameState->Octorok1->InvincibilityTimer = 60;
-                GameState->Octorok1->Health -= 1;
-            }
-        }
-
-        // Player sword hitting Octorok checking
-        if (GameState->Octorok2->InvincibilityTimer == 0 && GameState->Octorok2->Health > 0)
-        {
-            bool32 IsEnemyHit = IsHitboxPointActive(GameState->SwordPoint, 
-                                                    GameState->Octorok2->P, 
-                                                    1.0f, 1.0f);
-            if (IsEnemyHit)
-            {
-                GameState->Octorok2->InvincibilityTimer = 60;
-                GameState->Octorok2->Health -= 1;
-            }
-        }
-
-        // Player sword hitting Moblin check
-        if (GameState->Moblin->InvincibilityTimer == 0 && GameState->Moblin->Health > 0)
-        {
-            bool32 IsEnemyHit = IsHitboxPointActive(GameState->SwordPoint, 
-                                                    GameState->Moblin->P, 
-                                                    1.0f, 1.0f);
-            if (IsEnemyHit)
-            {
-                GameState->Moblin->InvincibilityTimer = 60;
-                GameState->Moblin->Health -= 1;
+                if (Entity->InvincibilityTimer == 0 && Entity->Health > 0)
+                {
+                    bool32 IsEnemyHit = IsHitboxPointActive(GameState->SwordPoint, 
+                                                            Entity->P, 
+                                                            1.0f, 1.0f);
+                    if (IsEnemyHit)
+                    {
+                        Entity->InvincibilityTimer = 60;
+                        Entity->Health -= 1;
+                    }
+                }
             }
         }
     }
 
     // Update invincibility timers
-    if (GameState->Octorok1->InvincibilityTimer > 0)
+    for (uint32 EntityIndex = 0; EntityIndex < GameState->EntityCount; EntityIndex++)
     {
-        GameState->Octorok1->InvincibilityTimer -= 1;
-    }
-    if (GameState->Octorok2->InvincibilityTimer > 0)
-    {
-        GameState->Octorok2->InvincibilityTimer -= 1;
-    }
-    if (GameState->Moblin->InvincibilityTimer > 0)
-    {
-        GameState->Moblin->InvincibilityTimer -= 1;
+        entity *Entity = &GameState->Entities[EntityIndex];
+        if (Entity->InvincibilityTimer > 0)
+        {
+            Entity->InvincibilityTimer -= 1;
+        }
     }
 
     // RENDERING
