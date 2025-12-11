@@ -266,32 +266,6 @@ struct entity
     uint32 FireFrequency;
 };
 
-// Type aliases for backward compatibility - these are just entities
-typedef entity octorok;
-typedef entity moblin;
-typedef entity octorok_projectile;
-typedef entity moblin_projectile;
-
-// Legacy structs for compatibility - these just wrap entity
-// (Keeping for any code that accesses .Base)
-struct enemy_base
-{
-    uint32 Health;
-    tile_map_position P;
-    uint32 InvincibilityTimer;
-    bool32 IFramesFlicker;
-    direction Direction;
-};
-
-struct enemy_projectile_base
-{
-    tile_map_position P;
-    real32 VelocityX;
-    real32 VelocityY;
-    bool32 IsActive;
-    uint32 FireFrequency;
-};
-
 struct game_state
 {
     memory_arena WorldArena;
@@ -330,14 +304,13 @@ struct game_state
     uint32 EntityCount;
 
     // Frontend pointers - point into Entities array
-    octorok *Octorok1;
-    octorok_projectile *OctorokProjectile1;
+    entity *Octorok1;
+    entity *OctorokProjectile1;
+    entity *Octorok2;
+    entity *OctorokProjectile2;
 
-    octorok *Octorok2;
-    octorok_projectile *OctorokProjectile2;
-
-    moblin *Moblin;
-    moblin_projectile *MoblinProjectile;
+    entity *Moblin;
+    entity *MoblinProjectile;
 };
 
 #endif

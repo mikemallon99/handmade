@@ -146,8 +146,28 @@ IsEntityCollidingWithPlayer(entity *Entity, tile_map_position NewPlayerP)
     return IsHitboxPointActive(NewPlayerP, Entity->P, HitboxWidth, HitboxHeight);
 }
 
+internal entity *
+SpawnOctorokProjectile(game_state *GameState, tile_map_position SpawnPosition)
+{
+    // Check if we have room in the entity array
+    if (GameState->EntityCount >= MAX_ENTITIES)
+    {
+        return 0; // No room for new entity
+    }
+    
+    // TODO: Need a way to clean these up
+    entity *Projectile = &GameState->Entities[GameState->EntityCount++];
+    Projectile->Type = EntityType_OctorokRock;
+    Projectile->P = SpawnPosition;
+    Projectile->VelocityX = 0.0;
+    Projectile->VelocityY = -5.0;
+    Projectile->IsActive = true;
+    
+    return Projectile;
+}
+
 internal void
-UpdateOctorok(game_state *GameState, octorok *Octorok, octorok_projectile *Projectile)
+UpdateOctorok(game_state *GameState, entity *Octorok)
 {
     // Octorok position update
     if (IsInSameTileRoom(GameState->PlayerP, Octorok->P))
@@ -165,19 +185,15 @@ UpdateOctorok(game_state *GameState, octorok *Octorok, octorok_projectile *Proje
     }
 
     // Octorok fire projectile
-    if (!Projectile->IsActive && 
-        Octorok->Health > 0 &&
-        GameState->FrameCounter % Projectile->FireFrequency == 0)
+    if (Octorok->Health > 0 &&
+        GameState->FrameCounter % Octorok->FireFrequency == 0)
     {
-        Projectile->IsActive = true;
-        Projectile->VelocityX = 0.0;
-        Projectile->VelocityY = -5.0;
-        Projectile->P = Octorok->P;
+        SpawnOctorokProjectile(GameState, Octorok->P);
     }
 }
 
 internal void
-UpdateOctorokProjectile(octorok_projectile *Projectile)
+UpdateOctorokProjectile(entity *Projectile)
 {
     Projectile->P.Pos.X += Projectile->VelocityX/60.0f;
     Projectile->P.Pos.Y += Projectile->VelocityY/60.0f;
@@ -188,41 +204,57 @@ UpdateOctorokProjectile(octorok_projectile *Projectile)
     }
 }
 
+internal entity *
+SpawnMoblinProjectile(game_state *GameState, tile_map_position SpawnPosition, direction ArrowDirection)
+{
+    // Check if we have room in the entity array
+    if (GameState->EntityCount >= MAX_ENTITIES)
+    {
+        return 0; // No room for new entity
+    }
+    
+    // TODO: Need a way to clean these up
+    entity *Projectile = &GameState->Entities[GameState->EntityCount++];
+    Projectile->Type = EntityType_MoblinArrow;
+    Projectile->P = SpawnPosition;
+    Projectile->VelocityX = 0.0;
+    Projectile->VelocityY = -5.0;
+    Projectile->Direction = ArrowDirection;
+    Projectile->IsActive = true;
+    
+    return Projectile;
+}
+
 internal void
-UpdateMoblin(game_state *GameState)
+UpdateMoblin(game_state *GameState, entity *Moblin)
 {
     // Moblin position update
-    if (IsInSameTileRoom(GameState->PlayerP, GameState->Moblin->P))
+    if (IsInSameTileRoom(GameState->PlayerP, Moblin->P))
     {
         local_persist int32 YDirection = -1;
-        if (GameState->Moblin->P.Pos.Y > 8)
+        if (Moblin->P.Pos.Y > 8)
         {
             YDirection = -1;
-            GameState->Moblin->Direction = FRONT;
+            Moblin->Direction = FRONT;
         }
-        else if (GameState->Moblin->P.Pos.Y < 3)
+        else if (Moblin->P.Pos.Y < 3)
         {
             YDirection = 1;
-            GameState->Moblin->Direction = BACK;
+            Moblin->Direction = BACK;
         }
-        GameState->Moblin->P.Pos.Y += (real32)YDirection * 0.05f;
+        Moblin->P.Pos.Y += (real32)YDirection * 0.05f;
     }
 
     // Moblin fire projectile
-    if (!GameState->MoblinProjectile->IsActive && 
-        GameState->Moblin->Health > 0 &&
-        GameState->FrameCounter % GameState->MoblinProjectile->FireFrequency == 0)
+    if (Moblin->Health > 0 &&
+        GameState->FrameCounter % Moblin->FireFrequency == 0)
     {
-        GameState->MoblinProjectile->IsActive = true;
-        GameState->MoblinProjectile->VelocityX = 0.0;
-        GameState->MoblinProjectile->VelocityY = -5.0;
-        GameState->MoblinProjectile->P = GameState->Moblin->P;
-        GameState->MoblinProjectile->Direction = GameState->Moblin->Direction;
+        SpawnMoblinProjectile(GameState, Moblin->P, Moblin->Direction);
     }
 }
 
 internal void
-UpdateMoblinProjectile(moblin_projectile *Projectile)
+UpdateMoblinProjectile(entity *Projectile)
 {
     Projectile->P.Pos.X += Projectile->VelocityX/60.0f;
     Projectile->P.Pos.Y += Projectile->VelocityY/60.0f;
@@ -238,35 +270,18 @@ UpdateEntity(game_state *GameState, entity *Entity)
 {
     if (Entity->Type == EntityType_Octorok)
     {
-        // TODO: Make this not weird
-        // Find associated projectile - check if this is Octorok1 or Octorok2
-        octorok_projectile *Projectile = 0;
-        if (Entity == GameState->Octorok1)
-        {
-            Projectile = GameState->OctorokProjectile1;
-        }
-        else if (Entity == GameState->Octorok2)
-        {
-            Projectile = GameState->OctorokProjectile2;
-        }
-        
-        if (Projectile)
-        {
-            UpdateOctorok(GameState, (octorok *)Entity, Projectile);
-        }
+        UpdateOctorok(GameState, Entity);
     }
     else if (Entity->Type == EntityType_Moblin)
     {
-        // Moblin update uses frontend pointers, so just call it
-        // (It will use GameState->Moblin and GameState->MoblinProjectile)
-        UpdateMoblin(GameState);
+        UpdateMoblin(GameState, Entity);
     }
     else if (Entity->Type == EntityType_OctorokRock)
     {
         // Update projectile if active
         if (Entity->IsActive)
         {
-            UpdateOctorokProjectile((octorok_projectile *)Entity);
+            UpdateOctorokProjectile(Entity);
         }
     }
     else if (Entity->Type == EntityType_MoblinArrow)
@@ -274,14 +289,14 @@ UpdateEntity(game_state *GameState, entity *Entity)
         // Update projectile if active
         if (Entity->IsActive)
         {
-            UpdateMoblinProjectile((moblin_projectile *)Entity);
+            UpdateMoblinProjectile(Entity);
         }
     }
 }
 
 internal void
 DrawOctorok(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
-            real32 PlayAreaY, uint32 CameraTileX, octorok *Octorok, octorok_sprites *OctorokSprites)
+            real32 PlayAreaY, uint32 CameraTileX, entity *Octorok, octorok_sprites *OctorokSprites)
 {
     if (IsInSameTileRoom(GameState->PlayerP, Octorok->P) && Octorok->Health > 0)
     {
@@ -324,7 +339,7 @@ DrawOctorok(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *Tile
 
 internal void
 DrawOctorokProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
-                      real32 PlayAreaY, uint32 CameraTileX, octorok_projectile *Projectile, octorok_sprites *OctorokSprites)
+                      real32 PlayAreaY, uint32 CameraTileX, entity *Projectile, octorok_sprites *OctorokSprites)
 {
     if (IsInSameTileRoom(GameState->PlayerP, Projectile->P) && 
         Projectile->IsActive)
@@ -340,7 +355,7 @@ DrawOctorokProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile
 
 internal void
 DrawMoblin(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
-           real32 PlayAreaY, uint32 CameraTileX, moblin *Moblin, moblin_sprites *MoblinSprites)
+           real32 PlayAreaY, uint32 CameraTileX, entity *Moblin, moblin_sprites *MoblinSprites)
 {
     if (IsInSameTileRoom(GameState->PlayerP, Moblin->P) && Moblin->Health > 0)
     {
@@ -408,7 +423,7 @@ DrawMoblin(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileM
 
 internal void
 DrawMoblinProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
-                     real32 PlayAreaY, uint32 CameraTileX, moblin_projectile *Projectile, moblin_sprites *MoblinSprites)
+                     real32 PlayAreaY, uint32 CameraTileX, entity *Projectile, moblin_sprites *MoblinSprites)
 {
     if (IsInSameTileRoom(GameState->PlayerP, Projectile->P) && 
         Projectile->IsActive)
@@ -454,22 +469,22 @@ DrawEntity(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileM
     if (Entity->Type == EntityType_Octorok)
     {
         DrawOctorok(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
-                   (octorok *)Entity, &GameState->OctorokSprites);
+                   Entity, &GameState->OctorokSprites);
     }
     else if (Entity->Type == EntityType_OctorokRock)
     {
         DrawOctorokProjectile(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
-                             (octorok_projectile *)Entity, &GameState->OctorokSprites);
+                             Entity, &GameState->OctorokSprites);
     }
     else if (Entity->Type == EntityType_Moblin)
     {
         DrawMoblin(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
-                  (moblin *)Entity, &GameState->MoblinSprites);
+                  Entity, &GameState->MoblinSprites);
     }
     else if (Entity->Type == EntityType_MoblinArrow)
     {
         DrawMoblinProjectile(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
-                            (moblin_projectile *)Entity, &GameState->MoblinSprites);
+                            Entity, &GameState->MoblinSprites);
     }
 }
 
@@ -572,12 +587,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->Octorok1->P.RoomIDY = SpawnRoomY;
         GameState->Octorok1->InvincibilityTimer = 0;
         GameState->Octorok1->IFramesFlicker = false;
-
-        // Add OctorokProjectile1 to entity array
-        GameState->OctorokProjectile1 = &GameState->Entities[GameState->EntityCount++];
-        GameState->OctorokProjectile1->Type = EntityType_OctorokRock;
-        GameState->OctorokProjectile1->FireFrequency = 60;
-        GameState->OctorokProjectile1->IsActive = false;
+        GameState->Octorok1->FireFrequency = 60;
 
         // Add Octorok2 to entity array
         GameState->Octorok2 = &GameState->Entities[GameState->EntityCount++];
@@ -589,12 +599,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->Octorok2->P.RoomIDY = SpawnRoomY;
         GameState->Octorok2->InvincibilityTimer = 0;
         GameState->Octorok2->IFramesFlicker = false;
-
-        // Add OctorokProjectile2 to entity array
-        GameState->OctorokProjectile2 = &GameState->Entities[GameState->EntityCount++];
-        GameState->OctorokProjectile2->Type = EntityType_OctorokRock;
-        GameState->OctorokProjectile2->FireFrequency = 60;
-        GameState->OctorokProjectile2->IsActive = false;
+        GameState->Octorok2->FireFrequency = 60;
 
         // Add Moblin to entity array
         GameState->Moblin = &GameState->Entities[GameState->EntityCount++];
@@ -607,12 +612,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->Moblin->Direction = FRONT;
         GameState->Moblin->InvincibilityTimer = 0;
         GameState->Moblin->IFramesFlicker = false;
-
-        // Add MoblinProjectile to entity array
-        GameState->MoblinProjectile = &GameState->Entities[GameState->EntityCount++];
-        GameState->MoblinProjectile->Type = EntityType_MoblinArrow;
-        GameState->MoblinProjectile->FireFrequency = 60;
-        GameState->MoblinProjectile->IsActive = false;
+        GameState->Moblin->FireFrequency = 60;
 
         // NOTE: We should probably start a new arena for this image? 
         // Memory->Background = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_background.bmp");
