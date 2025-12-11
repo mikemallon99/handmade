@@ -284,7 +284,12 @@ DrawBMPTile(bmp_tile *BMPTile, game_offscreen_buffer *Buffer,
             {
                 SourceX = BMPTile->X + BMPTile->Width - ColIdx;
             }
+            // NOTE: If Y is flipped, then grab from buffer in reverse order
             uint32 SourceY = BMPTile->Y + RowIdx;
+            if (BMPTile->FlipY)
+            {
+                SourceY = BMPTile->Y + BMPTile->Height - RowIdx;
+            }
 
             uint32 ImageOffset = SourceY*BMPBaseFile->Width + SourceX;
             uint32 *ImagePixel = BMPBaseFile->Pixels + ImageOffset;
@@ -459,6 +464,12 @@ LoadOctorokSprites(octorok_sprites *OctorokSprites, bmp_file *BaseBMP)
     OctorokSprites->Right[1].Width = 16;
     OctorokSprites->Right[1].Height = 16;
     OctorokSprites->Right[1].FlipX = true;
+
+    OctorokSprites->Projectile.Tileset = BaseBMP;
+    OctorokSprites->Projectile.X = 69;
+    OctorokSprites->Projectile.Y = 11;
+    OctorokSprites->Projectile.Width = 8;
+    OctorokSprites->Projectile.Height = 16;
 }
 
 internal void

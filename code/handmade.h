@@ -248,7 +248,6 @@ struct octorok
 {
     // NOTE: Theres only 1 sprite for these guys, not a good reason to load it 4 times
     enemy_base Base;
-    octorok_sprites Sprites;
 };
 
 struct enemy_projectile_base
@@ -263,7 +262,6 @@ struct enemy_projectile_base
 struct octorok_projectile
 {
     enemy_projectile_base Base;
-    bmp_tile Sprite;
 };
 
 struct moblin
@@ -307,8 +305,13 @@ struct game_state
 
     bmp_file OWEnemiesBMP;
 
-    octorok Octorok;
-    octorok_projectile OctorokProjectile;
+    octorok_sprites OctorokSprites;
+
+    octorok Octorok1;
+    octorok_projectile OctorokProjectile1;
+
+    octorok Octorok2;
+    octorok_projectile OctorokProjectile2;
 
     moblin Moblin;
     moblin_projectile MoblinProjectile;
