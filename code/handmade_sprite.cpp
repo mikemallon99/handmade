@@ -409,6 +409,30 @@ LoadTextTileset(text_tileset *TextTileset, bmp_file *BaseBMP)
 }
 
 internal void
+LoadHudTileset(hud_tileset *HudTileset, bmp_file *BaseBMP)
+{
+    HudTileset->BaseBMP = BaseBMP;
+
+    HudTileset->Hearts[0].Tileset = BaseBMP;
+    HudTileset->Hearts[0].X = 627;
+    HudTileset->Hearts[0].Y = 117;
+    HudTileset->Hearts[0].Width = 8;
+    HudTileset->Hearts[0].Height = 8;
+
+    HudTileset->Hearts[1].Tileset = BaseBMP;
+    HudTileset->Hearts[1].X = 636;
+    HudTileset->Hearts[1].Y = 117;
+    HudTileset->Hearts[1].Width = 8;
+    HudTileset->Hearts[1].Height = 8;
+
+    HudTileset->Hearts[2].Tileset = BaseBMP;
+    HudTileset->Hearts[2].X = 645;
+    HudTileset->Hearts[2].Y = 117;
+    HudTileset->Hearts[2].Width = 8;
+    HudTileset->Hearts[2].Height = 8;
+}
+
+internal void
 LoadOctorokSprites(octorok_sprites *OctorokSprites, bmp_file *BaseBMP)
 {
     OctorokSprites->BaseBMP = BaseBMP;

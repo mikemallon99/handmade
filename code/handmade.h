@@ -198,6 +198,8 @@ typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 //
 
 #include "handmade_intrinsics.h"
+#include "handmade_position.h"
+#include "handmade_entity.h"
 #include "handmade_tile.h"
 #include "handmade_sprite.h"
 
@@ -233,39 +235,6 @@ struct world
     tile_map *TileMap;
 };
 
-enum direction {FRONT, BACK, LEFT, RIGHT};
-
-enum entity_type
-{
-    EntityType_Octorok,
-    EntityType_Moblin,
-    EntityType_OctorokRock,
-    EntityType_MoblinArrow
-};
-
-// Unified entity structure - used by all enemies and projectiles
-struct entity
-{
-    entity_type Type;
-    
-    // Position (all entities have this)
-    tile_map_position P;
-    
-    // Health system (enemies only, projectiles use IsActive instead)
-    uint32 Health;
-    uint32 InvincibilityTimer;
-    bool32 IFramesFlicker;
-    
-    // Movement (projectiles use velocity, enemies use direction for AI)
-    real32 VelocityX;
-    real32 VelocityY;
-    direction Direction;
-    
-    // Projectile system
-    bool32 IsActive;
-    uint32 FireFrequency;
-};
-
 struct game_state
 {
     memory_arena WorldArena;
@@ -274,6 +243,7 @@ struct game_state
 
     tile_map_position PlayerP;
     uint32 PlayerHealth;
+    uint32 MaxHealth;
     bool32 PlayerUsingSword;
     int32 SwordUsageFrame;
     tile_map_position SwordPoint;
@@ -286,12 +256,13 @@ struct game_state
     bmp_file LinkBMP;
     link_sprites LinkSprites;
     uint32 WalkStep;
-    uint32 LinkWidth;
-    uint32 LinkHeight;
 
     bmp_file OverworldBMP;
     overworld_tileset OverworldTileset;
     text_tileset TextTileset;
+
+    bmp_file HudBMP;
+    hud_tileset HudTileset;
 
     bmp_file OWEnemiesBMP;
 
@@ -302,15 +273,14 @@ struct game_state
     #define MAX_ENTITIES 64
     entity Entities[MAX_ENTITIES];
     uint32 EntityCount;
+    tile_room *RoomDebug;
 
-    // Frontend pointers - point into Entities array
+    // Room 1 enemies (point to places in entites array)
     entity *Octorok1;
-    entity *OctorokProjectile1;
     entity *Octorok2;
-    entity *OctorokProjectile2;
-
-    entity *Moblin;
-    entity *MoblinProjectile;
+    entity *Octorok3;
+    entity *Moblin1;
+    entity *Moblin2;
 };
 
 #endif

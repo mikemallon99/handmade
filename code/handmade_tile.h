@@ -1,19 +1,8 @@
 #ifndef HANDMADE_TILE_H
 #define HANDMADE_TILE_H
 
-struct tile_room_position
-{
-    real32 X;
-    real32 Y;
-};
-
-struct tile_map_position
-{
-    uint32 RoomIDX; 
-    uint32 RoomIDY;
-
-    tile_room_position Pos;
-};
+#include "handmade_position.h"
+#include "handmade_entity.h"
 
 struct tile_room
 {
@@ -23,6 +12,7 @@ struct tile_room
     tile_map_position *Left;
     tile_map_position *Right;
     tile_map_position Door;
+    entity Entities[32];
 };
 
 struct tile_map

@@ -58,6 +58,13 @@ struct text_tileset
     bmp_tile Tiles[48];
 };
 
+struct hud_tileset
+{
+    bmp_file *BaseBMP;
+
+    bmp_tile Hearts[3];
+};
+
 struct link_sprites
 {
     bmp_file *BaseBMP;

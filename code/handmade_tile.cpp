@@ -59,6 +59,15 @@ GetTileRoom(tile_map *TileMap, uint32 RoomX, uint32 RoomY)
     return TileRoom;
 }
 
+internal tile_room *
+GetTileRoom(tile_map *TileMap, tile_map_position Pos)
+{
+    tile_room *TileRoom = 0;
+    TileRoom = GetTileRoom(TileMap, Pos.RoomIDX, Pos.RoomIDY);
+
+    return TileRoom;
+}
+
 inline uint32
 GetTileValue(tile_map *TileMap, tile_room *TileRoom, uint32 TileX, uint32 TileY)
 {
@@ -92,7 +101,7 @@ GetTileValue(tile_map *TileMap, uint32 RoomIDX, uint32 RoomIDY, uint32 TileX, ui
 }
 
 inline uint32
-GetTileValue(tile_map *TileMap, uint32 RoomIDX, uint32 RoomIDY, tile_room_position Pos)
+GetTileValue(tile_map *TileMap, uint32 RoomIDX, uint32 RoomIDY, vector2 Pos)
 {
     tile_room *TileRoom = GetTileRoom(TileMap, RoomIDX, RoomIDY);
     uint32 TileValue = GetTileValue(TileMap, TileRoom, Pos.X, Pos.Y);
@@ -124,6 +133,14 @@ internal bool32
 IsTileMapPointEmpty(tile_map *TileMap, tile_map_position Pos)
 {
     bool32 Empty = false;
+
+    // If its offscreen
+    if (Pos.Pos.X < 0 || Pos.Pos.Y < 0 ||
+        Pos.Pos.X >= TileMap->RoomWidth || 
+        Pos.Pos.Y >= TileMap->RoomHeight)
+    {
+        return false;
+    }
 
     uint32 TileValue = GetTileValue(TileMap, Pos);
     Empty = (TileValue == OW_Floor || TileValue == OW_Floor_Dusty ||

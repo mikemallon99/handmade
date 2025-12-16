@@ -6,6 +6,9 @@
 //
 #include <math.h>
 
+// NOTE: real32 must be defined before including this header
+// (it's defined in handmade.h which includes this file)
+
 inline int32
 RoundReal32ToInt32(real32 Real32)
 {
