@@ -12,7 +12,8 @@ struct tile_room
     tile_map_position *Left;
     tile_map_position *Right;
     tile_map_position Door;
-    entity Entities[32];
+    #define MAX_ENTITIES 32
+    entity Entities[MAX_ENTITIES];
 };
 
 struct tile_map

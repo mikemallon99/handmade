@@ -3,6 +3,7 @@
 #include "handmade_random.h"
 #include "handmade_map.h"
 #include "handmade_tile.cpp"
+#include "handmade_entity.cpp"
 #include "handmade_sprite.cpp"
 
 
@@ -181,20 +182,16 @@ IsEntityCollidingWithPlayer(entity *Entity, tile_map_position NewPlayerP)
 internal entity *
 SpawnOctorokProjectile(game_state *GameState, tile_map_position SpawnPosition)
 {
-    // Check if we have room in the entity array
-    if (GameState->EntityCount >= MAX_ENTITIES)
-    {
-        return 0; // No room for new entity
-    }
-    
-    // TODO: Need a way to clean these up
     tile_room *PlayerRoom = GetTileRoom(GameState->World->TileMap, GameState->PlayerP);
-    entity *Projectile = &PlayerRoom->Entities[GameState->EntityCount++];
-    Projectile->Type = EntityType_OctorokRock;
-    Projectile->P = SpawnPosition;
-    Projectile->VelocityX = 0.0;
-    Projectile->VelocityY = -5.0;
-    Projectile->IsActive = true;
+    entity *Projectile = GetNewEntity(PlayerRoom->Entities);
+    if (Projectile)
+    {
+        Projectile->Type = EntityType_OctorokRock;
+        Projectile->P = SpawnPosition;
+        Projectile->VelocityX = 0.0;
+        Projectile->VelocityY = -5.0;
+        Projectile->IsActive = true;
+    }
     
     return Projectile;
 }
@@ -204,71 +201,66 @@ UpdateOctorok(game_state *GameState, entity *Octorok)
 {
     // New algo: go forward until hit a wall, then turn a random direction
     // Octorok position update
-    // NOTE: do we have to do this same tile room check every time? 
-    // TODO: instead, each room has entity array which we update
-    if (IsInSameTileRoom(GameState->PlayerP, Octorok->P))
+    real32 Speed = 0.05f;
+    vector2 PositionDelta = Octorok->Direction * Speed;
+
+    tile_map_position NewPosition = Octorok->P;
+    NewPosition.Pos = Octorok->P.Pos + PositionDelta;
+    tile_map_position NewPositionUp = NewPosition;
+    NewPositionUp.Pos.Y += Octorok->Height;
+    tile_map_position NewPositionRight = NewPosition;
+    NewPositionRight.Pos.X += Octorok->Width;
+    tile_map_position NewPositionUpRight = NewPosition;
+    NewPositionUpRight.Pos.X += Octorok->Width;
+    NewPositionUpRight.Pos.Y += Octorok->Height;
+
+    tile_map *TileMap = GameState->World->TileMap;
+    if (IsTileMapPointEmpty(TileMap, NewPosition) &&
+        IsTileMapPointEmpty(TileMap, NewPositionUp) &&
+        IsTileMapPointEmpty(TileMap, NewPositionRight) &&
+        IsTileMapPointEmpty(TileMap, NewPositionUpRight))
     {
-        real32 Speed = 0.05f;
-        vector2 PositionDelta = Octorok->Direction * Speed;
+        Octorok->P = NewPosition;
+    }
+    else
+    {
+        // What directions are available?
+        vector2 UpDir = {0.0f, 1.0f};
+        vector2 DownDir = {0.0f, -1.0f};
+        vector2 LeftDir = {-1.0f, 0.0f};
+        vector2 RightDir = {1.0f, 0.0f};
 
-        tile_map_position NewPosition = Octorok->P;
-        NewPosition.Pos = Octorok->P.Pos + PositionDelta;
-        tile_map_position NewPositionUp = NewPosition;
-        NewPositionUp.Pos.Y += Octorok->Height;
-        tile_map_position NewPositionRight = NewPosition;
-        NewPositionRight.Pos.X += Octorok->Width;
-        tile_map_position NewPositionUpRight = NewPosition;
-        NewPositionUpRight.Pos.X += Octorok->Width;
-        NewPositionUpRight.Pos.Y += Octorok->Height;
+        tile_map_position UpPosition = Octorok->P;
+        UpPosition.Pos = Octorok->P.Pos + UpDir * Speed;
+        tile_map_position DownPosition = Octorok->P;
+        DownPosition.Pos = Octorok->P.Pos + DownDir * Speed;
+        tile_map_position LeftPosition = Octorok->P;
+        LeftPosition.Pos = Octorok->P.Pos + LeftDir * Speed;
+        tile_map_position RightPosition = Octorok->P;
+        RightPosition.Pos = Octorok->P.Pos + RightDir * Speed;
 
-        tile_map *TileMap = GameState->World->TileMap;
-        if (IsTileMapPointEmpty(TileMap, NewPosition) &&
-            IsTileMapPointEmpty(TileMap, NewPositionUp) &&
-            IsTileMapPointEmpty(TileMap, NewPositionRight) &&
-            IsTileMapPointEmpty(TileMap, NewPositionUpRight))
+        uint32 DirArraySize = 0;
+        vector2 *DirectionArray[4];
+        if (IsTileMapPointEmpty(GameState->World->TileMap, UpPosition))
         {
-            Octorok->P = NewPosition;
+            DirectionArray[DirArraySize++] = &UpDir;
         }
-        else
+        if (IsTileMapPointEmpty(GameState->World->TileMap, DownPosition))
         {
-            // What directions are available?
-            vector2 UpDir = {0.0f, 1.0f};
-            vector2 DownDir = {0.0f, -1.0f};
-            vector2 LeftDir = {-1.0f, 0.0f};
-            vector2 RightDir = {1.0f, 0.0f};
-
-            tile_map_position UpPosition = Octorok->P;
-            UpPosition.Pos = Octorok->P.Pos + UpDir * Speed;
-            tile_map_position DownPosition = Octorok->P;
-            DownPosition.Pos = Octorok->P.Pos + DownDir * Speed;
-            tile_map_position LeftPosition = Octorok->P;
-            LeftPosition.Pos = Octorok->P.Pos + LeftDir * Speed;
-            tile_map_position RightPosition = Octorok->P;
-            RightPosition.Pos = Octorok->P.Pos + RightDir * Speed;
-
-            uint32 DirArraySize = 0;
-            vector2 *DirectionArray[4];
-            if (IsTileMapPointEmpty(GameState->World->TileMap, UpPosition))
-            {
-                DirectionArray[DirArraySize++] = &UpDir;
-            }
-            if (IsTileMapPointEmpty(GameState->World->TileMap, DownPosition))
-            {
-                DirectionArray[DirArraySize++] = &DownDir;
-            }
-            if (IsTileMapPointEmpty(GameState->World->TileMap, LeftPosition))
-            {
-                DirectionArray[DirArraySize++] = &LeftDir;
-            }
-            if (IsTileMapPointEmpty(GameState->World->TileMap, RightPosition))
-            {
-                DirectionArray[DirArraySize++] = &RightDir;
-            }
-
-            local_persist uint32 RandomIdx = 0;
-            uint32 RandomNum = RandomNumberTable[RandomIdx++] % DirArraySize;
-            Octorok->Direction = *DirectionArray[RandomNum];
+            DirectionArray[DirArraySize++] = &DownDir;
         }
+        if (IsTileMapPointEmpty(GameState->World->TileMap, LeftPosition))
+        {
+            DirectionArray[DirArraySize++] = &LeftDir;
+        }
+        if (IsTileMapPointEmpty(GameState->World->TileMap, RightPosition))
+        {
+            DirectionArray[DirArraySize++] = &RightDir;
+        }
+
+        local_persist uint32 RandomIdx = 0;
+        uint32 RandomNum = RandomNumberTable[RandomIdx++] % DirArraySize;
+        Octorok->Direction = *DirectionArray[RandomNum];
     }
 
     // Octorok fire projectile
@@ -294,21 +286,17 @@ UpdateOctorokProjectile(entity *Projectile)
 internal entity *
 SpawnMoblinProjectile(game_state *GameState, tile_map_position SpawnPosition, vector2 ArrowDirection)
 {
-    // Check if we have room in the entity array
-    if (GameState->EntityCount >= MAX_ENTITIES)
-    {
-        return 0; // No room for new entity
-    }
-    
-    // TODO: Need a way to clean these up
     tile_room *PlayerRoom = GetTileRoom(GameState->World->TileMap, GameState->PlayerP);
-    entity *Projectile = &PlayerRoom->Entities[GameState->EntityCount++];
-    Projectile->Type = EntityType_MoblinArrow;
-    Projectile->P = SpawnPosition;
-    Projectile->VelocityX = 0.0;
-    Projectile->VelocityY = -5.0;
-    Projectile->Direction = ArrowDirection;
-    Projectile->IsActive = true;
+    entity *Projectile = GetNewEntity(PlayerRoom->Entities);
+    if (Projectile)
+    {
+        Projectile->Type = EntityType_MoblinArrow;
+        Projectile->P = SpawnPosition;
+        Projectile->VelocityX = 0.0;
+        Projectile->VelocityY = -5.0;
+        Projectile->Direction = ArrowDirection;
+        Projectile->IsActive = true;
+    }
     
     return Projectile;
 }
@@ -317,25 +305,21 @@ internal void
 UpdateMoblin(game_state *GameState, entity *Moblin)
 {
     // Moblin position update
-    if (IsInSameTileRoom(GameState->PlayerP, Moblin->P))
+    local_persist int32 YDirection = -1;
+    if (Moblin->P.Pos.Y > 8)
     {
-        local_persist int32 YDirection = -1;
-        if (Moblin->P.Pos.Y > 8)
-        {
-            YDirection = -1;
-        }
-        else if (Moblin->P.Pos.Y < 3)
-        {
-            YDirection = 1;
-        }
-        Moblin->Direction.X = 0.0f;
-        Moblin->Direction.Y = (real32)YDirection;
-        Moblin->P.Pos.Y += (real32)YDirection * 0.05f;
+        YDirection = -1;
     }
+    else if (Moblin->P.Pos.Y < 3)
+    {
+        YDirection = 1;
+    }
+    Moblin->Direction.X = 0.0f;
+    Moblin->Direction.Y = (real32)YDirection;
+    Moblin->P.Pos.Y += (real32)YDirection * 0.05f;
 
     // Moblin fire projectile
-    if (Moblin->Health > 0 &&
-        GameState->FrameCounter % Moblin->FireFrequency == 0)
+    if (GameState->FrameCounter % Moblin->FireFrequency == 0)
     {
         SpawnMoblinProjectile(GameState, Moblin->P, Moblin->Direction);
     }
@@ -386,42 +370,39 @@ internal void
 DrawOctorok(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
             real32 PlayAreaY, uint32 CameraTileX, entity *Octorok, octorok_sprites *OctorokSprites)
 {
-    if (IsInSameTileRoom(GameState->PlayerP, Octorok->P) && Octorok->Health > 0)
-    {
-        real32 OctoOriginX = TileMap->TileSideInPixels*(Octorok->P.Pos.X - (real32)CameraTileX);
-        real32 OctoOriginY = PlayAreaY - TileMap->TileSideInPixels*(Octorok->P.Pos.Y - 11.0f);
-        real32 OctoScreenX = OctoOriginX;
-        // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
-        real32 OctoScreenY = OctoOriginY - TileMap->TileSideInPixels*1.0f;
-        // Origin
-        DrawRectangle(Buffer, OctoOriginX, OctoOriginY-2, OctoOriginX+2, OctoOriginY, 
-                      1.0f, 0.0f, 0.0f);
+    real32 OctoOriginX = TileMap->TileSideInPixels*(Octorok->P.Pos.X - (real32)CameraTileX);
+    real32 OctoOriginY = PlayAreaY - TileMap->TileSideInPixels*(Octorok->P.Pos.Y - 11.0f);
+    real32 OctoScreenX = OctoOriginX;
+    // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
+    real32 OctoScreenY = OctoOriginY - TileMap->TileSideInPixels*1.0f;
+    // Origin
+    DrawRectangle(Buffer, OctoOriginX, OctoOriginY-2, OctoOriginX+2, OctoOriginY, 
+                    1.0f, 0.0f, 0.0f);
 
-        // Hurt/Invincible rendering
-        if (Octorok->InvincibilityTimer > 0)
+    // Hurt/Invincible rendering
+    if (Octorok->InvincibilityTimer > 0)
+    {
+        if (Octorok->InvincibilityTimer % 6 == 0)
         {
-            if (Octorok->InvincibilityTimer % 6 == 0)
+            if (Octorok->IFramesFlicker)
             {
-                if (Octorok->IFramesFlicker)
-                {
-                    Octorok->IFramesFlicker = false;
-                }
-                else
-                {
-                    Octorok->IFramesFlicker = true;
-                }
+                Octorok->IFramesFlicker = false;
+            }
+            else
+            {
+                Octorok->IFramesFlicker = true;
             }
         }
-        else 
-        {
-            Octorok->IFramesFlicker = false;
-        }
+    }
+    else 
+    {
+        Octorok->IFramesFlicker = false;
+    }
 
-        if (!Octorok->IFramesFlicker)
-        {
-            uint32 OctoSpriteIndex = (GameState->FrameCounter & 0x10) == 0x10;
-            DrawBMPTile(&OctorokSprites->Front[OctoSpriteIndex], Buffer, OctoScreenX, OctoScreenY);
-        }
+    if (!Octorok->IFramesFlicker)
+    {
+        uint32 OctoSpriteIndex = (GameState->FrameCounter & 0x10) == 0x10;
+        DrawBMPTile(&OctorokSprites->Front[OctoSpriteIndex], Buffer, OctoScreenX, OctoScreenY);
     }
 }
 
@@ -429,83 +410,76 @@ internal void
 DrawOctorokProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
                       real32 PlayAreaY, uint32 CameraTileX, entity *Projectile, octorok_sprites *OctorokSprites)
 {
-    if (IsInSameTileRoom(GameState->PlayerP, Projectile->P) && 
-        Projectile->IsActive)
-    {
-        real32 ProjOriginX = TileMap->TileSideInPixels*(Projectile->P.Pos.X - (real32)CameraTileX);
-        real32 ProjOriginY = PlayAreaY - TileMap->TileSideInPixels*(Projectile->P.Pos.Y - 11.0f);
-        real32 ProjScreenX = ProjOriginX;
-        // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
-        real32 ProjScreenY = ProjOriginY - TileMap->TileSideInPixels*1.0f;
-        DrawBMPTile(&OctorokSprites->Projectile, Buffer, ProjScreenX, ProjScreenY);
-    }
+    real32 ProjOriginX = TileMap->TileSideInPixels*(Projectile->P.Pos.X - (real32)CameraTileX);
+    real32 ProjOriginY = PlayAreaY - TileMap->TileSideInPixels*(Projectile->P.Pos.Y - 11.0f);
+    real32 ProjScreenX = ProjOriginX;
+    // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
+    real32 ProjScreenY = ProjOriginY - TileMap->TileSideInPixels*1.0f;
+    DrawBMPTile(&OctorokSprites->Projectile, Buffer, ProjScreenX, ProjScreenY);
 }
 
 internal void
 DrawMoblin(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
            real32 PlayAreaY, uint32 CameraTileX, entity *Moblin, moblin_sprites *MoblinSprites)
 {
-    if (IsInSameTileRoom(GameState->PlayerP, Moblin->P) && Moblin->Health > 0)
+    real32 MoblinOriginX = TileMap->TileSideInPixels*(Moblin->P.Pos.X - (real32)CameraTileX);
+    real32 MoblinOriginY = PlayAreaY - TileMap->TileSideInPixels*(Moblin->P.Pos.Y - 11.0f);
+    real32 MoblinScreenX = MoblinOriginX;
+    // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
+    real32 MoblinScreenY = MoblinOriginY - TileMap->TileSideInPixels*1.0f;
+    // Origin
+    DrawRectangle(Buffer, MoblinOriginX, MoblinOriginY-2, MoblinOriginX+2, MoblinOriginY, 
+                    1.0f, 0.0f, 0.0f);
+
+    // Hurt/Invincible rendering
+    if (Moblin->InvincibilityTimer > 0)
     {
-        real32 MoblinOriginX = TileMap->TileSideInPixels*(Moblin->P.Pos.X - (real32)CameraTileX);
-        real32 MoblinOriginY = PlayAreaY - TileMap->TileSideInPixels*(Moblin->P.Pos.Y - 11.0f);
-        real32 MoblinScreenX = MoblinOriginX;
-        // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
-        real32 MoblinScreenY = MoblinOriginY - TileMap->TileSideInPixels*1.0f;
-        // Origin
-        DrawRectangle(Buffer, MoblinOriginX, MoblinOriginY-2, MoblinOriginX+2, MoblinOriginY, 
-                      1.0f, 0.0f, 0.0f);
-
-        // Hurt/Invincible rendering
-        if (Moblin->InvincibilityTimer > 0)
+        if (Moblin->InvincibilityTimer % 6 == 0)
         {
-            if (Moblin->InvincibilityTimer % 6 == 0)
+            if (Moblin->IFramesFlicker)
             {
-                if (Moblin->IFramesFlicker)
-                {
-                    Moblin->IFramesFlicker = false;
-                }
-                else
-                {
-                    Moblin->IFramesFlicker = true;
-                }
-            }
-        }
-        else 
-        {
-            Moblin->IFramesFlicker = false;
-        }
-
-        if (!Moblin->IFramesFlicker)
-        {
-            direction MoblinDir = Vector2ToDirectionEnum(&Moblin->Direction);
-            bmp_tile *MoblinDirSprite;
-            if (MoblinDir == FRONT)
-            {
-                MoblinDirSprite = (bmp_tile *)&MoblinSprites->Front;
-            }
-            else if (MoblinDir == BACK)
-            {
-                MoblinDirSprite = (bmp_tile *)&MoblinSprites->Back;
-            }
-            else if (MoblinDir == LEFT)
-            {
-                MoblinDirSprite = (bmp_tile *)&MoblinSprites->Left;
-            }
-            else if (MoblinDir == RIGHT)
-            {
-                MoblinDirSprite = (bmp_tile *)&MoblinSprites->Right;
+                Moblin->IFramesFlicker = false;
             }
             else
             {
-                MoblinDirSprite = 0;
-                Assert(0);
+                Moblin->IFramesFlicker = true;
             }
-
-            uint32 MoblinSpriteIndex = (GameState->FrameCounter & 0x10) == 0x10;
-
-            DrawBMPTile(&MoblinDirSprite[MoblinSpriteIndex], Buffer, MoblinScreenX, MoblinScreenY);
         }
+    }
+    else 
+    {
+        Moblin->IFramesFlicker = false;
+    }
+
+    if (!Moblin->IFramesFlicker)
+    {
+        direction MoblinDir = Vector2ToDirectionEnum(&Moblin->Direction);
+        bmp_tile *MoblinDirSprite;
+        if (MoblinDir == FRONT)
+        {
+            MoblinDirSprite = (bmp_tile *)&MoblinSprites->Front;
+        }
+        else if (MoblinDir == BACK)
+        {
+            MoblinDirSprite = (bmp_tile *)&MoblinSprites->Back;
+        }
+        else if (MoblinDir == LEFT)
+        {
+            MoblinDirSprite = (bmp_tile *)&MoblinSprites->Left;
+        }
+        else if (MoblinDir == RIGHT)
+        {
+            MoblinDirSprite = (bmp_tile *)&MoblinSprites->Right;
+        }
+        else
+        {
+            MoblinDirSprite = 0;
+            Assert(0);
+        }
+
+        uint32 MoblinSpriteIndex = (GameState->FrameCounter & 0x10) == 0x10;
+
+        DrawBMPTile(&MoblinDirSprite[MoblinSpriteIndex], Buffer, MoblinScreenX, MoblinScreenY);
     }
 }
 
@@ -513,41 +487,37 @@ internal void
 DrawMoblinProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
                      real32 PlayAreaY, uint32 CameraTileX, entity *Projectile, moblin_sprites *MoblinSprites)
 {
-    if (IsInSameTileRoom(GameState->PlayerP, Projectile->P) && 
-        Projectile->IsActive)
+    real32 ProjOriginX = TileMap->TileSideInPixels*(Projectile->P.Pos.X - (real32)CameraTileX);
+    real32 ProjOriginY = PlayAreaY - TileMap->TileSideInPixels*(Projectile->P.Pos.Y - 11.0f);
+    real32 ProjScreenX = ProjOriginX;
+    // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
+    real32 ProjScreenY = ProjOriginY - TileMap->TileSideInPixels*1.0f;
+
+    direction ArrowDir = Vector2ToDirectionEnum(&Projectile->Direction);
+    bmp_tile *ArrowSprite;
+    if (ArrowDir == FRONT)
     {
-        real32 ProjOriginX = TileMap->TileSideInPixels*(Projectile->P.Pos.X - (real32)CameraTileX);
-        real32 ProjOriginY = PlayAreaY - TileMap->TileSideInPixels*(Projectile->P.Pos.Y - 11.0f);
-        real32 ProjScreenX = ProjOriginX;
-        // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
-        real32 ProjScreenY = ProjOriginY - TileMap->TileSideInPixels*1.0f;
-
-        direction ArrowDir = Vector2ToDirectionEnum(&Projectile->Direction);
-        bmp_tile *ArrowSprite;
-        if (ArrowDir == FRONT)
-        {
-            ArrowSprite = &MoblinSprites->ArrowFront;
-        }
-        else if (ArrowDir == BACK)
-        {
-            ArrowSprite = &MoblinSprites->ArrowBack;
-        }
-        else if (ArrowDir == LEFT)
-        {
-            ArrowSprite = &MoblinSprites->ArrowLeft;
-        }
-        else if (ArrowDir == RIGHT)
-        {
-            ArrowSprite = &MoblinSprites->ArrowRight;
-        }
-        else
-        {
-            ArrowSprite = 0;
-            Assert(0);
-        }
-
-        DrawBMPTile(ArrowSprite, Buffer, ProjScreenX, ProjScreenY);
+        ArrowSprite = &MoblinSprites->ArrowFront;
     }
+    else if (ArrowDir == BACK)
+    {
+        ArrowSprite = &MoblinSprites->ArrowBack;
+    }
+    else if (ArrowDir == LEFT)
+    {
+        ArrowSprite = &MoblinSprites->ArrowLeft;
+    }
+    else if (ArrowDir == RIGHT)
+    {
+        ArrowSprite = &MoblinSprites->ArrowRight;
+    }
+    else
+    {
+        ArrowSprite = 0;
+        Assert(0);
+    }
+
+    DrawBMPTile(ArrowSprite, Buffer, ProjScreenX, ProjScreenY);
 }
 
 internal void
@@ -640,8 +610,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         uint32 SpawnRoomX = 7;
         uint32 SpawnRoomY = 0;
         tile_room *TileRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, HardcodedMap, SpawnRoomX, SpawnRoomY);
-        GameState->RoomDebug = TileRoom;
-        LoadOverworldRoom(&GameState->WorldArena, TileMap, HardcodedMap2, SpawnRoomX+1, SpawnRoomY);
+        GameState->RoomDebug1 = TileRoom;
+        GameState->RoomDebug2 = LoadOverworldRoom(&GameState->WorldArena, TileMap, HardcodedMap2, SpawnRoomX+1, SpawnRoomY);
 
         // NOTE: Overworld is 16x8 but we allocate 16x16, so we store extra rooms in the top 16x8 half
         uint32 CaveRoomX = 0;
@@ -665,12 +635,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->PlayerP.Pos.X = 5.0f;
         GameState->PlayerP.Pos.Y = 5.0f;
 
-        // Initialize entity array
-        GameState->EntityCount = 0;
-
         // Add Octorok1 to entity array
-        entity *Entities = (entity *)GameState->RoomDebug->Entities;
-        GameState->Octorok1 = &Entities[GameState->EntityCount++];
+        entity *Entities = (entity *)GameState->RoomDebug1->Entities;
+        GameState->Octorok1 = GetNewEntity(Entities);
         GameState->Octorok1->Type = EntityType_Octorok;
         GameState->Octorok1->Health = 3;
         GameState->Octorok1->P.Pos.X = 8;
@@ -686,7 +653,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->Octorok1->FireFrequency = 60;
 
         // Add Octorok2 to entity array
-        GameState->Octorok2 = &Entities[GameState->EntityCount++];
+        GameState->Octorok2 = GetNewEntity(Entities);
         GameState->Octorok2->Type = EntityType_Octorok;
         GameState->Octorok2->Health = 3;
         GameState->Octorok2->P.Pos.X = 9;
@@ -702,7 +669,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->Octorok2->FireFrequency = 60;
 
         // Add Octorok3 to entity array
-        GameState->Octorok3 = &Entities[GameState->EntityCount++];
+        GameState->Octorok3 = GetNewEntity(Entities);
         GameState->Octorok3->Type = EntityType_Octorok;
         GameState->Octorok3->Health = 3;
         GameState->Octorok3->P.Pos.X = 4;
@@ -718,7 +685,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->Octorok3->FireFrequency = 60;
 
         // Add Moblin to entity array
-        GameState->Moblin1 = &Entities[GameState->EntityCount++];
+        GameState->Moblin1 = GetNewEntity(Entities);
         GameState->Moblin1->Type = EntityType_Moblin;
         GameState->Moblin1->Health = 3;
         GameState->Moblin1->P.Pos.X = 6;
@@ -734,7 +701,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->Moblin1->FireFrequency = 60;
 
         // Add Moblin to entity array
-        GameState->Moblin2 = &Entities[GameState->EntityCount++];
+        GameState->Moblin2 = GetNewEntity(Entities);
         GameState->Moblin2->Type = EntityType_Moblin;
         GameState->Moblin2->Health = 3;
         GameState->Moblin2->P.Pos.X = 7;
@@ -748,6 +715,23 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->Moblin2->InvincibilityTimer = 0;
         GameState->Moblin2->IFramesFlicker = false;
         GameState->Moblin2->FireFrequency = 60;
+
+        // Add Octorok1 to entity array
+        Entities = (entity *)GameState->RoomDebug2->Entities;
+        GameState->Octorok4 = GetNewEntity(Entities);
+        GameState->Octorok4->Type = EntityType_Octorok;
+        GameState->Octorok4->Health = 3;
+        GameState->Octorok4->P.Pos.X = 8;
+        GameState->Octorok4->P.Pos.Y = 5.0f;
+        GameState->Octorok4->P.RoomIDX = SpawnRoomX+1;
+        GameState->Octorok4->P.RoomIDY = SpawnRoomY;
+        GameState->Octorok4->Width = 1.0f;
+        GameState->Octorok4->Height = 1.0f;
+        GameState->Octorok4->Direction.X = -1.0f;
+        GameState->Octorok4->Direction.Y = 0.0f;
+        GameState->Octorok4->InvincibilityTimer = 0;
+        GameState->Octorok4->IFramesFlicker = false;
+        GameState->Octorok4->FireFrequency = 60;
 
         // NOTE: We should probably start a new arena for this image? 
         // Memory->Background = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_background.bmp");
@@ -1032,19 +1016,24 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     // Update all entities
     tile_room *PlayerRoom = GetTileRoom(TileMap, GameState->PlayerP);
-    for (uint32 EntityIndex = 0; EntityIndex < GameState->EntityCount; EntityIndex++)
+    for (uint32 EntityIndex = 0; EntityIndex < MAX_ENTITIES; EntityIndex++)
     {
-        UpdateEntity(GameState, &PlayerRoom->Entities[EntityIndex]);
+        entity *Entity = &PlayerRoom->Entities[EntityIndex];
+        if (Entity->IsActive)
+        {
+            UpdateEntity(GameState, Entity);
+        }
+        
     }
 
     // Check entity collisions with player
     // NOTE: I chose to do this after the entity position update, so were not using pos from last frame
     if (GameState->InvincibilityTimer == 0)
     {
-        for (uint32 EntityIndex = 0; EntityIndex < GameState->EntityCount; EntityIndex++)
+        for (uint32 EntityIndex = 0; EntityIndex < MAX_ENTITIES; EntityIndex++)
         {
             entity *Entity = &PlayerRoom->Entities[EntityIndex];
-            if (IsEntityCollidingWithPlayer(Entity, NewPlayerP))
+            if (Entity->IsActive && IsEntityCollidingWithPlayer(Entity, NewPlayerP))
             {
                 GameState->InvincibilityTimer = 60;
                 GameState->PlayerHealth -= 1;
@@ -1065,12 +1054,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     // Player sword hitting entities
     if (GameState->PlayerUsingSword)
     {
-        for (uint32 EntityIndex = 0; EntityIndex < GameState->EntityCount; EntityIndex++)
+        for (uint32 EntityIndex = 0; EntityIndex < MAX_ENTITIES; EntityIndex++)
         {
             entity *Entity = &PlayerRoom->Entities[EntityIndex];
             
             // Only check enemy types (not projectiles)
-            if (Entity->Type == EntityType_Octorok || Entity->Type == EntityType_Moblin)
+            if (Entity->IsActive && Entity->Type == EntityType_Octorok || Entity->Type == EntityType_Moblin)
             {
                 if (Entity->InvincibilityTimer == 0 && Entity->Health > 0)
                 {
@@ -1088,10 +1077,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     }
 
     // Update invincibility timers
-    for (uint32 EntityIndex = 0; EntityIndex < GameState->EntityCount; EntityIndex++)
+    for (uint32 EntityIndex = 0; EntityIndex < MAX_ENTITIES; EntityIndex++)
     {
         entity *Entity = &PlayerRoom->Entities[EntityIndex];
-        if (Entity->InvincibilityTimer > 0)
+        if (Entity->IsActive && Entity->InvincibilityTimer > 0)
         {
             Entity->InvincibilityTimer -= 1;
         }
@@ -1298,10 +1287,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     DrawBMPTile(&GameState->TextTileset.Tiles[GameState->Octorok1->Health], Buffer, 32, 16);
 
     // Draw all entities
-    for (uint32 EntityIndex = 0; EntityIndex < GameState->EntityCount; EntityIndex++)
+    for (uint32 EntityIndex = 0; EntityIndex < MAX_ENTITIES; EntityIndex++)
     {
         entity *Entity = &PlayerRoom->Entities[EntityIndex];
-        DrawEntity(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, Entity);
+        if (Entity->IsActive)
+        {
+            DrawEntity(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, Entity);
+        }
     }
 
     // Draw HUD

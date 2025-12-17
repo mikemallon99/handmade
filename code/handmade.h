@@ -269,11 +269,8 @@ struct game_state
     octorok_sprites OctorokSprites;
     moblin_sprites MoblinSprites;
 
-    // Entity array - backend storage
-    #define MAX_ENTITIES 64
-    entity Entities[MAX_ENTITIES];
-    uint32 EntityCount;
-    tile_room *RoomDebug;
+    tile_room *RoomDebug1;
+    tile_room *RoomDebug2;
 
     // Room 1 enemies (point to places in entites array)
     entity *Octorok1;
@@ -281,6 +278,9 @@ struct game_state
     entity *Octorok3;
     entity *Moblin1;
     entity *Moblin2;
+
+    // Room 2 enemies (point to places in entites array)
+    entity *Octorok4;
 };
 
 #endif

@@ -16,6 +16,7 @@ enum entity_type
 // Unified entity structure - used by all enemies and projectiles
 struct entity
 {
+    bool32 IsActive;
     entity_type Type;
     
     // Position (all entities have this)
@@ -34,7 +35,6 @@ struct entity
     vector2 Direction;
     
     // Projectile system
-    bool32 IsActive;
     uint32 FireFrequency;
 };
 
