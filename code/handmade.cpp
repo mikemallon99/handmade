@@ -551,6 +551,20 @@ DrawMoblinProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile_
 }
 
 internal void
+DrawBoomerang(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
+              real32 PlayAreaY, uint32 CameraTileX)
+{
+    real32 BoomerangOriginX = TileMap->TileSideInPixels*(GameState->BoomerangP.Pos.X - (real32)CameraTileX);
+    real32 BoomerangOriginY = PlayAreaY - TileMap->TileSideInPixels*(GameState->BoomerangP.Pos.Y - 11.0f);
+    real32 BoomerangScreenX = BoomerangOriginX;
+    // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
+    real32 BoomerangScreenY = BoomerangOriginY - TileMap->TileSideInPixels*0.5f;
+    
+    uint32 SpriteIndex = 7;
+    DrawBMPTile(&GameState->BoomerangSprites.Sprites[SpriteIndex], Buffer, BoomerangScreenX, BoomerangScreenY);
+}
+
+internal void
 DrawEntity(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
            real32 PlayAreaY, uint32 CameraTileX, entity *Entity)
 {
@@ -906,12 +920,15 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             GameState->BoomerangP = GameState->PlayerP;
             GameState->BoomerangDirection = GameState->PlayerDirection;
         }
-        else
-        {
-            GameState->BoomerangP = GameState->PlayerP;
-        }
 
         GameState->BoomerangUsageFrame += 1;
+
+        // Despawn after 100 frames
+        if (GameState->BoomerangUsageFrame >= 100)
+        {
+            GameState->PlayerUsingBoomerang = false;
+            GameState->BoomerangUsageFrame = 0;
+        }
     }
 
     // Player movement stuff
@@ -1351,6 +1368,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {
             DrawEntity(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, Entity);
         }
+    }
+
+    // Draw boomerang
+    if (GameState->PlayerUsingBoomerang)
+    {
+        DrawBoomerang(GameState, Buffer, TileMap, PlayAreaY, CameraTileX);
     }
 
     // Draw HUD

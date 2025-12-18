@@ -774,6 +774,42 @@ LoadBoomerangSprites(boomerang_sprites *BoomerangSprites, bmp_file *BaseBMP)
     BoomerangSprites->Sprites[2].Y = 185;
     BoomerangSprites->Sprites[2].Width = 8;
     BoomerangSprites->Sprites[2].Height = 16;
+
+    BoomerangSprites->Sprites[3].Tileset = BoomerangSprites->BaseBMP;
+    BoomerangSprites->Sprites[3].X = 73;
+    BoomerangSprites->Sprites[3].Y = 185;
+    BoomerangSprites->Sprites[3].Width = 8;
+    BoomerangSprites->Sprites[3].Height = 16;
+    BoomerangSprites->Sprites[3].FlipX = true;
+
+    BoomerangSprites->Sprites[4].Tileset = BoomerangSprites->BaseBMP;
+    BoomerangSprites->Sprites[4].X = 64;
+    BoomerangSprites->Sprites[4].Y = 185;
+    BoomerangSprites->Sprites[4].Width = 8;
+    BoomerangSprites->Sprites[4].Height = 16;
+    BoomerangSprites->Sprites[4].FlipX = true;
+
+    BoomerangSprites->Sprites[5].Tileset = BoomerangSprites->BaseBMP;
+    BoomerangSprites->Sprites[5].X = 73;
+    BoomerangSprites->Sprites[5].Y = 185;
+    BoomerangSprites->Sprites[5].Width = 8;
+    BoomerangSprites->Sprites[5].Height = 16;
+    BoomerangSprites->Sprites[5].FlipX = true;
+    BoomerangSprites->Sprites[5].FlipY = true;
+
+    BoomerangSprites->Sprites[6].Tileset = BoomerangSprites->BaseBMP;
+    BoomerangSprites->Sprites[6].X = 82;
+    BoomerangSprites->Sprites[6].Y = 185;
+    BoomerangSprites->Sprites[6].Width = 8;
+    BoomerangSprites->Sprites[6].Height = 16;
+    BoomerangSprites->Sprites[6].FlipY = true;
+
+    BoomerangSprites->Sprites[7].Tileset = BoomerangSprites->BaseBMP;
+    BoomerangSprites->Sprites[7].X = 73;
+    BoomerangSprites->Sprites[7].Y = 185;
+    BoomerangSprites->Sprites[7].Width = 8;
+    BoomerangSprites->Sprites[7].Height = 16;
+    BoomerangSprites->Sprites[7].FlipY = true;
 }
 
 internal int32
