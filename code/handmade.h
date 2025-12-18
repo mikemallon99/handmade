@@ -251,7 +251,7 @@ struct game_state
     bool32 PlayerUsingBoomerang;
     int32 BoomerangUsageFrame;
     tile_map_position SwordPoint;
-    direction HeroDirection;
+    vector2 PlayerDirection;
     uint32 InvincibilityTimer;
     bool32 IFramesFlicker;
 

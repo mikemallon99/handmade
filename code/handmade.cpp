@@ -40,26 +40,36 @@ internal direction
 Vector2ToDirectionEnum(vector2 *Vector2)
 {
     direction DirectionEnum = FRONT;
-    if (Vector2->X == 0.0f && Vector2->Y == -1.0f)
+    
+    // Determine primary direction based on which component has larger absolute value
+    real32 AbsX = (Vector2->X < 0.0f) ? -Vector2->X : Vector2->X;
+    real32 AbsY = (Vector2->Y < 0.0f) ? -Vector2->Y : Vector2->Y;
+    
+    if (AbsY > AbsX)
     {
-        DirectionEnum = FRONT;
-    }
-    else if (Vector2->X == 0.0f && Vector2->Y == 1.0f)
-    {
-        DirectionEnum = BACK;
-    }
-    else if (Vector2->X == 1.0f && Vector2->Y == 0.0f)
-    {
-        DirectionEnum = RIGHT;
-    }
-    else if (Vector2->X == -1.0f && Vector2->Y == 0.0f)
-    {
-        DirectionEnum = LEFT;
+        // Vertical direction is primary
+        if (Vector2->Y > 0.0f)
+        {
+            DirectionEnum = BACK;
+        }
+        else
+        {
+            DirectionEnum = FRONT;
+        }
     }
     else
     {
-        Assert(0);
+        // Horizontal direction is primary
+        if (Vector2->X > 0.0f)
+        {
+            DirectionEnum = RIGHT;
+        }
+        else
+        {
+            DirectionEnum = LEFT;
+        }
     }
+    
     return DirectionEnum;
 }
 
@@ -654,6 +664,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->PlayerP.RoomIDY = SpawnRoomY;
         GameState->PlayerP.Pos.X = 5.0f;
         GameState->PlayerP.Pos.Y = 5.0f;
+        GameState->PlayerDirection = {0.0f, -1.0f}; // FRONT
 
         // Add Octorok1 to entity array
         entity *Entities = (entity *)GameState->RoomDebug1->Entities;
@@ -790,9 +801,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     real32 PlayerWidth = 0.75f;
     real32 PlayerHeight = 1.0f;
 
-    real32 dPlayerX = 0.0f;
-    real32 dPlayerY = 0.0f;
-    real32 PlayerSpeed = 5.0f;
+    real32 PlayerSpeed = 0.0f;
     for (int ControllerIndex = 0;
          ControllerIndex < ArrayCount(Input->Controllers);
          ControllerIndex++)
@@ -812,23 +821,23 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             // NOTE: Use digital movement tuning
             if (Controller->MoveUp.EndedDown)
             {
-                dPlayerY = 1.0f;
-                GameState->HeroDirection = BACK;
+                GameState->PlayerDirection = {0.0f, 1.0f}; // BACK
+                PlayerSpeed = 5.0f;
             }
             if (Controller->MoveDown.EndedDown)
             {
-                dPlayerY = -1.0f;
-                GameState->HeroDirection = FRONT;
+                GameState->PlayerDirection = {0.0f, -1.0f}; // FRONT
+                PlayerSpeed = 5.0f;
             }
             if (Controller->MoveLeft.EndedDown)
             {
-                dPlayerX = -1.0f;
-                GameState->HeroDirection = LEFT;
+                GameState->PlayerDirection = {-1.0f, 0.0f}; // LEFT
+                PlayerSpeed = 5.0f;
             }
             if (Controller->MoveRight.EndedDown)
             {
-                dPlayerX = 1.0f;
-                GameState->HeroDirection = RIGHT;
+                GameState->PlayerDirection = {1.0f, 0.0f}; // RIGHT
+                PlayerSpeed = 5.0f;
             }
 
             if (Controller->ActionUp.EndedDown)
@@ -895,7 +904,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         if (GameState->BoomerangUsageFrame == 0)
         {
             GameState->BoomerangP = GameState->PlayerP;
-            GameState->BoomerangDirection = ;
+            GameState->BoomerangDirection = GameState->PlayerDirection;
         }
         else
         {
@@ -906,9 +915,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     }
 
     // Player movement stuff
-    dPlayerX *= PlayerSpeed;
-    dPlayerY *= PlayerSpeed;
-
     // NOTE: Translate origin to the center of player cuz of legacy calculations
     tile_map_position NewPlayerOrigin = GameState->PlayerP;
     tile_map_position NewPlayerP = NewPlayerOrigin;
@@ -916,8 +922,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     if (!GameState->PlayerUsingSword && !GameState->PlayerUsingBoomerang)
     {
-        NewPlayerP.Pos.X += Input->dtForFrame*dPlayerX;
-        NewPlayerP.Pos.Y += Input->dtForFrame*dPlayerY;
+        vector2 MovementDelta = Input->dtForFrame * PlayerSpeed * GameState->PlayerDirection;
+        NewPlayerP.Pos.X += MovementDelta.X;
+        NewPlayerP.Pos.Y += MovementDelta.Y;
     }
 
     tile_map_position NewPlayerUp = NewPlayerP;
@@ -1021,23 +1028,24 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             tile_map_position SwordPoint = NewPlayerOrigin;
             int32 PixelOffsetX = 0;
             int32 PixelOffsetY = 0;
-            if (GameState->HeroDirection == FRONT)
+            direction PlayerDir = Vector2ToDirectionEnum(&GameState->PlayerDirection);
+            if (PlayerDir == FRONT)
             {
                 // NOTE: XY values taken from sprite sheet
                 PixelOffsetX = 26 - 18;
                 PixelOffsetY = 73 - 62;
             }
-            else if (GameState->HeroDirection == RIGHT)
+            else if (PlayerDir == RIGHT)
             {
                 PixelOffsetX = 44 - 18;
                 PixelOffsetY = 86 - 92;
             }
-            else if (GameState->HeroDirection == BACK)
+            else if (PlayerDir == BACK)
             {
                 PixelOffsetX = 24 - 18;
                 PixelOffsetY = 97 - 124;
             }
-            else if (GameState->HeroDirection == LEFT)
+            else if (PlayerDir == LEFT)
             {
                 // This math here is weird cuz of the flippy
                 PixelOffsetX = -1*(44 - 18) + 16;
@@ -1076,7 +1084,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             {
                 // Skip if player blocks the projectile
                 if (Entity->IsProjectile && !GameState->PlayerUsingSword &&
-                    IsDirectionOpposite(GameState->HeroDirection, Vector2ToDirectionEnum(&Entity->Direction)))
+                    IsDirectionOpposite(Vector2ToDirectionEnum(&GameState->PlayerDirection), Vector2ToDirectionEnum(&Entity->Direction)))
                 {
                     // Do nothing
                 }
@@ -1187,6 +1195,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     real32 SpriteMinY = PlayerScreenY;
 
     bmp_tile *LinkSprite;
+    direction PlayerDir = Vector2ToDirectionEnum(&GameState->PlayerDirection);
     if (GameState->PlayerUsingSword)
     {
         uint32 SwordSpriteIndex;
@@ -1209,19 +1218,19 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             Assert(0);
         }
 
-        if (GameState->HeroDirection == FRONT)
+        if (PlayerDir == FRONT)
         {
             LinkSprite = &GameState->LinkSprites.SwordFront[SwordSpriteIndex];
         }
-        else if (GameState->HeroDirection == BACK)
+        else if (PlayerDir == BACK)
         {
             LinkSprite = &GameState->LinkSprites.SwordBack[SwordSpriteIndex];
         }
-        else if (GameState->HeroDirection == LEFT)
+        else if (PlayerDir == LEFT)
         {
             LinkSprite = &GameState->LinkSprites.SwordLeft[SwordSpriteIndex];
         }
-        else if (GameState->HeroDirection == RIGHT)
+        else if (PlayerDir == RIGHT)
         {
             LinkSprite = &GameState->LinkSprites.SwordRight[SwordSpriteIndex];
         }
@@ -1233,19 +1242,19 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     }
     else
     {
-        if (GameState->HeroDirection == FRONT)
+        if (PlayerDir == FRONT)
         {
             LinkSprite = &GameState->LinkSprites.Front[GameState->WalkStep];
         }
-        else if (GameState->HeroDirection == BACK)
+        else if (PlayerDir == BACK)
         {
             LinkSprite = &GameState->LinkSprites.Back[GameState->WalkStep];
         }
-        else if (GameState->HeroDirection == LEFT)
+        else if (PlayerDir == LEFT)
         {
             LinkSprite = &GameState->LinkSprites.Left[GameState->WalkStep];
         }
-        else if (GameState->HeroDirection == RIGHT)
+        else if (PlayerDir == RIGHT)
         {
             LinkSprite = &GameState->LinkSprites.Right[GameState->WalkStep];
         }
