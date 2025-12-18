@@ -35,6 +35,7 @@ struct entity
     vector2 Direction;
     
     // Projectile system
+    bool32 IsProjectile;
     uint32 FireFrequency;
 };
 

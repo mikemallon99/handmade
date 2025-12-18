@@ -78,6 +78,12 @@ struct link_sprites
     bmp_tile SwordLeft[4];
 };
 
+struct boomerang_sprites
+{
+    bmp_file *BaseBMP;
+    bmp_tile Sprites[3];
+};
+
 struct octorok_sprites
 {
     bmp_file *BaseBMP;

@@ -752,6 +752,30 @@ LoadLinkSprites(link_sprites *LinkSprites, bmp_file *BaseBMP)
     LinkSprites->SwordLeft[3].FlipX = true;
 }
 
+internal void
+LoadBoomerangSprites(boomerang_sprites *BoomerangSprites, bmp_file *BaseBMP)
+{
+    BoomerangSprites->BaseBMP = BaseBMP;
+
+    BoomerangSprites->Sprites[0].Tileset = BoomerangSprites->BaseBMP;
+    BoomerangSprites->Sprites[0].X = 64;
+    BoomerangSprites->Sprites[0].Y = 185;
+    BoomerangSprites->Sprites[0].Width = 8;
+    BoomerangSprites->Sprites[0].Height = 16;
+
+    BoomerangSprites->Sprites[1].Tileset = BoomerangSprites->BaseBMP;
+    BoomerangSprites->Sprites[1].X = 73;
+    BoomerangSprites->Sprites[1].Y = 185;
+    BoomerangSprites->Sprites[1].Width = 8;
+    BoomerangSprites->Sprites[1].Height = 16;
+
+    BoomerangSprites->Sprites[2].Tileset = BoomerangSprites->BaseBMP;
+    BoomerangSprites->Sprites[2].X = 82;
+    BoomerangSprites->Sprites[2].Y = 185;
+    BoomerangSprites->Sprites[2].Width = 8;
+    BoomerangSprites->Sprites[2].Height = 16;
+}
+
 internal int32
 StringLength(uint8 *String)
 {

@@ -246,6 +246,10 @@ struct game_state
     uint32 MaxHealth;
     bool32 PlayerUsingSword;
     int32 SwordUsageFrame;
+    tile_map_position BoomerangP;
+    vector2 BoomerangDirection;
+    bool32 PlayerUsingBoomerang;
+    int32 BoomerangUsageFrame;
     tile_map_position SwordPoint;
     direction HeroDirection;
     uint32 InvincibilityTimer;
@@ -255,6 +259,7 @@ struct game_state
 
     bmp_file LinkBMP;
     link_sprites LinkSprites;
+    boomerang_sprites BoomerangSprites;
     uint32 WalkStep;
 
     bmp_file OverworldBMP;

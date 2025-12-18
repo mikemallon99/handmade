@@ -63,6 +63,21 @@ Vector2ToDirectionEnum(vector2 *Vector2)
     return DirectionEnum;
 }
 
+internal bool32
+IsDirectionOpposite(direction DirA, direction DirB)
+{
+    bool32 Result = false;
+    if (DirA == FRONT && DirB == BACK ||
+        DirA == BACK && DirB == FRONT ||
+        DirA == LEFT && DirB == RIGHT ||
+        DirA == RIGHT && DirB == LEFT)
+    {
+        Result = true;
+    }
+
+    return Result;
+}
+
 internal void
 DrawRectangle(game_offscreen_buffer *Buffer, 
               real32 RealMinX, real32 RealMinY, real32 RealMaxX, real32 RealMaxY,
@@ -188,9 +203,12 @@ SpawnOctorokProjectile(game_state *GameState, tile_map_position SpawnPosition)
     {
         Projectile->Type = EntityType_OctorokRock;
         Projectile->P = SpawnPosition;
+        // TODO: Make projectiles just use direction
         Projectile->VelocityX = 0.0;
         Projectile->VelocityY = -5.0;
+        Projectile->Direction = {0.0f, -1.0f};
         Projectile->IsActive = true;
+        Projectile->IsProjectile = true;
     }
     
     return Projectile;
@@ -292,10 +310,12 @@ SpawnMoblinProjectile(game_state *GameState, tile_map_position SpawnPosition, ve
     {
         Projectile->Type = EntityType_MoblinArrow;
         Projectile->P = SpawnPosition;
+        // TODO: Make projectiles just use direction
         Projectile->VelocityX = 0.0;
         Projectile->VelocityY = -5.0;
         Projectile->Direction = ArrowDirection;
         Projectile->IsActive = true;
+        Projectile->IsProjectile = true;
     }
     
     return Projectile;
@@ -741,6 +761,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->LinkBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
                                            "tiles/link.bmp");
         LoadLinkSprites(&GameState->LinkSprites, &GameState->LinkBMP);
+        LoadBoomerangSprites(&GameState->BoomerangSprites, &GameState->LinkBMP);
 
         GameState->OverworldBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
                                                 "tiles/overworld_tileset.bmp");
@@ -827,7 +848,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             // A
             if (Controller->ActionDown.EndedDown)
             {
-                // PlayerSpeed = 10.0f;
+                if (!GameState->PlayerUsingBoomerang)
+                {
+                    GameState->PlayerUsingBoomerang = true;
+                }
             }
         }
 
@@ -865,6 +889,22 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
+    if (GameState->PlayerUsingBoomerang)
+    {
+        // Set position on first frame
+        if (GameState->BoomerangUsageFrame == 0)
+        {
+            GameState->BoomerangP = GameState->PlayerP;
+            GameState->BoomerangDirection = ;
+        }
+        else
+        {
+            GameState->BoomerangP = GameState->PlayerP;
+        }
+
+        GameState->BoomerangUsageFrame += 1;
+    }
+
     // Player movement stuff
     dPlayerX *= PlayerSpeed;
     dPlayerY *= PlayerSpeed;
@@ -874,7 +914,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     tile_map_position NewPlayerP = NewPlayerOrigin;
     NewPlayerP.Pos.X += 0.5f;
 
-    if (!GameState->PlayerUsingSword)
+    if (!GameState->PlayerUsingSword && !GameState->PlayerUsingBoomerang)
     {
         NewPlayerP.Pos.X += Input->dtForFrame*dPlayerX;
         NewPlayerP.Pos.Y += Input->dtForFrame*dPlayerY;
@@ -1023,7 +1063,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {
             UpdateEntity(GameState, Entity);
         }
-        
     }
 
     // Check entity collisions with player
@@ -1035,8 +1074,17 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             entity *Entity = &PlayerRoom->Entities[EntityIndex];
             if (Entity->IsActive && IsEntityCollidingWithPlayer(Entity, NewPlayerP))
             {
-                GameState->InvincibilityTimer = 60;
-                GameState->PlayerHealth -= 1;
+                // Skip if player blocks the projectile
+                if (Entity->IsProjectile && !GameState->PlayerUsingSword &&
+                    IsDirectionOpposite(GameState->HeroDirection, Vector2ToDirectionEnum(&Entity->Direction)))
+                {
+                    // Do nothing
+                }
+                else
+                {
+                    GameState->InvincibilityTimer = 60;
+                    GameState->PlayerHealth -= 1;
+                }
                 
                 // Deactivate projectiles on hit
                 if (Entity->Type == EntityType_OctorokRock || Entity->Type == EntityType_MoblinArrow)
