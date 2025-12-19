@@ -560,7 +560,7 @@ DrawBoomerang(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *Ti
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
     real32 BoomerangScreenY = BoomerangOriginY - TileMap->TileSideInPixels*0.5f;
     
-    uint32 SpriteIndex = 7;
+    uint32 SpriteIndex = (GameState->FrameCounter / 5) % 8;
     DrawBMPTile(&GameState->BoomerangSprites.Sprites[SpriteIndex], Buffer, BoomerangScreenX, BoomerangScreenY);
 }
 

@@ -81,7 +81,7 @@ struct link_sprites
 struct boomerang_sprites
 {
     bmp_file *BaseBMP;
-    bmp_tile Sprites[7];
+    bmp_tile Sprites[8];
 };
 
 struct octorok_sprites
