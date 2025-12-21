@@ -834,6 +834,18 @@ LoadNPCSprites(npc_sprites *NPCSprites, bmp_file *BaseBMP)
     NPCSprites->OldMan[1].Y = 11;
     NPCSprites->OldMan[1].Width = 16;
     NPCSprites->OldMan[1].Height = 16;
+
+    NPCSprites->Fire[0].Tileset = NPCSprites->BaseBMP;
+    NPCSprites->Fire[0].X = 52;
+    NPCSprites->Fire[0].Y = 11;
+    NPCSprites->Fire[0].Width = 16;
+    NPCSprites->Fire[0].Height = 16;
+
+    NPCSprites->Fire[1].Tileset = NPCSprites->BaseBMP;
+    NPCSprites->Fire[1].X = 69;
+    NPCSprites->Fire[1].Y = 11;
+    NPCSprites->Fire[1].Width = 16;
+    NPCSprites->Fire[1].Height = 16;
 }
 
 internal int32

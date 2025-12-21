@@ -88,6 +88,7 @@ struct npc_sprites
 {
     bmp_file *BaseBMP;
     bmp_tile OldMan[2];
+    bmp_tile Fire[2];
 };
 
 struct octorok_sprites

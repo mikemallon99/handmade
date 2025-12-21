@@ -385,10 +385,6 @@ UpdateEntity(game_state *GameState, entity *Entity)
     {
         UpdateMoblin(GameState, Entity);
     }
-    else if (Entity->Type == EntityType_OldMan)
-    {
-        UpdateOldMan(GameState, Entity);
-    }
     else if (Entity->Type == EntityType_OctorokRock)
     {
         // Update projectile if active
@@ -469,9 +465,24 @@ DrawOldMan(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileM
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
     real32 OldManScreenY = OldManOriginY - TileMap->TileSideInPixels*1.0f;
     
+    // NOTE: Old man is not animated
+    // uint32 OldManSpriteIndex = (GameState->FrameCounter / 30) % 2;
+    DrawBMPTile(&NPCSprites->OldMan[1], Buffer, OldManScreenX, OldManScreenY);
+}
+
+internal void
+DrawFire(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
+           real32 PlayAreaY, uint32 CameraTileX, entity *Fire, npc_sprites *NPCSprites)
+{
+    real32 FireOriginX = TileMap->TileSideInPixels*(Fire->P.Pos.X - (real32)CameraTileX);
+    real32 FireOriginY = PlayAreaY - TileMap->TileSideInPixels*(Fire->P.Pos.Y - 11.0f);
+    real32 FireScreenX = FireOriginX;
+    // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
+    real32 FireScreenY = FireOriginY - TileMap->TileSideInPixels*1.0f;
+    
     // Animate between two sprites (idle animation)
-    uint32 OldManSpriteIndex = (GameState->FrameCounter / 30) % 2;
-    DrawBMPTile(&NPCSprites->OldMan[OldManSpriteIndex], Buffer, OldManScreenX, OldManScreenY);
+    uint32 FireSpriteIndex = (GameState->FrameCounter / 30) % 2;
+    DrawBMPTile(&NPCSprites->Fire[FireSpriteIndex], Buffer, FireScreenX, FireScreenY);
 }
 
 internal void
@@ -607,6 +618,11 @@ DrawEntity(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileM
     else if (Entity->Type == EntityType_OldMan)
     {
         DrawOldMan(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
+                  Entity, &GameState->NPCSprites);
+    }
+    else if (Entity->Type == EntityType_Fire)
+    {
+        DrawFire(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
                   Entity, &GameState->NPCSprites);
     }
     else if (Entity->Type == EntityType_OctorokRock)
@@ -758,20 +774,49 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->Octorok3->Height = 1.0f;
         GameState->Octorok3->Direction.X = -1.0f;
 
-        // Example: Add OldMan to entity array
         entity *OldMan = GetNewEntity(CaveRoom->Entities);
         if (OldMan)
         {
             OldMan->Type = EntityType_OldMan;
             OldMan->IsActive = true;
-            OldMan->P.Pos.X = 7.0f;
-            OldMan->P.Pos.Y = 3.0f;
+            OldMan->P.Pos.X = 7.5f;
+            OldMan->P.Pos.Y = 5.0f;
             OldMan->P.RoomIDX = CaveRoomX;
             OldMan->P.RoomIDY = CaveRoomY;
             OldMan->Width = 1.0f;
             OldMan->Height = 1.0f;
             OldMan->Health = 0; // NPCs don't have health
             OldMan->IsProjectile = false;
+        }
+
+        entity *Fire1 = GetNewEntity(CaveRoom->Entities);
+        if (Fire1)
+        {
+            Fire1->Type = EntityType_Fire;
+            Fire1->IsActive = true;
+            Fire1->P.Pos.X = 5.5f;
+            Fire1->P.Pos.Y = 5.0f;
+            Fire1->P.RoomIDX = CaveRoomX;
+            Fire1->P.RoomIDY = CaveRoomY;
+            Fire1->Width = 1.0f;
+            Fire1->Height = 1.0f;
+            Fire1->Health = 0; // NPCs don't have health
+            Fire1->IsProjectile = false;
+        }
+
+        entity *Fire2 = GetNewEntity(CaveRoom->Entities);
+        if (Fire2)
+        {
+            Fire2->Type = EntityType_Fire;
+            Fire2->IsActive = true;
+            Fire2->P.Pos.X = 9.5f;
+            Fire2->P.Pos.Y = 5.0f;
+            Fire2->P.RoomIDX = CaveRoomX;
+            Fire2->P.RoomIDY = CaveRoomY;
+            Fire2->Width = 1.0f;
+            Fire2->Height = 1.0f;
+            Fire2->Health = 0; // NPCs don't have health
+            Fire2->IsProjectile = false;
         }
 
         GameState->Octorok3->Direction.Y = 0.0f;
