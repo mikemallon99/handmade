@@ -250,6 +250,10 @@ struct game_state
     vector2 BoomerangDirection;
     bool32 PlayerUsingBoomerang;
     int32 BoomerangUsageFrame;
+    tile_map_position BoomerangStartP;
+    real32 BoomerangMaxDistance;
+    bool32 BoomerangReturning;
+    real32 BoomerangSpeed;
     tile_map_position SwordPoint;
     vector2 PlayerDirection;
     uint32 InvincibilityTimer;
@@ -261,6 +265,9 @@ struct game_state
     link_sprites LinkSprites;
     boomerang_sprites BoomerangSprites;
     uint32 WalkStep;
+
+    bmp_file NPCBMP;
+    npc_sprites NPCSprites;
 
     bmp_file OverworldBMP;
     overworld_tileset OverworldTileset;

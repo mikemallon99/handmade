@@ -88,7 +88,8 @@ DEBUG_PLATFORM_READ_ENTIRE_FILE(DEBUGPlatformReadEntireFile)
         }
         else
         {
-            // TODO: Logging
+            // File does not exist
+            Assert(0);
         }
 
         CloseHandle(FileHandle);

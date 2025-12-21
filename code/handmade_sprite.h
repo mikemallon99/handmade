@@ -84,6 +84,12 @@ struct boomerang_sprites
     bmp_tile Sprites[8];
 };
 
+struct npc_sprites
+{
+    bmp_file *BaseBMP;
+    bmp_tile OldMan[2];
+};
+
 struct octorok_sprites
 {
     bmp_file *BaseBMP;

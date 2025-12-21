@@ -1,6 +1,8 @@
 #ifndef HANDMADE_POSITION_H
 #define HANDMADE_POSITION_H
 
+#include <math.h>
+
 struct vector2
 {
     union
@@ -36,6 +38,20 @@ inline vector2
 operator*(real32 Scalar, vector2 A)
 {
     return A * Scalar;
+}
+
+inline real32
+LengthSq(vector2 V)
+{
+    real32 Result = V.X * V.X + V.Y * V.Y;
+    return Result;
+}
+
+inline real32
+Length(vector2 V)
+{
+    real32 Result = sqrtf(V.X * V.X + V.Y * V.Y);
+    return Result;
 }
 
 struct tile_room_position

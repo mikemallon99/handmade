@@ -225,6 +225,13 @@ SpawnOctorokProjectile(game_state *GameState, tile_map_position SpawnPosition)
 }
 
 internal void
+UpdateOldMan(game_state *GameState, entity *OldMan)
+{
+    // OldMan doesn't move, just stands there
+    // Could add idle animation or dialogue triggers here
+}
+
+internal void
 UpdateOctorok(game_state *GameState, entity *Octorok)
 {
     // New algo: go forward until hit a wall, then turn a random direction
@@ -378,6 +385,10 @@ UpdateEntity(game_state *GameState, entity *Entity)
     {
         UpdateMoblin(GameState, Entity);
     }
+    else if (Entity->Type == EntityType_OldMan)
+    {
+        UpdateOldMan(GameState, Entity);
+    }
     else if (Entity->Type == EntityType_OctorokRock)
     {
         // Update projectile if active
@@ -446,6 +457,21 @@ DrawOctorokProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
     real32 ProjScreenY = ProjOriginY - TileMap->TileSideInPixels*1.0f;
     DrawBMPTile(&OctorokSprites->Projectile, Buffer, ProjScreenX, ProjScreenY);
+}
+
+internal void
+DrawOldMan(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
+           real32 PlayAreaY, uint32 CameraTileX, entity *OldMan, npc_sprites *NPCSprites)
+{
+    real32 OldManOriginX = TileMap->TileSideInPixels*(OldMan->P.Pos.X - (real32)CameraTileX);
+    real32 OldManOriginY = PlayAreaY - TileMap->TileSideInPixels*(OldMan->P.Pos.Y - 11.0f);
+    real32 OldManScreenX = OldManOriginX;
+    // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
+    real32 OldManScreenY = OldManOriginY - TileMap->TileSideInPixels*1.0f;
+    
+    // Animate between two sprites (idle animation)
+    uint32 OldManSpriteIndex = (GameState->FrameCounter / 30) % 2;
+    DrawBMPTile(&NPCSprites->OldMan[OldManSpriteIndex], Buffer, OldManScreenX, OldManScreenY);
 }
 
 internal void
@@ -573,15 +599,20 @@ DrawEntity(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileM
         DrawOctorok(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
                    Entity, &GameState->OctorokSprites);
     }
-    else if (Entity->Type == EntityType_OctorokRock)
-    {
-        DrawOctorokProjectile(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
-                             Entity, &GameState->OctorokSprites);
-    }
     else if (Entity->Type == EntityType_Moblin)
     {
         DrawMoblin(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
                   Entity, &GameState->MoblinSprites);
+    }
+    else if (Entity->Type == EntityType_OldMan)
+    {
+        DrawOldMan(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
+                  Entity, &GameState->NPCSprites);
+    }
+    else if (Entity->Type == EntityType_OctorokRock)
+    {
+        DrawOctorokProjectile(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
+                             Entity, &GameState->OctorokSprites);
     }
     else if (Entity->Type == EntityType_MoblinArrow)
     {
@@ -679,6 +710,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->PlayerP.Pos.X = 5.0f;
         GameState->PlayerP.Pos.Y = 5.0f;
         GameState->PlayerDirection = {0.0f, -1.0f}; // FRONT
+        GameState->BoomerangMaxDistance = 5.0f;
+        GameState->BoomerangSpeed = 8.0f;
 
         // Add Octorok1 to entity array
         entity *Entities = (entity *)GameState->RoomDebug1->Entities;
@@ -724,6 +757,23 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->Octorok3->Width = 1.0f;
         GameState->Octorok3->Height = 1.0f;
         GameState->Octorok3->Direction.X = -1.0f;
+
+        // Example: Add OldMan to entity array
+        entity *OldMan = GetNewEntity(CaveRoom->Entities);
+        if (OldMan)
+        {
+            OldMan->Type = EntityType_OldMan;
+            OldMan->IsActive = true;
+            OldMan->P.Pos.X = 7.0f;
+            OldMan->P.Pos.Y = 3.0f;
+            OldMan->P.RoomIDX = CaveRoomX;
+            OldMan->P.RoomIDY = CaveRoomY;
+            OldMan->Width = 1.0f;
+            OldMan->Height = 1.0f;
+            OldMan->Health = 0; // NPCs don't have health
+            OldMan->IsProjectile = false;
+        }
+
         GameState->Octorok3->Direction.Y = 0.0f;
         GameState->Octorok3->InvincibilityTimer = 0;
         GameState->Octorok3->IFramesFlicker = false;
@@ -780,13 +830,17 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         // NOTE: We should probably start a new arena for this image? 
         // Memory->Background = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_background.bmp");
-        GameState->Background = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                            "backgrounds_processed/kitchen.bmp");
+        // GameState->Background = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
+        //                                     "backgrounds_processed/kitchen.bmp");
 
         GameState->LinkBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
                                            "tiles/link.bmp");
         LoadLinkSprites(&GameState->LinkSprites, &GameState->LinkBMP);
         LoadBoomerangSprites(&GameState->BoomerangSprites, &GameState->LinkBMP);
+
+        GameState->NPCBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
+                                           "tiles/npcs.bmp");
+        LoadNPCSprites(&GameState->NPCSprites, &GameState->NPCBMP);
 
         GameState->OverworldBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
                                                 "tiles/overworld_tileset.bmp");
@@ -874,6 +928,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 if (!GameState->PlayerUsingBoomerang)
                 {
                     GameState->PlayerUsingBoomerang = true;
+                    GameState->BoomerangUsageFrame = 0;
                 }
             }
         }
@@ -917,18 +972,63 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         // Set position on first frame
         if (GameState->BoomerangUsageFrame == 0)
         {
+            GameState->BoomerangStartP = GameState->PlayerP;
+            GameState->BoomerangReturning = false;
             GameState->BoomerangP = GameState->PlayerP;
             GameState->BoomerangDirection = GameState->PlayerDirection;
         }
 
-        GameState->BoomerangUsageFrame += 1;
+        // Keep boomerang in same room as player
+        GameState->BoomerangP.RoomIDX = GameState->PlayerP.RoomIDX;
+        GameState->BoomerangP.RoomIDY = GameState->PlayerP.RoomIDY;
 
-        // Despawn after 100 frames
-        if (GameState->BoomerangUsageFrame >= 100)
+        // Calculate squared distance from start (avoid sqrt for comparison)
+        real32 DistanceX = GameState->BoomerangP.Pos.X - GameState->BoomerangStartP.Pos.X;
+        real32 DistanceY = GameState->BoomerangP.Pos.Y - GameState->BoomerangStartP.Pos.Y;
+        real32 DistanceSq = DistanceX*DistanceX + DistanceY*DistanceY;
+        real32 MaxDistanceSq = GameState->BoomerangMaxDistance * GameState->BoomerangMaxDistance;
+
+        if (!GameState->BoomerangReturning)
         {
-            GameState->PlayerUsingBoomerang = false;
-            GameState->BoomerangUsageFrame = 0;
+            // Move boomerang away from player
+            if (DistanceSq < MaxDistanceSq)
+            {
+                GameState->BoomerangP.Pos = GameState->BoomerangP.Pos + Input->dtForFrame * GameState->BoomerangSpeed * GameState->BoomerangDirection;
+            }
+            else
+            {
+                // Reached max distance, start returning
+                GameState->BoomerangReturning = true;
+            }
         }
+        else
+        {
+            // Returning to player
+            vector2 ToPlayer;
+            ToPlayer.X = GameState->PlayerP.Pos.X - GameState->BoomerangP.Pos.X;
+            ToPlayer.Y = GameState->PlayerP.Pos.Y - GameState->BoomerangP.Pos.Y;
+            real32 DistToPlayer = Length(ToPlayer);
+
+            if (DistToPlayer > 0.01f)
+            {
+                // Normalize direction
+                ToPlayer.X /= DistToPlayer;
+                ToPlayer.Y /= DistToPlayer;
+                
+                // Move toward player
+                GameState->BoomerangP.Pos = GameState->BoomerangP.Pos + Input->dtForFrame * GameState->BoomerangSpeed * ToPlayer;
+            }
+
+            // Check if close to player
+            if (DistToPlayer < 0.5f)
+            {
+                // Deactivate boomerang
+                GameState->PlayerUsingBoomerang = false;
+                GameState->BoomerangUsageFrame = 0;
+            }
+        }
+
+        GameState->BoomerangUsageFrame += 1;
     }
 
     // Player movement stuff

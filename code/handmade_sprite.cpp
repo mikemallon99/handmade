@@ -96,13 +96,14 @@ LoadBMPFile(memory_arena *Arena, game_memory *Memory, thread_context *Thread, ch
             uint32 PixelCount = BMPFile.Width*BMPFile.Height;
             uint32 *MemoryPixels = PushArray(Arena, PixelCount, uint32);
             BMPFile.Pixels = MemoryPixels;
+            uint32 RowSize = ((BMPFile.Width * 3 + 3) / 4) * 4;
             uint8 *CopyPixel;
             // NOTE: It goes top to bottom, i wanna reverse it so the image pixels always starts at the top left corner
             for (uint32 RowIdx = BMPFile.Height; 
                 RowIdx > 0; 
                 RowIdx--)
             {
-                CopyPixel = (uint8 *)FilePixels + BMPFile.Width*(RowIdx-1)*3;
+                CopyPixel = (uint8 *)FilePixels + RowSize*(RowIdx-1);
                 for (uint32 ColIdx = 0; 
                     ColIdx < BMPFile.Width; 
                     ColIdx++)
@@ -120,6 +121,11 @@ LoadBMPFile(memory_arena *Arena, game_memory *Memory, thread_context *Thread, ch
                     *MemoryPixels++ = Pixel;
                 }
             }
+        }
+        else
+        {
+            // Have not implemented importer for this format
+            Assert(0);
         }
 
         Memory->DEBUGPlatformFreeFileMemory(Thread, File.Contents);
@@ -810,6 +816,24 @@ LoadBoomerangSprites(boomerang_sprites *BoomerangSprites, bmp_file *BaseBMP)
     BoomerangSprites->Sprites[7].Width = 8;
     BoomerangSprites->Sprites[7].Height = 16;
     BoomerangSprites->Sprites[7].FlipY = true;
+}
+
+internal void
+LoadNPCSprites(npc_sprites *NPCSprites, bmp_file *BaseBMP)
+{
+    NPCSprites->BaseBMP = BaseBMP;
+
+    NPCSprites->OldMan[0].Tileset = NPCSprites->BaseBMP;
+    NPCSprites->OldMan[0].X = 1;
+    NPCSprites->OldMan[0].Y = 11;
+    NPCSprites->OldMan[0].Width = 16;
+    NPCSprites->OldMan[0].Height = 16;
+
+    NPCSprites->OldMan[1].Tileset = NPCSprites->BaseBMP;
+    NPCSprites->OldMan[1].X = 18;
+    NPCSprites->OldMan[1].Y = 11;
+    NPCSprites->OldMan[1].Width = 16;
+    NPCSprites->OldMan[1].Height = 16;
 }
 
 internal int32

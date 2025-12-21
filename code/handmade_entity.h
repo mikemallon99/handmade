@@ -10,7 +10,8 @@ enum entity_type
     EntityType_Octorok,
     EntityType_Moblin,
     EntityType_OctorokRock,
-    EntityType_MoblinArrow
+    EntityType_MoblinArrow,
+    EntityType_OldMan
 };
 
 // Unified entity structure - used by all enemies and projectiles
