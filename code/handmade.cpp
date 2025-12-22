@@ -177,39 +177,61 @@ IsHitboxPointActive(tile_map_position PlayerP, tile_map_position HitboxP,
 internal bool32
 IsEntityCollidingWithPlayer(entity *Entity, tile_map_position NewPlayerP)
 {
-    real32 HitboxWidth = 1.0f;
-    real32 HitboxHeight = 1.0f;
+    if (!Entity->IsActive) return false;
     
-    // Determine hitbox size and if entity should be checked
-    if (Entity->Type == EntityType_Octorok || Entity->Type == EntityType_Moblin)
-    {
-        // Enemies - check if they have health
-        if (Entity->Health == 0) return false;
-        // TODO: Move hitbox stuff to a more centralized place
-        HitboxWidth = 1.0f;
-        HitboxHeight = 1.0f;
-    }
-    else if (Entity->Type == EntityType_OctorokRock || Entity->Type == EntityType_MoblinArrow)
-    {
-        // Projectiles - check if active
-        if (!Entity->IsActive) return false;
-        HitboxWidth = 0.5f;
-        HitboxHeight = 1.0f;
-    }
-    else if (Entity->Type == EntityType_Sword)
-    {
-        // Projectiles - check if active
-        if (!Entity->IsActive) return false;
-        HitboxWidth = 0.5f;
-        HitboxHeight = 1.0f;
-    }
-    else
-    {
-        return false;
-    }
+    // Check collision using entity's width and height
+    return IsHitboxPointActive(NewPlayerP, Entity->P, Entity->Width, Entity->Height);
+}
+
+internal void
+SetEntityTypeDefaults(entity *Entity, entity_type Type)
+{
+    Entity->Type = Type;
+    Entity->IsActive = true;
+    Entity->InvincibilityTimer = 0;
+    Entity->IFramesFlicker = false;
+    Entity->Health = 0;  // Default, override per-instance if needed
+    Entity->Width = 1.0f;
+    Entity->Height = 1.0f;
+    Entity->Damage = 0;
+    Entity->IsProjectile = false;
+    Entity->FireFrequency = 0;
     
-    // Check collision
-    return IsHitboxPointActive(NewPlayerP, Entity->P, HitboxWidth, HitboxHeight);
+    // Set type-specific defaults
+    switch (Type)
+    {
+        case EntityType_Octorok:
+        case EntityType_Moblin:
+        {
+            Entity->Damage = 1;
+            Entity->FireFrequency = 60;
+        } break;
+        
+        case EntityType_OctorokRock:
+        case EntityType_MoblinArrow:
+        {
+            Entity->Width = 0.5f;
+            Entity->Height = 1.0f;
+            Entity->Damage = 1;
+            Entity->IsProjectile = true;
+        } break;
+        
+        case EntityType_OldMan:
+        {
+            // Uses default width/height
+        } break;
+        
+        case EntityType_Fire:
+        {
+            Entity->Damage = 1;
+        } break;
+        
+        case EntityType_Sword:
+        {
+            Entity->Width = 0.5f;
+            Entity->Height = 1.0f;
+        } break;
+    }
 }
 
 internal entity *
@@ -219,14 +241,12 @@ SpawnOctorokProjectile(game_state *GameState, tile_map_position SpawnPosition)
     entity *Projectile = GetNewEntity(PlayerRoom->Entities);
     if (Projectile)
     {
-        Projectile->Type = EntityType_OctorokRock;
+        SetEntityTypeDefaults(Projectile, EntityType_OctorokRock);
         Projectile->P = SpawnPosition;
         // TODO: Make projectiles just use direction
         Projectile->VelocityX = 0.0;
         Projectile->VelocityY = -5.0;
         Projectile->Direction = {0.0f, -1.0f};
-        Projectile->IsActive = true;
-        Projectile->IsProjectile = true;
     }
     
     return Projectile;
@@ -346,14 +366,12 @@ SpawnMoblinProjectile(game_state *GameState, tile_map_position SpawnPosition, ve
     entity *Projectile = GetNewEntity(PlayerRoom->Entities);
     if (Projectile)
     {
-        Projectile->Type = EntityType_MoblinArrow;
+        SetEntityTypeDefaults(Projectile, EntityType_MoblinArrow);
         Projectile->P = SpawnPosition;
         // TODO: Make projectiles just use direction
         Projectile->VelocityX = 0.0;
         Projectile->VelocityY = -5.0;
         Projectile->Direction = ArrowDirection;
-        Projectile->IsActive = true;
-        Projectile->IsProjectile = true;
     }
     
     return Projectile;
@@ -770,161 +788,110 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         // Add Octorok1 to entity array
         entity *Entities = (entity *)GameState->RoomDebug1->Entities;
         GameState->Octorok1 = GetNewEntity(Entities);
-        GameState->Octorok1->Type = EntityType_Octorok;
+        SetEntityTypeDefaults(GameState->Octorok1, EntityType_Octorok);
         GameState->Octorok1->Health = 3;
         GameState->Octorok1->P.Pos.X = 8;
         GameState->Octorok1->P.Pos.Y = 5.0f;
         GameState->Octorok1->P.RoomIDX = SpawnRoomX;
         GameState->Octorok1->P.RoomIDY = SpawnRoomY;
-        GameState->Octorok1->Width = 1.0f;
-        GameState->Octorok1->Height = 1.0f;
         GameState->Octorok1->Direction.X = -1.0f;
         GameState->Octorok1->Direction.Y = 0.0f;
-        GameState->Octorok1->InvincibilityTimer = 0;
-        GameState->Octorok1->IFramesFlicker = false;
-        GameState->Octorok1->FireFrequency = 60;
 
         // Add Octorok2 to entity array
         GameState->Octorok2 = GetNewEntity(Entities);
-        GameState->Octorok2->Type = EntityType_Octorok;
+        SetEntityTypeDefaults(GameState->Octorok2, EntityType_Octorok);
         GameState->Octorok2->Health = 3;
         GameState->Octorok2->P.Pos.X = 9;
         GameState->Octorok2->P.Pos.Y = 5.0f;
         GameState->Octorok2->P.RoomIDX = SpawnRoomX;
         GameState->Octorok2->P.RoomIDY = SpawnRoomY;
-        GameState->Octorok2->Width = 1.0f;
-        GameState->Octorok2->Height = 1.0f;
         GameState->Octorok2->Direction.X = -1.0f;
         GameState->Octorok2->Direction.Y = 0.0f;
-        GameState->Octorok2->InvincibilityTimer = 0;
-        GameState->Octorok2->IFramesFlicker = false;
-        GameState->Octorok2->FireFrequency = 60;
 
         // Add Octorok3 to entity array
         GameState->Octorok3 = GetNewEntity(Entities);
-        GameState->Octorok3->Type = EntityType_Octorok;
+        SetEntityTypeDefaults(GameState->Octorok3, EntityType_Octorok);
         GameState->Octorok3->Health = 3;
         GameState->Octorok3->P.Pos.X = 4;
         GameState->Octorok3->P.Pos.Y = 5.0f;
         GameState->Octorok3->P.RoomIDX = SpawnRoomX;
         GameState->Octorok3->P.RoomIDY = SpawnRoomY;
-        GameState->Octorok3->Width = 1.0f;
-        GameState->Octorok3->Height = 1.0f;
         GameState->Octorok3->Direction.X = -1.0f;
+        GameState->Octorok3->Direction.Y = 0.0f;
 
         entity *OldMan = GetNewEntity(CaveRoom->Entities);
         if (OldMan)
         {
-            OldMan->Type = EntityType_OldMan;
-            OldMan->IsActive = true;
+            SetEntityTypeDefaults(OldMan, EntityType_OldMan);
             OldMan->P.Pos.X = 7.5f;
             OldMan->P.Pos.Y = 5.0f;
             OldMan->P.RoomIDX = CaveRoomX;
             OldMan->P.RoomIDY = CaveRoomY;
-            OldMan->Width = 1.0f;
-            OldMan->Height = 1.0f;
-            OldMan->Health = 0; // NPCs don't have health
-            OldMan->IsProjectile = false;
         }
 
         entity *Fire1 = GetNewEntity(CaveRoom->Entities);
         if (Fire1)
         {
-            Fire1->Type = EntityType_Fire;
-            Fire1->IsActive = true;
+            SetEntityTypeDefaults(Fire1, EntityType_Fire);
             Fire1->P.Pos.X = 5.5f;
             Fire1->P.Pos.Y = 5.0f;
             Fire1->P.RoomIDX = CaveRoomX;
             Fire1->P.RoomIDY = CaveRoomY;
-            Fire1->Width = 1.0f;
-            Fire1->Height = 1.0f;
-            Fire1->Health = 0; // NPCs don't have health
-            Fire1->IsProjectile = false;
         }
 
         entity *Fire2 = GetNewEntity(CaveRoom->Entities);
         if (Fire2)
         {
-            Fire2->Type = EntityType_Fire;
-            Fire2->IsActive = true;
+            SetEntityTypeDefaults(Fire2, EntityType_Fire);
             Fire2->P.Pos.X = 9.5f;
             Fire2->P.Pos.Y = 5.0f;
             Fire2->P.RoomIDX = CaveRoomX;
             Fire2->P.RoomIDY = CaveRoomY;
-            Fire2->Width = 1.0f;
-            Fire2->Height = 1.0f;
-            Fire2->Health = 0; // NPCs don't have health
-            Fire2->IsProjectile = false;
         }
 
         entity *Sword = GetNewEntity(CaveRoom->Entities);
         if (Sword)
         {
-            Sword->Type = EntityType_Sword;
-            Sword->IsActive = true;
+            SetEntityTypeDefaults(Sword, EntityType_Sword);
             Sword->P.Pos.X = 7.5f;
             Sword->P.Pos.Y = 3.0f;
             Sword->P.RoomIDX = CaveRoomX;
             Sword->P.RoomIDY = CaveRoomY;
-            Sword->Width = 1.0f;
-            Sword->Height = 1.0f;
-            Sword->Health = 0; // NPCs don't have health
-            Sword->IsProjectile = false;
         }
-
-        GameState->Octorok3->Direction.Y = 0.0f;
-        GameState->Octorok3->InvincibilityTimer = 0;
-        GameState->Octorok3->IFramesFlicker = false;
-        GameState->Octorok3->FireFrequency = 60;
 
         // Add Moblin to entity array
         GameState->Moblin1 = GetNewEntity(Entities);
-        GameState->Moblin1->Type = EntityType_Moblin;
+        SetEntityTypeDefaults(GameState->Moblin1, EntityType_Moblin);
         GameState->Moblin1->Health = 3;
         GameState->Moblin1->P.Pos.X = 6;
         GameState->Moblin1->P.Pos.Y = 5.0f;
         GameState->Moblin1->P.RoomIDX = SpawnRoomX;
         GameState->Moblin1->P.RoomIDY = SpawnRoomY;
-        GameState->Moblin1->Width = 1.0f;
-        GameState->Moblin1->Height = 1.0f;
         GameState->Moblin1->Direction.X = -1.0f;
         GameState->Moblin1->Direction.Y = 0.0f;
-        GameState->Moblin1->InvincibilityTimer = 0;
-        GameState->Moblin1->IFramesFlicker = false;
-        GameState->Moblin1->FireFrequency = 60;
 
         // Add Moblin to entity array
         GameState->Moblin2 = GetNewEntity(Entities);
-        GameState->Moblin2->Type = EntityType_Moblin;
+        SetEntityTypeDefaults(GameState->Moblin2, EntityType_Moblin);
         GameState->Moblin2->Health = 3;
         GameState->Moblin2->P.Pos.X = 7;
         GameState->Moblin2->P.Pos.Y = 5.0f;
         GameState->Moblin2->P.RoomIDX = SpawnRoomX;
         GameState->Moblin2->P.RoomIDY = SpawnRoomY;
-        GameState->Moblin2->Width = 1.0f;
-        GameState->Moblin2->Height = 1.0f;
         GameState->Moblin2->Direction.X = -1.0f;
         GameState->Moblin2->Direction.Y = 0.0f;
-        GameState->Moblin2->InvincibilityTimer = 0;
-        GameState->Moblin2->IFramesFlicker = false;
-        GameState->Moblin2->FireFrequency = 60;
 
         // Add Octorok1 to entity array
         Entities = (entity *)GameState->RoomDebug2->Entities;
         GameState->Octorok4 = GetNewEntity(Entities);
-        GameState->Octorok4->Type = EntityType_Octorok;
+        SetEntityTypeDefaults(GameState->Octorok4, EntityType_Octorok);
         GameState->Octorok4->Health = 3;
         GameState->Octorok4->P.Pos.X = 8;
         GameState->Octorok4->P.Pos.Y = 5.0f;
         GameState->Octorok4->P.RoomIDX = SpawnRoomX+1;
         GameState->Octorok4->P.RoomIDY = SpawnRoomY;
-        GameState->Octorok4->Width = 1.0f;
-        GameState->Octorok4->Height = 1.0f;
         GameState->Octorok4->Direction.X = -1.0f;
         GameState->Octorok4->Direction.Y = 0.0f;
-        GameState->Octorok4->InvincibilityTimer = 0;
-        GameState->Octorok4->IFramesFlicker = false;
-        GameState->Octorok4->FireFrequency = 60;
 
         // NOTE: We should probably start a new arena for this image? 
         // Memory->Background = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_background.bmp");
@@ -1303,12 +1270,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 {
                     // Do nothing
                 }
-                else
+                else if (Entity->Damage > 0)
                 {
+                    // Apply damage if entity has damage value
                     GameState->InvincibilityTimer = 60;
-                    GameState->PlayerHealth -= 1;
+                    GameState->PlayerHealth -= Entity->Damage;
                 }
-                
+
                 // Deactivate projectiles on hit
                 if (Entity->Type == EntityType_OctorokRock || Entity->Type == EntityType_MoblinArrow)
                 {
@@ -1336,7 +1304,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 {
                     bool32 IsEnemyHit = IsHitboxPointActive(GameState->SwordPoint, 
                                                             Entity->P, 
-                                                            1.0f, 1.0f);
+                                                            Entity->Width, 
+                                                            Entity->Height);
                     if (IsEnemyHit)
                     {
                         Entity->InvincibilityTimer = 60;

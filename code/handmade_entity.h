@@ -39,6 +39,9 @@ struct entity
     uint32 InvincibilityTimer;
     bool32 IFramesFlicker;
     
+    // Damage system
+    uint32 Damage;  // Amount of damage this entity does on collision (0 = no damage)
+    
     // Movement (projectiles use velocity, enemies use direction for AI)
     real32 VelocityX;
     real32 VelocityY;
