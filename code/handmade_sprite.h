@@ -74,10 +74,13 @@ struct link_sprites
     bmp_tile Back[2];
     bmp_tile Left[2];
     bmp_tile Right[2];
+
     bmp_tile UseSwordFront[4];
     bmp_tile UseSwordRight[4];
     bmp_tile UseSwordBack[4];
     bmp_tile UseSwordLeft[4];
+
+    bmp_tile PickUp[2];
 
     // Link items
     bmp_tile Sword[3];

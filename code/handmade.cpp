@@ -262,13 +262,13 @@ UpdateOldMan(game_state *GameState, entity *OldMan)
 internal void
 UpdateSword(game_state *GameState, entity *Sword)
 {
-    // OldMan doesn't move, just stands there
-    // Could add idle animation or dialogue triggers here
     bool32 IsColliding = IsEntityCollidingWithPlayer(Sword, GameState->PlayerP);
-    if (IsColliding)
+    if (IsColliding && !GameState->PlayerPickingUpSword)
     {
-        Sword->IsActive = false;
+        // Don't deactivate yet - keep it active for animation
         GameState->HasSword = true;
+        GameState->PlayerPickingUpSword = true;
+        GameState->PickupFrame = 0;
     }
 }
 
@@ -777,6 +777,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->PlayerHealth = 6;
         GameState->MaxHealth = 6;
         GameState->HasSword = false;
+        GameState->PlayerPickingUpSword = false;
+        GameState->PickupFrame = 0;
+        GameState->TotalPickupFrames = 30 * 4;
         GameState->PlayerP.RoomIDX = SpawnRoomX;
         GameState->PlayerP.RoomIDY = SpawnRoomY;
         GameState->PlayerP.Pos.X = 5.0f;
@@ -857,6 +860,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             Sword->P.Pos.Y = 3.0f;
             Sword->P.RoomIDX = CaveRoomX;
             Sword->P.RoomIDY = CaveRoomY;
+            GameState->Sword = Sword;
         }
 
         // Add Moblin to entity array
@@ -951,31 +955,39 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
         else
         {
-            // NOTE: Use digital movement tuning
-            if (Controller->MoveUp.EndedDown)
+            // Prevent movement during animations
+            if (GameState->PlayerPickingUpSword || GameState->PlayerUsingSword || GameState->PlayerUsingBoomerang)
             {
-                GameState->PlayerDirection = {0.0f, 1.0f}; // BACK
-                PlayerSpeed = 5.0f;
+                PlayerSpeed = 0.0f;
             }
-            if (Controller->MoveDown.EndedDown)
+            else
             {
-                GameState->PlayerDirection = {0.0f, -1.0f}; // FRONT
-                PlayerSpeed = 5.0f;
-            }
-            if (Controller->MoveLeft.EndedDown)
-            {
-                GameState->PlayerDirection = {-1.0f, 0.0f}; // LEFT
-                PlayerSpeed = 5.0f;
-            }
-            if (Controller->MoveRight.EndedDown)
-            {
-                GameState->PlayerDirection = {1.0f, 0.0f}; // RIGHT
-                PlayerSpeed = 5.0f;
-            }
+                // NOTE: Use digital movement tuning
+                if (Controller->MoveUp.EndedDown)
+                {
+                    GameState->PlayerDirection = {0.0f, 1.0f}; // BACK
+                    PlayerSpeed = 5.0f;
+                }
+                if (Controller->MoveDown.EndedDown)
+                {
+                    GameState->PlayerDirection = {0.0f, -1.0f}; // FRONT
+                    PlayerSpeed = 5.0f;
+                }
+                if (Controller->MoveLeft.EndedDown)
+                {
+                    GameState->PlayerDirection = {-1.0f, 0.0f}; // LEFT
+                    PlayerSpeed = 5.0f;
+                }
+                if (Controller->MoveRight.EndedDown)
+                {
+                    GameState->PlayerDirection = {1.0f, 0.0f}; // RIGHT
+                    PlayerSpeed = 5.0f;
+                }
 
-            if (Controller->ActionUp.EndedDown)
-            {
-                PlayerSpeed = 10.0f;
+                if (Controller->ActionUp.EndedDown)
+                {
+                    PlayerSpeed = 10.0f;
+                }
             }
 
             // B
@@ -1029,6 +1041,48 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         if (GameState->SwordUsageFrame > 30)
         {
             GameState->PlayerUsingSword = false;
+        }
+    }
+
+    // Update pickup animation
+    if (GameState->PlayerPickingUpSword)
+    {
+        GameState->PickupFrame += 1;
+        
+        // Update sword entity position using pointer
+        if (GameState->Sword && GameState->Sword->IsActive)
+        {
+            // Calculate animation progress (0.0 to 1.0)
+            real32 t = (real32)GameState->PickupFrame / ((real32)GameState->TotalPickupFrames / 4);
+            // Dont let it get larger than 1, cuz we want it to freeze above links head
+            if (t > 1.0f) t = 1.0f;
+            
+            // Start position: Link's position (at arm level)
+            real32 StartY = GameState->PlayerP.Pos.Y + 0.75f;  // Slightly above Link's feet
+            real32 EndY = GameState->PlayerP.Pos.Y + 1.25f;    // Above Link's head
+            
+            // Interpolate Y position (sword moves upward)
+            GameState->Sword->P.Pos.Y = StartY + (EndY - StartY) * t;
+            
+            // Keep X position aligned with Link (centered)
+            GameState->Sword->P.Pos.X = GameState->PlayerP.Pos.X + 0.25f;  // Center on Link
+            
+            // Keep sword in same room as player
+            GameState->Sword->P.RoomIDX = GameState->PlayerP.RoomIDX;
+            GameState->Sword->P.RoomIDY = GameState->PlayerP.RoomIDY;
+        }
+        
+        // Animation duration
+        if (GameState->PickupFrame > GameState->TotalPickupFrames)
+        {
+            // Now deactivate the sword entity
+            if (GameState->Sword)
+            {
+                GameState->Sword->IsActive = false;
+            }
+            
+            GameState->PlayerPickingUpSword = false;
+            GameState->PickupFrame = 0;
         }
     }
 
@@ -1380,7 +1434,15 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     bmp_tile *LinkSprite;
     direction PlayerDir = Vector2ToDirectionEnum(&GameState->PlayerDirection);
-    if (GameState->PlayerUsingSword)
+    
+    // Priority: Pickup animation > Sword usage > Normal walking
+    if (GameState->PlayerPickingUpSword)
+    {
+        // Animate between the 2 pickup sprites (15 frames per sprite)
+        uint32 PickupSpriteIndex = 1;
+        LinkSprite = &GameState->LinkSprites.PickUp[PickupSpriteIndex];
+    }
+    else if (GameState->PlayerUsingSword)
     {
         uint32 SwordSpriteIndex;
         if (GameState->SwordUsageFrame < 10)

@@ -757,6 +757,18 @@ LoadLinkSprites(link_sprites *LinkSprites, bmp_file *BaseBMP)
     LinkSprites->UseSwordLeft[3].AnchorY = 77;
     LinkSprites->UseSwordLeft[3].FlipX = true;
 
+    LinkSprites->PickUp[0].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->PickUp[0].X = 213;
+    LinkSprites->PickUp[0].Y = 11;
+    LinkSprites->PickUp[0].Width = 16;
+    LinkSprites->PickUp[0].Height = 16;
+
+    LinkSprites->PickUp[1].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->PickUp[1].X = 230;
+    LinkSprites->PickUp[1].Y = 11;
+    LinkSprites->PickUp[1].Width = 16;
+    LinkSprites->PickUp[1].Height = 16;
+
     LinkSprites->Sword[0].Tileset = LinkSprites->BaseBMP;
     LinkSprites->Sword[0].X = 1;
     LinkSprites->Sword[0].Y = 154;

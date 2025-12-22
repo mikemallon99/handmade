@@ -247,6 +247,9 @@ struct game_state
     bool32 HasSword;
     bool32 PlayerUsingSword;
     int32 SwordUsageFrame;
+    bool32 PlayerPickingUpSword;
+    int32 PickupFrame;
+    int32 TotalPickupFrames;
     tile_map_position BoomerangP;
     vector2 BoomerangDirection;
     bool32 PlayerUsingBoomerang;
@@ -294,6 +297,9 @@ struct game_state
 
     // Room 2 enemies (point to places in entites array)
     entity *Octorok4;
+    
+    // Items
+    entity *Sword;
 };
 
 #endif
