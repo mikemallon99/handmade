@@ -185,10 +185,18 @@ IsEntityCollidingWithPlayer(entity *Entity, tile_map_position NewPlayerP)
     {
         // Enemies - check if they have health
         if (Entity->Health == 0) return false;
+        // TODO: Move hitbox stuff to a more centralized place
         HitboxWidth = 1.0f;
         HitboxHeight = 1.0f;
     }
     else if (Entity->Type == EntityType_OctorokRock || Entity->Type == EntityType_MoblinArrow)
+    {
+        // Projectiles - check if active
+        if (!Entity->IsActive) return false;
+        HitboxWidth = 0.5f;
+        HitboxHeight = 1.0f;
+    }
+    else if (Entity->Type == EntityType_Sword)
     {
         // Projectiles - check if active
         if (!Entity->IsActive) return false;
@@ -229,6 +237,19 @@ UpdateOldMan(game_state *GameState, entity *OldMan)
 {
     // OldMan doesn't move, just stands there
     // Could add idle animation or dialogue triggers here
+}
+
+internal void
+UpdateSword(game_state *GameState, entity *Sword)
+{
+    // OldMan doesn't move, just stands there
+    // Could add idle animation or dialogue triggers here
+    bool32 IsColliding = IsEntityCollidingWithPlayer(Sword, GameState->PlayerP);
+    if (IsColliding)
+    {
+        Sword->IsActive = false;
+        GameState->HasSword = true;
+    }
 }
 
 internal void
@@ -387,19 +408,15 @@ UpdateEntity(game_state *GameState, entity *Entity)
     }
     else if (Entity->Type == EntityType_OctorokRock)
     {
-        // Update projectile if active
-        if (Entity->IsActive)
-        {
-            UpdateOctorokProjectile(Entity);
-        }
+        UpdateOctorokProjectile(Entity);
     }
     else if (Entity->Type == EntityType_MoblinArrow)
     {
-        // Update projectile if active
-        if (Entity->IsActive)
-        {
-            UpdateMoblinProjectile(Entity);
-        }
+        UpdateMoblinProjectile(Entity);
+    }
+    else if (Entity->Type == EntityType_Sword)
+    {
+        UpdateSword(GameState, Entity);
     }
 }
 
@@ -468,6 +485,21 @@ DrawOldMan(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileM
     // NOTE: Old man is not animated
     // uint32 OldManSpriteIndex = (GameState->FrameCounter / 30) % 2;
     DrawBMPTile(&NPCSprites->OldMan[1], Buffer, OldManScreenX, OldManScreenY);
+}
+
+internal void
+DrawSword(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
+          real32 PlayAreaY, uint32 CameraTileX, entity *Sword, link_sprites *LinkSprites)
+{
+    real32 SwordOriginX = TileMap->TileSideInPixels*(Sword->P.Pos.X - (real32)CameraTileX);
+    real32 SwordOriginY = PlayAreaY - TileMap->TileSideInPixels*(Sword->P.Pos.Y - 11.0f);
+    real32 SwordScreenX = SwordOriginX;
+    // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
+    real32 SwordScreenY = SwordOriginY - TileMap->TileSideInPixels*1.0f;
+    
+    // NOTE: Old man is not animated
+    // uint32 OldManSpriteIndex = (GameState->FrameCounter / 30) % 2;
+    DrawBMPTile(&LinkSprites->Sword[0], Buffer, SwordScreenX, SwordScreenY);
 }
 
 internal void
@@ -625,6 +657,11 @@ DrawEntity(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileM
         DrawFire(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
                   Entity, &GameState->NPCSprites);
     }
+    else if (Entity->Type == EntityType_Sword)
+    {
+        DrawSword(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
+                  Entity, &GameState->LinkSprites);
+    }
     else if (Entity->Type == EntityType_OctorokRock)
     {
         DrawOctorokProjectile(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
@@ -721,6 +758,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         GameState->PlayerHealth = 6;
         GameState->MaxHealth = 6;
+        GameState->HasSword = false;
         GameState->PlayerP.RoomIDX = SpawnRoomX;
         GameState->PlayerP.RoomIDY = SpawnRoomY;
         GameState->PlayerP.Pos.X = 5.0f;
@@ -817,6 +855,21 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             Fire2->Height = 1.0f;
             Fire2->Health = 0; // NPCs don't have health
             Fire2->IsProjectile = false;
+        }
+
+        entity *Sword = GetNewEntity(CaveRoom->Entities);
+        if (Sword)
+        {
+            Sword->Type = EntityType_Sword;
+            Sword->IsActive = true;
+            Sword->P.Pos.X = 7.5f;
+            Sword->P.Pos.Y = 3.0f;
+            Sword->P.RoomIDX = CaveRoomX;
+            Sword->P.RoomIDY = CaveRoomY;
+            Sword->Width = 1.0f;
+            Sword->Height = 1.0f;
+            Sword->Health = 0; // NPCs don't have health
+            Sword->IsProjectile = false;
         }
 
         GameState->Octorok3->Direction.Y = 0.0f;
@@ -961,7 +1014,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             // B
             if (Controller->ActionLeft.EndedDown)
             {
-                if (!GameState->PlayerUsingSword)
+                if (GameState->HasSword && !GameState->PlayerUsingSword)
                 {
                     GameState->PlayerUsingSword = true;
                     GameState->SwordUsageFrame = -1;
@@ -1382,19 +1435,19 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         if (PlayerDir == FRONT)
         {
-            LinkSprite = &GameState->LinkSprites.SwordFront[SwordSpriteIndex];
+            LinkSprite = &GameState->LinkSprites.UseSwordFront[SwordSpriteIndex];
         }
         else if (PlayerDir == BACK)
         {
-            LinkSprite = &GameState->LinkSprites.SwordBack[SwordSpriteIndex];
+            LinkSprite = &GameState->LinkSprites.UseSwordBack[SwordSpriteIndex];
         }
         else if (PlayerDir == LEFT)
         {
-            LinkSprite = &GameState->LinkSprites.SwordLeft[SwordSpriteIndex];
+            LinkSprite = &GameState->LinkSprites.UseSwordLeft[SwordSpriteIndex];
         }
         else if (PlayerDir == RIGHT)
         {
-            LinkSprite = &GameState->LinkSprites.SwordRight[SwordSpriteIndex];
+            LinkSprite = &GameState->LinkSprites.UseSwordRight[SwordSpriteIndex];
         }
         else
         {

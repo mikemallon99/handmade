@@ -68,14 +68,19 @@ struct hud_tileset
 struct link_sprites
 {
     bmp_file *BaseBMP;
+
+    // Link sprites
     bmp_tile Front[2];
     bmp_tile Back[2];
     bmp_tile Left[2];
     bmp_tile Right[2];
-    bmp_tile SwordFront[4];
-    bmp_tile SwordRight[4];
-    bmp_tile SwordBack[4];
-    bmp_tile SwordLeft[4];
+    bmp_tile UseSwordFront[4];
+    bmp_tile UseSwordRight[4];
+    bmp_tile UseSwordBack[4];
+    bmp_tile UseSwordLeft[4];
+
+    // Link items
+    bmp_tile Sword[3];
 };
 
 struct boomerang_sprites

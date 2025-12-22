@@ -244,6 +244,7 @@ struct game_state
     tile_map_position PlayerP;
     uint32 PlayerHealth;
     uint32 MaxHealth;
+    bool32 HasSword;
     bool32 PlayerUsingSword;
     int32 SwordUsageFrame;
     tile_map_position BoomerangP;
