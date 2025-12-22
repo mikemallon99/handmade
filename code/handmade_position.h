@@ -54,12 +54,6 @@ Length(vector2 V)
     return Result;
 }
 
-struct tile_room_position
-{
-    real32 X;
-    real32 Y;
-};
-
 struct tile_map_position
 {
     uint32 RoomIDX; 

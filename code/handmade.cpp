@@ -147,11 +147,11 @@ DrawDebugPoint(game_offscreen_buffer *Buffer, tile_map *TileMap, real32 PlayArea
 }
 
 internal bool32
-IsHitboxPointActive(tile_room_position PointP, tile_room_position HitboxP,
+IsHitboxPointActive(vector2 PointP, vector2 HitboxP,
                     real32 HitboxWidth, real32 HitboxHeight)
 {
-    tile_room_position HitboxBotLeft = HitboxP;
-    tile_room_position HitboxTopRight = HitboxP;
+    vector2 HitboxBotLeft = HitboxP;
+    vector2 HitboxTopRight = HitboxP;
     HitboxTopRight.X += HitboxWidth;
     HitboxTopRight.Y += HitboxHeight;
 
@@ -168,7 +168,7 @@ IsHitboxPointActive(tile_room_position PointP, tile_room_position HitboxP,
 }
 
 internal bool32
-IsEntityCollidingWithPlayer(entity *Entity, tile_room_position PlayerRoomPos)
+IsEntityCollidingWithPlayer(entity *Entity, vector2 PlayerRoomPos)
 {
     if (!Entity->IsActive) return false;
     
@@ -228,7 +228,7 @@ SetEntityTypeDefaults(entity *Entity, entity_type Type)
 }
 
 internal entity *
-SpawnOctorokProjectile(game_state *GameState, tile_room *Room, tile_room_position SpawnPosition)
+SpawnOctorokProjectile(game_state *GameState, tile_room *Room, vector2 SpawnPosition)
 {
     entity *Projectile = GetNewEntityInRoom(Room);
     if (Projectile)
@@ -254,7 +254,7 @@ UpdateOldMan(game_state *GameState, entity *OldMan)
 internal void
 UpdateSword(game_state *GameState, entity *Sword)
 {
-    tile_room_position PlayerRoomPos;
+    vector2 PlayerRoomPos;
     PlayerRoomPos.X = GameState->PlayerP.Pos.X;
     PlayerRoomPos.Y = GameState->PlayerP.Pos.Y;
     bool32 IsColliding = IsEntityCollidingWithPlayer(Sword, PlayerRoomPos);
@@ -278,14 +278,14 @@ UpdateOctorok(game_state *GameState, entity *Octorok)
     // Get the room this entity is in (should be player's room since we only update entities in player room)
     tile_room *EntityRoom = GetTileRoom(GameState->World->TileMap, GameState->PlayerP);
     
-    tile_room_position NewPosition;
+    vector2 NewPosition;
     NewPosition.X = Octorok->P.X + PositionDelta.X;
     NewPosition.Y = Octorok->P.Y + PositionDelta.Y;
-    tile_room_position NewPositionUp = NewPosition;
+    vector2 NewPositionUp = NewPosition;
     NewPositionUp.Y += Octorok->Height;
-    tile_room_position NewPositionRight = NewPosition;
+    vector2 NewPositionRight = NewPosition;
     NewPositionRight.X += Octorok->Width;
-    tile_room_position NewPositionUpRight = NewPosition;
+    vector2 NewPositionUpRight = NewPosition;
     NewPositionUpRight.X += Octorok->Width;
     NewPositionUpRight.Y += Octorok->Height;
 
@@ -305,16 +305,16 @@ UpdateOctorok(game_state *GameState, entity *Octorok)
         vector2 LeftDir = {-1.0f, 0.0f};
         vector2 RightDir = {1.0f, 0.0f};
 
-        tile_room_position UpPosition;
+        vector2 UpPosition;
         UpPosition.X = Octorok->P.X + UpDir.X * Speed;
         UpPosition.Y = Octorok->P.Y + UpDir.Y * Speed;
-        tile_room_position DownPosition;
+        vector2 DownPosition;
         DownPosition.X = Octorok->P.X + DownDir.X * Speed;
         DownPosition.Y = Octorok->P.Y + DownDir.Y * Speed;
-        tile_room_position LeftPosition;
+        vector2 LeftPosition;
         LeftPosition.X = Octorok->P.X + LeftDir.X * Speed;
         LeftPosition.Y = Octorok->P.Y + LeftDir.Y * Speed;
-        tile_room_position RightPosition;
+        vector2 RightPosition;
         RightPosition.X = Octorok->P.X + RightDir.X * Speed;
         RightPosition.Y = Octorok->P.Y + RightDir.Y * Speed;
 
@@ -363,7 +363,7 @@ UpdateOctorokProjectile(entity *Projectile)
 }
 
 internal entity *
-SpawnMoblinProjectile(game_state *GameState, tile_room *Room, tile_room_position SpawnPosition, vector2 ArrowDirection)
+SpawnMoblinProjectile(game_state *GameState, tile_room *Room, vector2 SpawnPosition, vector2 ArrowDirection)
 {
     entity *Projectile = GetNewEntityInRoom(Room);
     if (Projectile)
@@ -1292,7 +1292,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     if (GameState->InvincibilityTimer == 0)
     {
         // Convert player position to room position for collision checks
-        tile_room_position PlayerRoomPos;
+        vector2 PlayerRoomPos;
         PlayerRoomPos.X = NewPlayerP.Pos.X;
         PlayerRoomPos.Y = NewPlayerP.Pos.Y;
         
@@ -1340,7 +1340,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 if (Entity->InvincibilityTimer == 0 && Entity->Health > 0)
                 {
                     // Convert sword point to room position for comparison
-                    tile_room_position SwordRoomPos;
+                    vector2 SwordRoomPos;
                     SwordRoomPos.X = GameState->SwordPoint.Pos.X;
                     SwordRoomPos.Y = GameState->SwordPoint.Pos.Y;
                     

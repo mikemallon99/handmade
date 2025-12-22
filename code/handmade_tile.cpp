@@ -151,7 +151,7 @@ IsTileMapPointEmpty(tile_map *TileMap, tile_map_position Pos)
 }
 
 internal bool32
-IsTileRoomPointEmpty(tile_map *TileMap, tile_room *Room, tile_room_position Pos)
+IsTileRoomPointEmpty(tile_map *TileMap, tile_room *Room, vector2 Pos)
 {
     bool32 Empty = false;
 

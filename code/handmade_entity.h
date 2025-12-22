@@ -30,7 +30,7 @@ struct entity
     entity_type Type;
     
     // Position (all entities have this) - local to room, no room coordinates needed
-    tile_room_position P;
+    vector2 P;
     real32 Height;
     real32 Width;
     
