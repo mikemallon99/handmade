@@ -147,40 +147,33 @@ DrawDebugPoint(game_offscreen_buffer *Buffer, tile_map *TileMap, real32 PlayArea
 }
 
 internal bool32
-IsHitboxPointActive(tile_map_position PlayerP, tile_map_position HitboxP, 
+IsHitboxPointActive(tile_room_position PointP, tile_room_position HitboxP,
                     real32 HitboxWidth, real32 HitboxHeight)
 {
-    bool32 Active = false;
-    if (PlayerP.RoomIDX != HitboxP.RoomIDX ||
-        PlayerP.RoomIDY != HitboxP.RoomIDY)
-    {
-        return false;
-    }
-
-    tile_map_position HitboxBotLeft = HitboxP;
-    tile_map_position HitboxTopRight = HitboxP;
-    HitboxTopRight.Pos.X += HitboxWidth;
-    HitboxTopRight.Pos.Y += HitboxHeight;
+    tile_room_position HitboxBotLeft = HitboxP;
+    tile_room_position HitboxTopRight = HitboxP;
+    HitboxTopRight.X += HitboxWidth;
+    HitboxTopRight.Y += HitboxHeight;
 
     // AABB checking
-    if (PlayerP.Pos.X >= HitboxBotLeft.Pos.X && 
-        PlayerP.Pos.X <= HitboxTopRight.Pos.X &&
-        PlayerP.Pos.Y >= HitboxBotLeft.Pos.Y &&
-        PlayerP.Pos.Y <= HitboxTopRight.Pos.Y)
+    if (PointP.X >= HitboxBotLeft.X && 
+        PointP.X <= HitboxTopRight.X &&
+        PointP.Y >= HitboxBotLeft.Y &&
+        PointP.Y <= HitboxTopRight.Y)
     {
-        Active = true;
+        return true;
     }
 
-    return Active;
+    return false;
 }
 
 internal bool32
-IsEntityCollidingWithPlayer(entity *Entity, tile_map_position NewPlayerP)
+IsEntityCollidingWithPlayer(entity *Entity, tile_room_position PlayerRoomPos)
 {
     if (!Entity->IsActive) return false;
     
-    // Check collision using entity's width and height
-    return IsHitboxPointActive(NewPlayerP, Entity->P, Entity->Width, Entity->Height);
+    // Entities are always in the same room as player (we only iterate PlayerRoom entities)
+    return IsHitboxPointActive(PlayerRoomPos, Entity->P, Entity->Width, Entity->Height);
 }
 
 internal void
@@ -235,10 +228,9 @@ SetEntityTypeDefaults(entity *Entity, entity_type Type)
 }
 
 internal entity *
-SpawnOctorokProjectile(game_state *GameState, tile_map_position SpawnPosition)
+SpawnOctorokProjectile(game_state *GameState, tile_room *Room, tile_room_position SpawnPosition)
 {
-    tile_room *PlayerRoom = GetTileRoom(GameState->World->TileMap, GameState->PlayerP);
-    entity *Projectile = GetNewEntity(PlayerRoom->Entities);
+    entity *Projectile = GetNewEntityInRoom(Room);
     if (Projectile)
     {
         SetEntityTypeDefaults(Projectile, EntityType_OctorokRock);
@@ -262,7 +254,10 @@ UpdateOldMan(game_state *GameState, entity *OldMan)
 internal void
 UpdateSword(game_state *GameState, entity *Sword)
 {
-    bool32 IsColliding = IsEntityCollidingWithPlayer(Sword, GameState->PlayerP);
+    tile_room_position PlayerRoomPos;
+    PlayerRoomPos.X = GameState->PlayerP.Pos.X;
+    PlayerRoomPos.Y = GameState->PlayerP.Pos.Y;
+    bool32 IsColliding = IsEntityCollidingWithPlayer(Sword, PlayerRoomPos);
     if (IsColliding && !GameState->PlayerPickingUpSword)
     {
         // Don't deactivate yet - keep it active for animation
@@ -280,21 +275,25 @@ UpdateOctorok(game_state *GameState, entity *Octorok)
     real32 Speed = 0.05f;
     vector2 PositionDelta = Octorok->Direction * Speed;
 
-    tile_map_position NewPosition = Octorok->P;
-    NewPosition.Pos = Octorok->P.Pos + PositionDelta;
-    tile_map_position NewPositionUp = NewPosition;
-    NewPositionUp.Pos.Y += Octorok->Height;
-    tile_map_position NewPositionRight = NewPosition;
-    NewPositionRight.Pos.X += Octorok->Width;
-    tile_map_position NewPositionUpRight = NewPosition;
-    NewPositionUpRight.Pos.X += Octorok->Width;
-    NewPositionUpRight.Pos.Y += Octorok->Height;
+    // Get the room this entity is in (should be player's room since we only update entities in player room)
+    tile_room *EntityRoom = GetTileRoom(GameState->World->TileMap, GameState->PlayerP);
+    
+    tile_room_position NewPosition;
+    NewPosition.X = Octorok->P.X + PositionDelta.X;
+    NewPosition.Y = Octorok->P.Y + PositionDelta.Y;
+    tile_room_position NewPositionUp = NewPosition;
+    NewPositionUp.Y += Octorok->Height;
+    tile_room_position NewPositionRight = NewPosition;
+    NewPositionRight.X += Octorok->Width;
+    tile_room_position NewPositionUpRight = NewPosition;
+    NewPositionUpRight.X += Octorok->Width;
+    NewPositionUpRight.Y += Octorok->Height;
 
     tile_map *TileMap = GameState->World->TileMap;
-    if (IsTileMapPointEmpty(TileMap, NewPosition) &&
-        IsTileMapPointEmpty(TileMap, NewPositionUp) &&
-        IsTileMapPointEmpty(TileMap, NewPositionRight) &&
-        IsTileMapPointEmpty(TileMap, NewPositionUpRight))
+    if (IsTileRoomPointEmpty(TileMap, EntityRoom, NewPosition) &&
+        IsTileRoomPointEmpty(TileMap, EntityRoom, NewPositionUp) &&
+        IsTileRoomPointEmpty(TileMap, EntityRoom, NewPositionRight) &&
+        IsTileRoomPointEmpty(TileMap, EntityRoom, NewPositionUpRight))
     {
         Octorok->P = NewPosition;
     }
@@ -306,30 +305,34 @@ UpdateOctorok(game_state *GameState, entity *Octorok)
         vector2 LeftDir = {-1.0f, 0.0f};
         vector2 RightDir = {1.0f, 0.0f};
 
-        tile_map_position UpPosition = Octorok->P;
-        UpPosition.Pos = Octorok->P.Pos + UpDir * Speed;
-        tile_map_position DownPosition = Octorok->P;
-        DownPosition.Pos = Octorok->P.Pos + DownDir * Speed;
-        tile_map_position LeftPosition = Octorok->P;
-        LeftPosition.Pos = Octorok->P.Pos + LeftDir * Speed;
-        tile_map_position RightPosition = Octorok->P;
-        RightPosition.Pos = Octorok->P.Pos + RightDir * Speed;
+        tile_room_position UpPosition;
+        UpPosition.X = Octorok->P.X + UpDir.X * Speed;
+        UpPosition.Y = Octorok->P.Y + UpDir.Y * Speed;
+        tile_room_position DownPosition;
+        DownPosition.X = Octorok->P.X + DownDir.X * Speed;
+        DownPosition.Y = Octorok->P.Y + DownDir.Y * Speed;
+        tile_room_position LeftPosition;
+        LeftPosition.X = Octorok->P.X + LeftDir.X * Speed;
+        LeftPosition.Y = Octorok->P.Y + LeftDir.Y * Speed;
+        tile_room_position RightPosition;
+        RightPosition.X = Octorok->P.X + RightDir.X * Speed;
+        RightPosition.Y = Octorok->P.Y + RightDir.Y * Speed;
 
         uint32 DirArraySize = 0;
         vector2 *DirectionArray[4];
-        if (IsTileMapPointEmpty(GameState->World->TileMap, UpPosition))
+        if (IsTileRoomPointEmpty(TileMap, EntityRoom, UpPosition))
         {
             DirectionArray[DirArraySize++] = &UpDir;
         }
-        if (IsTileMapPointEmpty(GameState->World->TileMap, DownPosition))
+        if (IsTileRoomPointEmpty(TileMap, EntityRoom, DownPosition))
         {
             DirectionArray[DirArraySize++] = &DownDir;
         }
-        if (IsTileMapPointEmpty(GameState->World->TileMap, LeftPosition))
+        if (IsTileRoomPointEmpty(TileMap, EntityRoom, LeftPosition))
         {
             DirectionArray[DirArraySize++] = &LeftDir;
         }
-        if (IsTileMapPointEmpty(GameState->World->TileMap, RightPosition))
+        if (IsTileRoomPointEmpty(TileMap, EntityRoom, RightPosition))
         {
             DirectionArray[DirArraySize++] = &RightDir;
         }
@@ -343,27 +346,26 @@ UpdateOctorok(game_state *GameState, entity *Octorok)
     if (Octorok->Health > 0 &&
         GameState->FrameCounter % Octorok->FireFrequency == 0)
     {
-        SpawnOctorokProjectile(GameState, Octorok->P);
+        SpawnOctorokProjectile(GameState, EntityRoom, Octorok->P);
     }
 }
 
 internal void
 UpdateOctorokProjectile(entity *Projectile)
 {
-    Projectile->P.Pos.X += Projectile->VelocityX/60.0f;
-    Projectile->P.Pos.Y += Projectile->VelocityY/60.0f;
+    Projectile->P.X += Projectile->VelocityX/60.0f;
+    Projectile->P.Y += Projectile->VelocityY/60.0f;
 
-    if (Projectile->P.Pos.Y < 0)
+    if (Projectile->P.Y < 0)
     {
         Projectile->IsActive = false;
     }
 }
 
 internal entity *
-SpawnMoblinProjectile(game_state *GameState, tile_map_position SpawnPosition, vector2 ArrowDirection)
+SpawnMoblinProjectile(game_state *GameState, tile_room *Room, tile_room_position SpawnPosition, vector2 ArrowDirection)
 {
-    tile_room *PlayerRoom = GetTileRoom(GameState->World->TileMap, GameState->PlayerP);
-    entity *Projectile = GetNewEntity(PlayerRoom->Entities);
+    entity *Projectile = GetNewEntityInRoom(Room);
     if (Projectile)
     {
         SetEntityTypeDefaults(Projectile, EntityType_MoblinArrow);
@@ -382,32 +384,34 @@ UpdateMoblin(game_state *GameState, entity *Moblin)
 {
     // Moblin position update
     local_persist int32 YDirection = -1;
-    if (Moblin->P.Pos.Y > 8)
+    if (Moblin->P.Y > 8)
     {
         YDirection = -1;
     }
-    else if (Moblin->P.Pos.Y < 3)
+    else if (Moblin->P.Y < 3)
     {
         YDirection = 1;
     }
     Moblin->Direction.X = 0.0f;
     Moblin->Direction.Y = (real32)YDirection;
-    Moblin->P.Pos.Y += (real32)YDirection * 0.05f;
+    Moblin->P.Y += (real32)YDirection * 0.05f;
 
     // Moblin fire projectile
     if (GameState->FrameCounter % Moblin->FireFrequency == 0)
     {
-        SpawnMoblinProjectile(GameState, Moblin->P, Moblin->Direction);
+        // Get the room this entity is in (should be player's room since we only update entities in player room)
+        tile_room *EntityRoom = GetTileRoom(GameState->World->TileMap, GameState->PlayerP);
+        SpawnMoblinProjectile(GameState, EntityRoom, Moblin->P, Moblin->Direction);
     }
 }
 
 internal void
 UpdateMoblinProjectile(entity *Projectile)
 {
-    Projectile->P.Pos.X += Projectile->VelocityX/60.0f;
-    Projectile->P.Pos.Y += Projectile->VelocityY/60.0f;
+    Projectile->P.X += Projectile->VelocityX/60.0f;
+    Projectile->P.Y += Projectile->VelocityY/60.0f;
 
-    if (Projectile->P.Pos.Y < 0)
+    if (Projectile->P.Y < 0)
     {
         Projectile->IsActive = false;
     }
@@ -442,8 +446,8 @@ internal void
 DrawOctorok(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
             real32 PlayAreaY, uint32 CameraTileX, entity *Octorok, octorok_sprites *OctorokSprites)
 {
-    real32 OctoOriginX = TileMap->TileSideInPixels*(Octorok->P.Pos.X - (real32)CameraTileX);
-    real32 OctoOriginY = PlayAreaY - TileMap->TileSideInPixels*(Octorok->P.Pos.Y - 11.0f);
+    real32 OctoOriginX = TileMap->TileSideInPixels*(Octorok->P.X - (real32)CameraTileX);
+    real32 OctoOriginY = PlayAreaY - TileMap->TileSideInPixels*(Octorok->P.Y - 11.0f);
     real32 OctoScreenX = OctoOriginX;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
     real32 OctoScreenY = OctoOriginY - TileMap->TileSideInPixels*1.0f;
@@ -482,8 +486,8 @@ internal void
 DrawOctorokProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
                       real32 PlayAreaY, uint32 CameraTileX, entity *Projectile, octorok_sprites *OctorokSprites)
 {
-    real32 ProjOriginX = TileMap->TileSideInPixels*(Projectile->P.Pos.X - (real32)CameraTileX);
-    real32 ProjOriginY = PlayAreaY - TileMap->TileSideInPixels*(Projectile->P.Pos.Y - 11.0f);
+    real32 ProjOriginX = TileMap->TileSideInPixels*(Projectile->P.X - (real32)CameraTileX);
+    real32 ProjOriginY = PlayAreaY - TileMap->TileSideInPixels*(Projectile->P.Y - 11.0f);
     real32 ProjScreenX = ProjOriginX;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
     real32 ProjScreenY = ProjOriginY - TileMap->TileSideInPixels*1.0f;
@@ -494,8 +498,8 @@ internal void
 DrawOldMan(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
            real32 PlayAreaY, uint32 CameraTileX, entity *OldMan, npc_sprites *NPCSprites)
 {
-    real32 OldManOriginX = TileMap->TileSideInPixels*(OldMan->P.Pos.X - (real32)CameraTileX);
-    real32 OldManOriginY = PlayAreaY - TileMap->TileSideInPixels*(OldMan->P.Pos.Y - 11.0f);
+    real32 OldManOriginX = TileMap->TileSideInPixels*(OldMan->P.X - (real32)CameraTileX);
+    real32 OldManOriginY = PlayAreaY - TileMap->TileSideInPixels*(OldMan->P.Y - 11.0f);
     real32 OldManScreenX = OldManOriginX;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
     real32 OldManScreenY = OldManOriginY - TileMap->TileSideInPixels*1.0f;
@@ -509,8 +513,8 @@ internal void
 DrawSword(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
           real32 PlayAreaY, uint32 CameraTileX, entity *Sword, link_sprites *LinkSprites)
 {
-    real32 SwordOriginX = TileMap->TileSideInPixels*(Sword->P.Pos.X - (real32)CameraTileX);
-    real32 SwordOriginY = PlayAreaY - TileMap->TileSideInPixels*(Sword->P.Pos.Y - 11.0f);
+    real32 SwordOriginX = TileMap->TileSideInPixels*(Sword->P.X - (real32)CameraTileX);
+    real32 SwordOriginY = PlayAreaY - TileMap->TileSideInPixels*(Sword->P.Y - 11.0f);
     real32 SwordScreenX = SwordOriginX;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
     real32 SwordScreenY = SwordOriginY - TileMap->TileSideInPixels*1.0f;
@@ -524,8 +528,8 @@ internal void
 DrawFire(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
            real32 PlayAreaY, uint32 CameraTileX, entity *Fire, npc_sprites *NPCSprites)
 {
-    real32 FireOriginX = TileMap->TileSideInPixels*(Fire->P.Pos.X - (real32)CameraTileX);
-    real32 FireOriginY = PlayAreaY - TileMap->TileSideInPixels*(Fire->P.Pos.Y - 11.0f);
+    real32 FireOriginX = TileMap->TileSideInPixels*(Fire->P.X - (real32)CameraTileX);
+    real32 FireOriginY = PlayAreaY - TileMap->TileSideInPixels*(Fire->P.Y - 11.0f);
     real32 FireScreenX = FireOriginX;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
     real32 FireScreenY = FireOriginY - TileMap->TileSideInPixels*1.0f;
@@ -539,8 +543,8 @@ internal void
 DrawMoblin(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
            real32 PlayAreaY, uint32 CameraTileX, entity *Moblin, moblin_sprites *MoblinSprites)
 {
-    real32 MoblinOriginX = TileMap->TileSideInPixels*(Moblin->P.Pos.X - (real32)CameraTileX);
-    real32 MoblinOriginY = PlayAreaY - TileMap->TileSideInPixels*(Moblin->P.Pos.Y - 11.0f);
+    real32 MoblinOriginX = TileMap->TileSideInPixels*(Moblin->P.X - (real32)CameraTileX);
+    real32 MoblinOriginY = PlayAreaY - TileMap->TileSideInPixels*(Moblin->P.Y - 11.0f);
     real32 MoblinScreenX = MoblinOriginX;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
     real32 MoblinScreenY = MoblinOriginY - TileMap->TileSideInPixels*1.0f;
@@ -604,8 +608,8 @@ internal void
 DrawMoblinProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
                      real32 PlayAreaY, uint32 CameraTileX, entity *Projectile, moblin_sprites *MoblinSprites)
 {
-    real32 ProjOriginX = TileMap->TileSideInPixels*(Projectile->P.Pos.X - (real32)CameraTileX);
-    real32 ProjOriginY = PlayAreaY - TileMap->TileSideInPixels*(Projectile->P.Pos.Y - 11.0f);
+    real32 ProjOriginX = TileMap->TileSideInPixels*(Projectile->P.X - (real32)CameraTileX);
+    real32 ProjOriginY = PlayAreaY - TileMap->TileSideInPixels*(Projectile->P.Y - 11.0f);
     real32 ProjScreenX = ProjOriginX;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
     real32 ProjScreenY = ProjOriginY - TileMap->TileSideInPixels*1.0f;
@@ -789,111 +793,89 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->BoomerangSpeed = 8.0f;
 
         // Add Octorok1 to entity array
-        entity *Entities = (entity *)GameState->RoomDebug1->Entities;
-        GameState->Octorok1 = GetNewEntity(Entities);
+        GameState->Octorok1 = GetNewEntityInRoom(GameState->RoomDebug1);
         SetEntityTypeDefaults(GameState->Octorok1, EntityType_Octorok);
         GameState->Octorok1->Health = 3;
-        GameState->Octorok1->P.Pos.X = 8;
-        GameState->Octorok1->P.Pos.Y = 5.0f;
-        GameState->Octorok1->P.RoomIDX = SpawnRoomX;
-        GameState->Octorok1->P.RoomIDY = SpawnRoomY;
+        GameState->Octorok1->P.X = 8;
+        GameState->Octorok1->P.Y = 5.0f;
         GameState->Octorok1->Direction.X = -1.0f;
         GameState->Octorok1->Direction.Y = 0.0f;
 
         // Add Octorok2 to entity array
-        GameState->Octorok2 = GetNewEntity(Entities);
+        GameState->Octorok2 = GetNewEntityInRoom(GameState->RoomDebug1);
         SetEntityTypeDefaults(GameState->Octorok2, EntityType_Octorok);
         GameState->Octorok2->Health = 3;
-        GameState->Octorok2->P.Pos.X = 9;
-        GameState->Octorok2->P.Pos.Y = 5.0f;
-        GameState->Octorok2->P.RoomIDX = SpawnRoomX;
-        GameState->Octorok2->P.RoomIDY = SpawnRoomY;
+        GameState->Octorok2->P.X = 9;
+        GameState->Octorok2->P.Y = 5.0f;
         GameState->Octorok2->Direction.X = -1.0f;
         GameState->Octorok2->Direction.Y = 0.0f;
 
         // Add Octorok3 to entity array
-        GameState->Octorok3 = GetNewEntity(Entities);
+        GameState->Octorok3 = GetNewEntityInRoom(GameState->RoomDebug1);
         SetEntityTypeDefaults(GameState->Octorok3, EntityType_Octorok);
         GameState->Octorok3->Health = 3;
-        GameState->Octorok3->P.Pos.X = 4;
-        GameState->Octorok3->P.Pos.Y = 5.0f;
-        GameState->Octorok3->P.RoomIDX = SpawnRoomX;
-        GameState->Octorok3->P.RoomIDY = SpawnRoomY;
+        GameState->Octorok3->P.X = 4;
+        GameState->Octorok3->P.Y = 5.0f;
         GameState->Octorok3->Direction.X = -1.0f;
         GameState->Octorok3->Direction.Y = 0.0f;
 
-        entity *OldMan = GetNewEntity(CaveRoom->Entities);
+        entity *OldMan = GetNewEntityInRoom(CaveRoom);
         if (OldMan)
         {
             SetEntityTypeDefaults(OldMan, EntityType_OldMan);
-            OldMan->P.Pos.X = 7.5f;
-            OldMan->P.Pos.Y = 5.0f;
-            OldMan->P.RoomIDX = CaveRoomX;
-            OldMan->P.RoomIDY = CaveRoomY;
+            OldMan->P.X = 7.5f;
+            OldMan->P.Y = 5.0f;
         }
 
-        entity *Fire1 = GetNewEntity(CaveRoom->Entities);
+        entity *Fire1 = GetNewEntityInRoom(CaveRoom);
         if (Fire1)
         {
             SetEntityTypeDefaults(Fire1, EntityType_Fire);
-            Fire1->P.Pos.X = 5.5f;
-            Fire1->P.Pos.Y = 5.0f;
-            Fire1->P.RoomIDX = CaveRoomX;
-            Fire1->P.RoomIDY = CaveRoomY;
+            Fire1->P.X = 5.5f;
+            Fire1->P.Y = 5.0f;
         }
 
-        entity *Fire2 = GetNewEntity(CaveRoom->Entities);
+        entity *Fire2 = GetNewEntityInRoom(CaveRoom);
         if (Fire2)
         {
             SetEntityTypeDefaults(Fire2, EntityType_Fire);
-            Fire2->P.Pos.X = 9.5f;
-            Fire2->P.Pos.Y = 5.0f;
-            Fire2->P.RoomIDX = CaveRoomX;
-            Fire2->P.RoomIDY = CaveRoomY;
+            Fire2->P.X = 9.5f;
+            Fire2->P.Y = 5.0f;
         }
 
-        entity *Sword = GetNewEntity(CaveRoom->Entities);
+        entity *Sword = GetNewEntityInRoom(CaveRoom);
         if (Sword)
         {
             SetEntityTypeDefaults(Sword, EntityType_Sword);
-            Sword->P.Pos.X = 7.5f;
-            Sword->P.Pos.Y = 3.0f;
-            Sword->P.RoomIDX = CaveRoomX;
-            Sword->P.RoomIDY = CaveRoomY;
+            Sword->P.X = 7.5f;
+            Sword->P.Y = 3.0f;
             GameState->Sword = Sword;
         }
 
         // Add Moblin to entity array
-        GameState->Moblin1 = GetNewEntity(Entities);
+        GameState->Moblin1 = GetNewEntityInRoom(GameState->RoomDebug1);
         SetEntityTypeDefaults(GameState->Moblin1, EntityType_Moblin);
         GameState->Moblin1->Health = 3;
-        GameState->Moblin1->P.Pos.X = 6;
-        GameState->Moblin1->P.Pos.Y = 5.0f;
-        GameState->Moblin1->P.RoomIDX = SpawnRoomX;
-        GameState->Moblin1->P.RoomIDY = SpawnRoomY;
+        GameState->Moblin1->P.X = 6;
+        GameState->Moblin1->P.Y = 5.0f;
         GameState->Moblin1->Direction.X = -1.0f;
         GameState->Moblin1->Direction.Y = 0.0f;
 
         // Add Moblin to entity array
-        GameState->Moblin2 = GetNewEntity(Entities);
+        GameState->Moblin2 = GetNewEntityInRoom(GameState->RoomDebug1);
         SetEntityTypeDefaults(GameState->Moblin2, EntityType_Moblin);
         GameState->Moblin2->Health = 3;
-        GameState->Moblin2->P.Pos.X = 7;
-        GameState->Moblin2->P.Pos.Y = 5.0f;
-        GameState->Moblin2->P.RoomIDX = SpawnRoomX;
-        GameState->Moblin2->P.RoomIDY = SpawnRoomY;
+        GameState->Moblin2->P.X = 7;
+        GameState->Moblin2->P.Y = 5.0f;
         GameState->Moblin2->Direction.X = -1.0f;
         GameState->Moblin2->Direction.Y = 0.0f;
 
         // Add Octorok1 to entity array
-        Entities = (entity *)GameState->RoomDebug2->Entities;
-        GameState->Octorok4 = GetNewEntity(Entities);
+        GameState->Octorok4 = GetNewEntityInRoom(GameState->RoomDebug2);
         SetEntityTypeDefaults(GameState->Octorok4, EntityType_Octorok);
         GameState->Octorok4->Health = 3;
-        GameState->Octorok4->P.Pos.X = 8;
-        GameState->Octorok4->P.Pos.Y = 5.0f;
-        GameState->Octorok4->P.RoomIDX = SpawnRoomX+1;
-        GameState->Octorok4->P.RoomIDY = SpawnRoomY;
+        GameState->Octorok4->P.X = 8;
+        GameState->Octorok4->P.Y = 5.0f;
         GameState->Octorok4->Direction.X = -1.0f;
         GameState->Octorok4->Direction.Y = 0.0f;
 
@@ -1062,14 +1044,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             real32 EndY = GameState->PlayerP.Pos.Y + 1.25f;    // Above Link's head
             
             // Interpolate Y position (sword moves upward)
-            GameState->Sword->P.Pos.Y = StartY + (EndY - StartY) * t;
+            GameState->Sword->P.Y = StartY + (EndY - StartY) * t;
             
             // Keep X position aligned with Link (centered)
-            GameState->Sword->P.Pos.X = GameState->PlayerP.Pos.X + 0.25f;  // Center on Link
-            
-            // Keep sword in same room as player
-            GameState->Sword->P.RoomIDX = GameState->PlayerP.RoomIDX;
-            GameState->Sword->P.RoomIDY = GameState->PlayerP.RoomIDY;
+            GameState->Sword->P.X = GameState->PlayerP.Pos.X + 0.25f;  // Center on Link
         }
         
         // Animation duration
@@ -1313,10 +1291,15 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     // NOTE: I chose to do this after the entity position update, so were not using pos from last frame
     if (GameState->InvincibilityTimer == 0)
     {
+        // Convert player position to room position for collision checks
+        tile_room_position PlayerRoomPos;
+        PlayerRoomPos.X = NewPlayerP.Pos.X;
+        PlayerRoomPos.Y = NewPlayerP.Pos.Y;
+        
         for (uint32 EntityIndex = 0; EntityIndex < MAX_ENTITIES; EntityIndex++)
         {
             entity *Entity = &PlayerRoom->Entities[EntityIndex];
-            if (Entity->IsActive && IsEntityCollidingWithPlayer(Entity, NewPlayerP))
+            if (Entity->IsActive && IsEntityCollidingWithPlayer(Entity, PlayerRoomPos))
             {
                 // Skip if player blocks the projectile
                 if (Entity->IsProjectile && !GameState->PlayerUsingSword &&
@@ -1356,10 +1339,15 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             {
                 if (Entity->InvincibilityTimer == 0 && Entity->Health > 0)
                 {
-                    bool32 IsEnemyHit = IsHitboxPointActive(GameState->SwordPoint, 
-                                                            Entity->P, 
-                                                            Entity->Width, 
-                                                            Entity->Height);
+                    // Convert sword point to room position for comparison
+                    tile_room_position SwordRoomPos;
+                    SwordRoomPos.X = GameState->SwordPoint.Pos.X;
+                    SwordRoomPos.Y = GameState->SwordPoint.Pos.Y;
+                    
+                    bool32 IsEnemyHit = IsHitboxPointActive(SwordRoomPos, 
+                                                             Entity->P, 
+                                                             Entity->Width, 
+                                                             Entity->Height);
                     if (IsEnemyHit)
                     {
                         Entity->InvincibilityTimer = 60;

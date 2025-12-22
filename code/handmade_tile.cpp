@@ -151,6 +151,27 @@ IsTileMapPointEmpty(tile_map *TileMap, tile_map_position Pos)
 }
 
 internal bool32
+IsTileRoomPointEmpty(tile_map *TileMap, tile_room *Room, tile_room_position Pos)
+{
+    bool32 Empty = false;
+
+    // If its offscreen
+    if (Pos.X < 0 || Pos.Y < 0 ||
+        Pos.X >= TileMap->RoomWidth || 
+        Pos.Y >= TileMap->RoomHeight)
+    {
+        return false;
+    }
+
+    // Get tile value using room coordinates
+    uint32 TileValue = GetTileValue(TileMap, Room->RoomIDX, Room->RoomIDY, (uint32)Pos.X, (uint32)Pos.Y);
+    Empty = (TileValue == OW_Floor || TileValue == OW_Floor_Dusty ||
+             TileValue == OW_Entrance);
+
+    return Empty;
+}
+
+internal bool32
 IsInSameTileRoom(tile_map_position PosA, tile_map_position PosB)
 {
     bool32 SameRoom = false;
@@ -266,6 +287,10 @@ LoadOverworldRoom(memory_arena *Arena, tile_map *TileMap, uint32 *SourceMap,
                   uint32 RoomIDX, uint32 RoomIDY)
 {
     tile_room *TileRoom = GetTileRoom(TileMap, RoomIDX, RoomIDY);
+    
+    // Store room coordinates in the room itself
+    TileRoom->RoomIDX = RoomIDX;
+    TileRoom->RoomIDY = RoomIDY;
 
     for (int32 SourceY = (int32)TileMap->RoomHeight-1;
             SourceY >= 0;

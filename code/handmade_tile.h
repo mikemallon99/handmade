@@ -6,6 +6,8 @@
 
 struct tile_room
 {
+    uint32 RoomIDX;  // Room's X coordinate in the tile map
+    uint32 RoomIDY;  // Room's Y coordinate in the tile map
     uint32 *Tiles;
     tile_map_position *Up;
     tile_map_position *Down;

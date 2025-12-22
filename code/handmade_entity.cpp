@@ -1,4 +1,5 @@
 #include "handmade_entity.h"
+#include "handmade_tile.h"
 
 internal entity *
 GetNewEntity(entity *Entities)
@@ -14,4 +15,12 @@ GetNewEntity(entity *Entities)
     }
     
     return 0; // No inactive entities found
+}
+
+internal entity *
+GetNewEntityInRoom(tile_room *Room)
+{
+    entity *Entity = GetNewEntity(Room->Entities);
+    // No need to set room coordinates - entities use tile_room_position (local to room)
+    return Entity;
 }

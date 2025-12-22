@@ -29,8 +29,8 @@ struct entity
     bool32 IsActive;
     entity_type Type;
     
-    // Position (all entities have this)
-    tile_map_position P;
+    // Position (all entities have this) - local to room, no room coordinates needed
+    tile_room_position P;
     real32 Height;
     real32 Width;
     
