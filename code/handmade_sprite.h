@@ -21,6 +21,24 @@ enum overworld_tile_id {
     OW_TileCount
 };
 
+enum dungeon_tile_id {
+    DN_Null,   
+
+    DN_Floor,
+    DN_Block,
+    DN_Statue1,
+    DN_Statue2,
+    DN_Black,
+    DN_Gravel,
+    DN_Water,
+    DN_Stairs,
+
+    DN_GreyWall,
+    DN_GreyLadder,
+
+    DN_TileCount
+};
+
 // NOTE: future unified image format (AARRGGBB)
 struct bmp_file
 {
@@ -50,6 +68,21 @@ struct overworld_tileset
 
     // NOTE: Changes based on OverworldSprite enum
     bmp_tile Tiles[OW_TileCount];
+};
+
+struct dungeon_tileset
+{
+    bmp_file *BaseBMP;
+
+    // NOTE: Changes based on OverworldSprite enum
+    bmp_tile Tiles[OW_TileCount];
+
+    bmp_tile RoomBorder;
+
+    bmp_tile DoorsTop[5];
+    bmp_tile DoorsBottom[5];
+    bmp_tile DoorsLeft[5];
+    bmp_tile DoorsRight[5];
 };
 
 struct text_tileset

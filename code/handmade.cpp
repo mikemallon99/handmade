@@ -775,6 +775,22 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         CaveRoom->Down->Pos.X = 4.5f;
         CaveRoom->Down->Pos.Y = 8.5f;
 
+        // TODO: Should dungeon rooms be a new tile map?
+        // Also whats the point of the Pos.X and Pos.Y stuff?
+        uint32 DungeonRoomX = 0;
+        uint32 DungeonRoomY = 9;
+        TileRoom->Door.Pos.X = (real32)TileMap->RoomWidth / 2.0f;
+        TileRoom->Door.Pos.Y = 0.5f;
+        TileRoom->Door.RoomIDX = DungeonRoomX;
+        TileRoom->Door.RoomIDY = DungeonRoomY;
+
+        tile_room *DungeonRoom = LoadDungeonRoom(&GameState->WorldArena, TileMap, DungeonMap, DungeonRoomX, DungeonRoomY);
+        DungeonRoom->Down = PushStruct(&GameState->WorldArena, tile_map_position);
+        DungeonRoom->Down->RoomIDX = SpawnRoomX;
+        DungeonRoom->Down->RoomIDY = SpawnRoomY;
+        DungeonRoom->Down->Pos.X = 4.5f;
+        DungeonRoom->Down->Pos.Y = 8.5f;
+
         GameState->PlayerHealth = 6;
         GameState->MaxHealth = 6;
         GameState->HasSword = false;
@@ -894,6 +910,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->OverworldBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
                                                 "tiles/overworld_tileset.bmp");
         LoadOverworldTileset(&GameState->OverworldTileset, &GameState->OverworldBMP);
+
+        GameState->DungeonBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
+                                                "tiles/dungeon_tileset.bmp");
+        LoadDungeonTileset(&GameState->DungeonTileset, &GameState->DungeonBMP);
 
         LoadTextTileset(&GameState->TextTileset, &GameState->OverworldBMP);
 

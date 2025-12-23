@@ -275,6 +275,8 @@ struct game_state
 
     bmp_file OverworldBMP;
     overworld_tileset OverworldTileset;
+    bmp_file DungeonBMP;
+    dungeon_tileset DungeonTileset;
     text_tileset TextTileset;
 
     bmp_file HudBMP;
