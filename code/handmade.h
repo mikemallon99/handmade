@@ -300,6 +300,9 @@ struct game_state
     
     // Items
     entity *Sword;
+    
+    // Cave room text animation
+    int32 CaveTextCharIndex;  // Current character index to display
 };
 
 #endif

@@ -145,7 +145,7 @@ IsTileMapPointEmpty(tile_map *TileMap, tile_map_position Pos)
 
     uint32 TileValue = GetTileValue(TileMap, Pos);
     Empty = (TileValue == OW_Floor || TileValue == OW_Floor_Dusty ||
-             TileValue == OW_Entrance);
+             TileValue == OW_Floor_Black || TileValue == OW_Entrance);
 
     return Empty;
 }

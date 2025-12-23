@@ -1,57 +1,73 @@
 #ifndef HANDMADE_MAP_H
 #define HANDMADE_MAP_H
 
-// Play area = 16 x 11
+#include "handmade_sprite.h"
+
+// Visual tile macros - scoped to this file only
+// These map directly to overworld_tile_id enum values
+// Format: T_<visual_char> where visual char represents the tile visually
+#define T__ OW_Floor              // Floor (underscore for ground) - enum value T__
+#define T_W OW_Wall_BotLeft       // Wall bottom left (W for wall) - enum value T_M
+#define T_T OW_Wall_TopMid        // Wall top middle (T for top) - enum value T_R
+#define T_L OW_Wall_TopLeft       // Wall top left (L for left) - enum value T_M
+#define T_M OW_Wall_TopMid        // Wall top middle (M for middle) - enum value T_R
+#define T_R OW_Wall_TopRight      // Wall top right (R for right) - enum value T_W
+#define T_B OW_Wall_BotMid        // Wall bottom middle (B for bottom) - enum value T_R
+#define T_K OW_Floor_Black        // Black floor (K for black) - enum value 3
+#define T_E OW_Entrance           // Entrance (E for entrance) - enum value T__T__
+#define T_U OW_Bush               // Bush (U for bush/underbrush) - enum value T__0
+
+// Play area = T__T_W x T__T__
 
 global_variable uint32 HardcodedMap[] = 
 {
-    7, 7, 7, 7, 7, 7, 7, 1,   1, 7, 7, 7, 7, 7, 7, 7,
-    7, 7, 7, 7, 10, 7, 8, 1,   1, 7, 7, 7, 7, 7, 7, 7,
-    7, 7, 7, 8, 1, 1, 1, 1,   1, 7, 7, 7, 7, 7, 7, 7,
-    7, 7, 8, 1, 1, 1, 1, 1,   1, 7, 7, 7, 7, 7, 7, 7,
+    T_B, T_B, T_B, T_B, T_B, T_B, T_B, T__,   T__, T_B, T_B, T_B, T_B, T_B, T_B, T_B,
+    T_B, T_B, T_B, T_B, T_E, T_B, T_B, T__,   T__, T_B, T_B, T_B, T_B, T_B, T_B, T_B,
+    T_B, T_B, T_B, T_B, T__, T__, T__, T__,   T__, T_B, T_B, T_B, T_B, T_B, T_B, T_B,
+    T_B, T_B, T_B, T__, T__, T__, T__, T__,   T__, T_B, T_B, T_B, T_B, T_B, T_B, T_B,
 
-    7, 8, 1, 1, 1, 1, 1, 1,   1, 6, 7, 7, 7, 7, 7, 7,
-    1, 1, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
-    4, 5, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 4, 4,
-    7, 7, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 7, 7,
+    T_B, T_B, T__, T__, T__, T__, T__, T__,   T__, T_W, T_B, T_B, T_B, T_B, T_B, T_B,
+    T__, T__, T__, T__, T__, T__, T__, T__,   T__, T__, T__, T__, T__, T__, T__, T__,
+    T_M, T_R, T__, T__, T__, T__, T__, T__,   T__, T__, T__, T__, T__, T__, T_B, T_B,
+    T_B, T_B, T__, T__, T__, T__, T__, T__,   T__, T__, T__, T__, T__, T__, T_B, T_B,
 
-    7, 7, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 7, 7,
-    7, 7, 4, 4, 4, 4, 4, 4,   4, 4, 4, 4, 4, 4, 7, 7,
-    7, 7, 7, 7, 7, 7, 7, 7,   7, 7, 7, 7, 7, 7, 7, 7,
+    T_B, T_B, T__, T__, T__, T__, T__, T__,   T__, T__, T__, T__, T__, T__, T_B, T_B,
+    T_B, T_B, T_M, T_M, T_M, T_M, T_M, T_M,   T_M, T_M, T_M, T_M, T_M, T_M, T_B, T_B,
+    T_B, T_B, T_B, T_B, T_B, T_B, T_B, T_B,   T_B, T_B, T_B, T_B, T_B, T_B, T_B, T_B,
 };
 
 global_variable uint32 HardcodedMap2[] = 
 {
-    7, 7, 9, 1, 9, 1, 9, 1,   1, 9, 1, 9, 1, 9, 1, 9,
-    7, 7, 9, 1, 9, 1, 9, 1,   1, 9, 1, 9, 1, 9, 1, 9,
-    7, 7, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
-    7, 8, 1, 1, 1, 1, 9, 1,   1, 9, 1, 9, 1, 9, 1, 1,
+    T_B, T_B, T_U, T__, T_U, T__, T_U, T__,   T__, T_U, T__, T_U, T__, T_U, T__, T_U,
+    T_B, T_B, T_U, T__, T_U, T__, T_U, T__,   T__, T_U, T__, T_U, T__, T_U, T__, T_U,
+    T_B, T_B, T__, T__, T__, T__, T__, T__,   T__, T__, T__, T__, T__, T__, T__, T__,
+    T_B, T_R, T__, T__, T__, T__, T_U, T__,   T__, T_U, T__, T_U, T__, T_U, T__, T__,
 
-    8, 1, 9, 1, 9, 1, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 9, 1,   1, 9, 1, 9, 1, 9, 1, 1,
-    5, 1, 9, 1, 9, 1, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
-    7, 5, 1, 1, 1, 1, 9, 1,   1, 9, 1, 9, 1, 9, 1, 1,
+    T_R, T__, T_U, T__, T_U, T__, T__, T__,   T__, T__, T__, T__, T__, T__, T__, T__,
+    T__, T__, T__, T__, T__, T__, T_U, T__,   T__, T_U, T__, T_U, T__, T_U, T__, T__,
+    T_R, T__, T_U, T__, T_U, T__, T__, T__,   T__, T__, T__, T__, T__, T__, T__, T__,
+    T_B, T_R, T__, T__, T__, T__, T_U, T__,   T__, T_U, T__, T_U, T__, T_U, T__, T__,
 
-    7, 7, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
-    7, 7, 9, 9, 9, 9, 9, 9,   9, 9, 9, 9, 9, 9, 9, 9,
-    7, 7, 9, 9, 9, 9, 9, 9,   9, 9, 9, 9, 9, 9, 9, 9,
+    T_B, T_B, T__, T__, T__, T__, T__, T__,   T__, T__, T__, T__, T__, T__, T__, T__,
+    T_B, T_B, T_U, T_U, T_U, T_U, T_U, T_U,   T_U, T_U, T_U, T_U, T_U, T_U, T_U, T_U,
+    T_B, T_B, T_U, T_U, T_U, T_U, T_U, T_U,   T_U, T_U, T_U, T_U, T_U, T_U, T_U, T_U,
 };
 
 global_variable uint32 CaveMap[] = 
 {
-    7, 7, 7, 7, 7, 7, 7, 7,   7, 7, 7, 7, 7, 7, 7, 7,
-    7, 7, 7, 7, 7, 7, 7, 7,   7, 7, 7, 7, 7, 7, 7, 7,
-    7, 7, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 7, 7,
-    7, 7, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 7, 7,
+    T_B, T_B, T_B, T_B, T_B, T_B, T_B, T_B,   T_B, T_B, T_B, T_B, T_B, T_B, T_B, T_B,
+    T_B, T_B, T_B, T_B, T_B, T_B, T_B, T_B,   T_B, T_B, T_B, T_B, T_B, T_B, T_B, T_B,
+    T_B, T_B, T_K, T_K, T_K, T_K, T_K, T_K,   T_K, T_K, T_K, T_K, T_K, T_K, T_B, T_B,
+    T_B, T_B, T_K, T_K, T_K, T_K, T_K, T_K,   T_K, T_K, T_K, T_K, T_K, T_K, T_B, T_B,
 
-    7, 7, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 7, 7,
-    7, 7, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 7, 7,
-    7, 7, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 7, 7,
-    7, 7, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 7, 7,
+    T_B, T_B, T_K, T_K, T_K, T_K, T_K, T_K,   T_K, T_K, T_K, T_K, T_K, T_K, T_B, T_B,
+    T_B, T_B, T_K, T_K, T_K, T_K, T_K, T_K,   T_K, T_K, T_K, T_K, T_K, T_K, T_B, T_B,
+    T_B, T_B, T_K, T_K, T_K, T_K, T_K, T_K,   T_K, T_K, T_K, T_K, T_K, T_K, T_B, T_B,
+    T_B, T_B, T_K, T_K, T_K, T_K, T_K, T_K,   T_K, T_K, T_K, T_K, T_K, T_K, T_B, T_B,
 
-    7, 7, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 7, 7,
-    7, 7, 7, 7, 7, 7, 7, 1,   1, 7, 7, 7, 7, 7, 7, 7,
-    7, 7, 7, 7, 7, 7, 7, 1,   1, 7, 7, 7, 7, 7, 7, 7,
+    T_B, T_B, T_K, T_K, T_K, T_K, T_K, T_K,   T_K, T_K, T_K, T_K, T_K, T_K, T_B, T_B,
+    T_B, T_B, T_M, T_M, T_M, T_M, T_M, T_K,   T_K, T_M, T_M, T_M, T_M, T_M, T_B, T_B,
+    T_B, T_B, T_B, T_B, T_B, T_B, T_B, T_K,   T_K, T_B, T_B, T_B, T_B, T_B, T_B, T_B,
 };
 
 #endif

@@ -21,6 +21,9 @@ internal entity *
 GetNewEntityInRoom(tile_room *Room)
 {
     entity *Entity = GetNewEntity(Room->Entities);
-    // No need to set room coordinates - entities use vector2 (local to room)
+    if (Entity)
+    {
+        Entity->Room = Room;  // Set room pointer
+    }
     return Entity;
 }

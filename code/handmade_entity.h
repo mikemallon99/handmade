@@ -3,6 +3,9 @@
 
 #include "handmade_position.h"
 
+// Forward declaration to avoid circular dependency
+struct tile_room;
+
 enum direction {FRONT, BACK, LEFT, RIGHT};
 
 enum entity_type
@@ -33,6 +36,9 @@ struct entity
     vector2 P;
     real32 Height;
     real32 Width;
+    
+    // Room parent - which room this entity belongs to
+    tile_room *Room;
     
     // Health system (enemies only, projectiles use IsActive instead)
     uint32 Health;

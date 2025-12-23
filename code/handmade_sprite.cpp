@@ -323,6 +323,12 @@ LoadOverworldTileset(overworld_tileset *OverworldTileset, bmp_file *BaseBMP)
         OverworldTileset->Tiles[OW_Floor_Dusty].Width = 16;
         OverworldTileset->Tiles[OW_Floor_Dusty].Height = 16;
 
+        OverworldTileset->Tiles[OW_Floor_Black].Tileset = OverworldTileset->BaseBMP;
+        OverworldTileset->Tiles[OW_Floor_Black].X = 137;
+        OverworldTileset->Tiles[OW_Floor_Black].Y = 205;
+        OverworldTileset->Tiles[OW_Floor_Black].Width = 16;
+        OverworldTileset->Tiles[OW_Floor_Black].Height = 16;
+
         OverworldTileset->Tiles[OW_Wall_TopLeft].Tileset = OverworldTileset->BaseBMP;
         OverworldTileset->Tiles[OW_Wall_TopLeft].X = 18;
         OverworldTileset->Tiles[OW_Wall_TopLeft].Y = 154;
@@ -955,4 +961,24 @@ DrawString(game_offscreen_buffer *Buffer,
         DrawBMPTile(&TextTileset->Tiles[CharIndex], Buffer, 
                     X + (real32)StringPos*8.0f, Y);
     }
+}
+
+internal void
+DrawStringPartial(game_offscreen_buffer *Buffer, 
+                 text_tileset *TextTileset, uint8 *String, 
+                 int32 MaxChars, real32 X, real32 Y)
+{
+    int32 StringLen = StringLength(String);
+    int32 CharsToDraw = MaxChars < StringLen ? MaxChars : StringLen;
+    
+    // Create temporary null-terminated string with only the characters we want to draw
+    uint8 TempString[256];  // Should be enough for any text we'll display
+    for (int32 i = 0; i < CharsToDraw; i++)
+    {
+        TempString[i] = String[i];
+    }
+    TempString[CharsToDraw] = 0;  // Null terminator
+    
+    // Use DrawString to do the actual drawing
+    DrawString(Buffer, TextTileset, TempString, X, Y);
 }

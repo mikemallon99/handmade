@@ -2,10 +2,11 @@
 #define HANDMADE_SPRITE_H
 
 enum overworld_tile_id {
-    OW_Null,   // 0
+    OW_Null,   
 
     OW_Floor,  // 1
     OW_Floor_Dusty, // 2
+    OW_Floor_Black,
 
     OW_Wall_TopLeft, // 3
     OW_Wall_TopMid, // 4

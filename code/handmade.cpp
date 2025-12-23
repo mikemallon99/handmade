@@ -137,11 +137,21 @@ DrawRectangle(game_offscreen_buffer *Buffer,
     }
 }
 
+internal vector2
+WorldToScreen(tile_map *TileMap, vector2 WorldPos, uint32 CameraTileX, real32 PlayAreaY)
+{
+    vector2 ScreenPos;
+    ScreenPos.X = TileMap->TileSideInPixels * (WorldPos.X - (real32)CameraTileX);
+    ScreenPos.Y = PlayAreaY - TileMap->TileSideInPixels * (WorldPos.Y - 11.0f);
+    return ScreenPos;
+}
+
 internal void
 DrawDebugPoint(game_offscreen_buffer *Buffer, tile_map *TileMap, real32 PlayAreaY, tile_map_position Point)
 {
-    real32 PointX = TileMap->TileSideInPixels*Point.Pos.X;
-    real32 PointY = PlayAreaY - TileMap->TileSideInPixels*(Point.Pos.Y - 11.0f);
+    // Debug point doesn't account for camera - uses absolute position
+    real32 PointX = TileMap->TileSideInPixels * Point.Pos.X;
+    real32 PointY = PlayAreaY - TileMap->TileSideInPixels * (Point.Pos.Y - 11.0f);
     DrawRectangle(Buffer, PointX, PointY-2, PointX+2, PointY, 
                     1.0f, 0.0f, 0.0f);
 }
@@ -274,9 +284,6 @@ UpdateOctorok(game_state *GameState, entity *Octorok)
     // Octorok position update
     real32 Speed = 0.05f;
     vector2 PositionDelta = Octorok->Direction * Speed;
-
-    // Get the room this entity is in (should be player's room since we only update entities in player room)
-    tile_room *EntityRoom = GetTileRoom(GameState->World->TileMap, GameState->PlayerP);
     
     vector2 NewPosition;
     NewPosition.X = Octorok->P.X + PositionDelta.X;
@@ -290,10 +297,10 @@ UpdateOctorok(game_state *GameState, entity *Octorok)
     NewPositionUpRight.Y += Octorok->Height;
 
     tile_map *TileMap = GameState->World->TileMap;
-    if (IsTileRoomPointEmpty(TileMap, EntityRoom, NewPosition) &&
-        IsTileRoomPointEmpty(TileMap, EntityRoom, NewPositionUp) &&
-        IsTileRoomPointEmpty(TileMap, EntityRoom, NewPositionRight) &&
-        IsTileRoomPointEmpty(TileMap, EntityRoom, NewPositionUpRight))
+    if (IsTileRoomPointEmpty(TileMap, Octorok->Room, NewPosition) &&
+        IsTileRoomPointEmpty(TileMap, Octorok->Room, NewPositionUp) &&
+        IsTileRoomPointEmpty(TileMap, Octorok->Room, NewPositionRight) &&
+        IsTileRoomPointEmpty(TileMap, Octorok->Room, NewPositionUpRight))
     {
         Octorok->P = NewPosition;
     }
@@ -320,19 +327,19 @@ UpdateOctorok(game_state *GameState, entity *Octorok)
 
         uint32 DirArraySize = 0;
         vector2 *DirectionArray[4];
-        if (IsTileRoomPointEmpty(TileMap, EntityRoom, UpPosition))
+        if (IsTileRoomPointEmpty(TileMap, Octorok->Room, UpPosition))
         {
             DirectionArray[DirArraySize++] = &UpDir;
         }
-        if (IsTileRoomPointEmpty(TileMap, EntityRoom, DownPosition))
+        if (IsTileRoomPointEmpty(TileMap, Octorok->Room, DownPosition))
         {
             DirectionArray[DirArraySize++] = &DownDir;
         }
-        if (IsTileRoomPointEmpty(TileMap, EntityRoom, LeftPosition))
+        if (IsTileRoomPointEmpty(TileMap, Octorok->Room, LeftPosition))
         {
             DirectionArray[DirArraySize++] = &LeftDir;
         }
-        if (IsTileRoomPointEmpty(TileMap, EntityRoom, RightPosition))
+        if (IsTileRoomPointEmpty(TileMap, Octorok->Room, RightPosition))
         {
             DirectionArray[DirArraySize++] = &RightDir;
         }
@@ -346,7 +353,7 @@ UpdateOctorok(game_state *GameState, entity *Octorok)
     if (Octorok->Health > 0 &&
         GameState->FrameCounter % Octorok->FireFrequency == 0)
     {
-        SpawnOctorokProjectile(GameState, EntityRoom, Octorok->P);
+        SpawnOctorokProjectile(GameState, Octorok->Room, Octorok->P);
     }
 }
 
@@ -399,9 +406,7 @@ UpdateMoblin(game_state *GameState, entity *Moblin)
     // Moblin fire projectile
     if (GameState->FrameCounter % Moblin->FireFrequency == 0)
     {
-        // Get the room this entity is in (should be player's room since we only update entities in player room)
-        tile_room *EntityRoom = GetTileRoom(GameState->World->TileMap, GameState->PlayerP);
-        SpawnMoblinProjectile(GameState, EntityRoom, Moblin->P, Moblin->Direction);
+        SpawnMoblinProjectile(GameState, Moblin->Room, Moblin->P, Moblin->Direction);
     }
 }
 
@@ -446,13 +451,12 @@ internal void
 DrawOctorok(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
             real32 PlayAreaY, uint32 CameraTileX, entity *Octorok, octorok_sprites *OctorokSprites)
 {
-    real32 OctoOriginX = TileMap->TileSideInPixels*(Octorok->P.X - (real32)CameraTileX);
-    real32 OctoOriginY = PlayAreaY - TileMap->TileSideInPixels*(Octorok->P.Y - 11.0f);
-    real32 OctoScreenX = OctoOriginX;
+    vector2 OctoOrigin = WorldToScreen(TileMap, Octorok->P, CameraTileX, PlayAreaY);
+    real32 OctoScreenX = OctoOrigin.X;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
-    real32 OctoScreenY = OctoOriginY - TileMap->TileSideInPixels*1.0f;
+    real32 OctoScreenY = OctoOrigin.Y - TileMap->TileSideInPixels*1.0f;
     // Origin
-    DrawRectangle(Buffer, OctoOriginX, OctoOriginY-2, OctoOriginX+2, OctoOriginY, 
+    DrawRectangle(Buffer, OctoOrigin.X, OctoOrigin.Y-2, OctoOrigin.X+2, OctoOrigin.Y, 
                     1.0f, 0.0f, 0.0f);
 
     // Hurt/Invincible rendering
@@ -486,11 +490,10 @@ internal void
 DrawOctorokProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
                       real32 PlayAreaY, uint32 CameraTileX, entity *Projectile, octorok_sprites *OctorokSprites)
 {
-    real32 ProjOriginX = TileMap->TileSideInPixels*(Projectile->P.X - (real32)CameraTileX);
-    real32 ProjOriginY = PlayAreaY - TileMap->TileSideInPixels*(Projectile->P.Y - 11.0f);
-    real32 ProjScreenX = ProjOriginX;
+    vector2 ProjOrigin = WorldToScreen(TileMap, Projectile->P, CameraTileX, PlayAreaY);
+    real32 ProjScreenX = ProjOrigin.X;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
-    real32 ProjScreenY = ProjOriginY - TileMap->TileSideInPixels*1.0f;
+    real32 ProjScreenY = ProjOrigin.Y - TileMap->TileSideInPixels*1.0f;
     DrawBMPTile(&OctorokSprites->Projectile, Buffer, ProjScreenX, ProjScreenY);
 }
 
@@ -498,11 +501,10 @@ internal void
 DrawOldMan(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
            real32 PlayAreaY, uint32 CameraTileX, entity *OldMan, npc_sprites *NPCSprites)
 {
-    real32 OldManOriginX = TileMap->TileSideInPixels*(OldMan->P.X - (real32)CameraTileX);
-    real32 OldManOriginY = PlayAreaY - TileMap->TileSideInPixels*(OldMan->P.Y - 11.0f);
-    real32 OldManScreenX = OldManOriginX;
+    vector2 OldManOrigin = WorldToScreen(TileMap, OldMan->P, CameraTileX, PlayAreaY);
+    real32 OldManScreenX = OldManOrigin.X;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
-    real32 OldManScreenY = OldManOriginY - TileMap->TileSideInPixels*1.0f;
+    real32 OldManScreenY = OldManOrigin.Y - TileMap->TileSideInPixels*1.0f;
     
     // NOTE: Old man is not animated
     // uint32 OldManSpriteIndex = (GameState->FrameCounter / 30) % 2;
@@ -513,11 +515,10 @@ internal void
 DrawSword(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
           real32 PlayAreaY, uint32 CameraTileX, entity *Sword, link_sprites *LinkSprites)
 {
-    real32 SwordOriginX = TileMap->TileSideInPixels*(Sword->P.X - (real32)CameraTileX);
-    real32 SwordOriginY = PlayAreaY - TileMap->TileSideInPixels*(Sword->P.Y - 11.0f);
-    real32 SwordScreenX = SwordOriginX;
+    vector2 SwordOrigin = WorldToScreen(TileMap, Sword->P, CameraTileX, PlayAreaY);
+    real32 SwordScreenX = SwordOrigin.X;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
-    real32 SwordScreenY = SwordOriginY - TileMap->TileSideInPixels*1.0f;
+    real32 SwordScreenY = SwordOrigin.Y - TileMap->TileSideInPixels*1.0f;
     
     // NOTE: Old man is not animated
     // uint32 OldManSpriteIndex = (GameState->FrameCounter / 30) % 2;
@@ -528,11 +529,10 @@ internal void
 DrawFire(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
            real32 PlayAreaY, uint32 CameraTileX, entity *Fire, npc_sprites *NPCSprites)
 {
-    real32 FireOriginX = TileMap->TileSideInPixels*(Fire->P.X - (real32)CameraTileX);
-    real32 FireOriginY = PlayAreaY - TileMap->TileSideInPixels*(Fire->P.Y - 11.0f);
-    real32 FireScreenX = FireOriginX;
+    vector2 FireOrigin = WorldToScreen(TileMap, Fire->P, CameraTileX, PlayAreaY);
+    real32 FireScreenX = FireOrigin.X;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
-    real32 FireScreenY = FireOriginY - TileMap->TileSideInPixels*1.0f;
+    real32 FireScreenY = FireOrigin.Y - TileMap->TileSideInPixels*1.0f;
     
     // Animate between two sprites (idle animation)
     uint32 FireSpriteIndex = (GameState->FrameCounter / 30) % 2;
@@ -543,13 +543,12 @@ internal void
 DrawMoblin(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
            real32 PlayAreaY, uint32 CameraTileX, entity *Moblin, moblin_sprites *MoblinSprites)
 {
-    real32 MoblinOriginX = TileMap->TileSideInPixels*(Moblin->P.X - (real32)CameraTileX);
-    real32 MoblinOriginY = PlayAreaY - TileMap->TileSideInPixels*(Moblin->P.Y - 11.0f);
-    real32 MoblinScreenX = MoblinOriginX;
+    vector2 MoblinOrigin = WorldToScreen(TileMap, Moblin->P, CameraTileX, PlayAreaY);
+    real32 MoblinScreenX = MoblinOrigin.X;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
-    real32 MoblinScreenY = MoblinOriginY - TileMap->TileSideInPixels*1.0f;
+    real32 MoblinScreenY = MoblinOrigin.Y - TileMap->TileSideInPixels*1.0f;
     // Origin
-    DrawRectangle(Buffer, MoblinOriginX, MoblinOriginY-2, MoblinOriginX+2, MoblinOriginY, 
+    DrawRectangle(Buffer, MoblinOrigin.X, MoblinOrigin.Y-2, MoblinOrigin.X+2, MoblinOrigin.Y, 
                     1.0f, 0.0f, 0.0f);
 
     // Hurt/Invincible rendering
@@ -608,11 +607,10 @@ internal void
 DrawMoblinProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
                      real32 PlayAreaY, uint32 CameraTileX, entity *Projectile, moblin_sprites *MoblinSprites)
 {
-    real32 ProjOriginX = TileMap->TileSideInPixels*(Projectile->P.X - (real32)CameraTileX);
-    real32 ProjOriginY = PlayAreaY - TileMap->TileSideInPixels*(Projectile->P.Y - 11.0f);
-    real32 ProjScreenX = ProjOriginX;
+    vector2 ProjOrigin = WorldToScreen(TileMap, Projectile->P, CameraTileX, PlayAreaY);
+    real32 ProjScreenX = ProjOrigin.X;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
-    real32 ProjScreenY = ProjOriginY - TileMap->TileSideInPixels*1.0f;
+    real32 ProjScreenY = ProjOrigin.Y - TileMap->TileSideInPixels*1.0f;
 
     direction ArrowDir = Vector2ToDirectionEnum(&Projectile->Direction);
     bmp_tile *ArrowSprite;
@@ -645,11 +643,10 @@ internal void
 DrawBoomerang(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
               real32 PlayAreaY, uint32 CameraTileX)
 {
-    real32 BoomerangOriginX = TileMap->TileSideInPixels*(GameState->BoomerangP.Pos.X - (real32)CameraTileX);
-    real32 BoomerangOriginY = PlayAreaY - TileMap->TileSideInPixels*(GameState->BoomerangP.Pos.Y - 11.0f);
-    real32 BoomerangScreenX = BoomerangOriginX;
+    vector2 BoomerangOrigin = WorldToScreen(TileMap, GameState->BoomerangP.Pos, CameraTileX, PlayAreaY);
+    real32 BoomerangScreenX = BoomerangOrigin.X;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
-    real32 BoomerangScreenY = BoomerangOriginY - TileMap->TileSideInPixels*0.5f;
+    real32 BoomerangScreenY = BoomerangOrigin.Y - TileMap->TileSideInPixels*0.5f;
     
     uint32 SpriteIndex = (GameState->FrameCounter / 5) % 8;
     DrawBMPTile(&GameState->BoomerangSprites.Sprites[SpriteIndex], Buffer, BoomerangScreenX, BoomerangScreenY);
@@ -784,6 +781,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->PlayerPickingUpSword = false;
         GameState->PickupFrame = 0;
         GameState->TotalPickupFrames = 30 * 4;
+        GameState->CaveTextCharIndex = 0;
         GameState->PlayerP.RoomIDX = SpawnRoomX;
         GameState->PlayerP.RoomIDY = SpawnRoomY;
         GameState->PlayerP.Pos.X = 5.0f;
@@ -1409,11 +1407,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
-    real32 HeroOriginX = TileMap->TileSideInPixels*(GameState->PlayerP.Pos.X - (real32)CameraTileX);
-    real32 HeroOriginY = PlayAreaY - TileMap->TileSideInPixels*(GameState->PlayerP.Pos.Y - 11.0f);
-    real32 PlayerScreenX = HeroOriginX;
+    vector2 HeroOrigin = WorldToScreen(TileMap, GameState->PlayerP.Pos, CameraTileX, PlayAreaY);
+    real32 PlayerScreenX = HeroOrigin.X;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
-    real32 PlayerScreenY = HeroOriginY - TileMap->TileSideInPixels*1.0f;
+    real32 PlayerScreenY = HeroOrigin.Y - TileMap->TileSideInPixels*1.0f;
 
     // real32 HeroCenterX = 8.0f;
     // real32 HeroCenterY = 16.0f;
@@ -1591,6 +1588,64 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     if (GameState->PlayerUsingBoomerang)
     {
         DrawBoomerang(GameState, Buffer, TileMap, PlayAreaY, CameraTileX);
+    }
+
+    // Draw cave room text
+    if (GameState->PlayerP.RoomIDX == 0 && GameState->PlayerP.RoomIDY == 8)
+    {
+        // Increment character index every 2 frames (adjust speed here)
+        // Only increment when actually in the cave room
+        if (GameState->FrameCounter % 2 == 0)
+        {
+            GameState->CaveTextCharIndex++;
+        }
+        
+        // Position text in world space (tile coordinates)
+        vector2 TextWorldPos;
+        TextWorldPos.X = 2.0f;  // 2 tiles from left
+        TextWorldPos.Y = 8.0f;   // 8 tiles from bottom
+        
+        // Convert to screen coordinates
+        vector2 TextScreenPos = WorldToScreen(TileMap, TextWorldPos, CameraTileX, PlayAreaY);
+        
+        uint8 Line1[] = "IT'S DANGEROUS TO GO";
+        uint8 Line2[] = "ALONE! TAKE THIS.";
+        
+        int32 Line1Length = StringLength(Line1);
+        int32 Line2Length = StringLength(Line2);
+        int32 TotalLength = Line1Length + Line2Length;
+        
+        // Draw text character by character (typewriter effect)
+        if (GameState->CaveTextCharIndex <= Line1Length)
+        {
+            // Still drawing first line
+            DrawStringPartial(Buffer, &GameState->TextTileset, Line1, 
+                             GameState->CaveTextCharIndex, 
+                             TextScreenPos.X, TextScreenPos.Y);
+        }
+        else
+        {
+            // First line complete, draw it and start second line
+            DrawString(Buffer, &GameState->TextTileset, Line1, TextScreenPos.X, TextScreenPos.Y);
+            
+            int32 Line2Chars = GameState->CaveTextCharIndex - Line1Length;
+            if (Line2Chars > 0)
+            {
+                DrawStringPartial(Buffer, &GameState->TextTileset, Line2, Line2Chars,
+                                 TextScreenPos.X, TextScreenPos.Y + 8.0f);
+            }
+        }
+        
+        // Cap at total length (keep text fully displayed once complete)
+        if (GameState->CaveTextCharIndex > TotalLength)
+        {
+            GameState->CaveTextCharIndex = TotalLength;
+        }
+    }
+    else
+    {
+        // Reset animation when not in cave room (so it restarts when re-entering)
+        GameState->CaveTextCharIndex = 0;
     }
 
     // Draw HUD
