@@ -282,8 +282,29 @@ IsOnSameTile(tile_map_position PosA, tile_map_position PosB)
 }
 
 
+internal uint32
+CharToTileID(char C)
+{
+    switch (C)
+    {
+        case '_': return OW_Floor;
+        case 'W': return OW_Wall_BotLeft;
+        case 'T': return OW_Wall_TopMid;
+        case 'L': return OW_Wall_TopLeft;
+        case 'M': return OW_Wall_BotMid;
+        case 'R': return OW_Wall_TopRight;
+        case 'B': return OW_Wall_BotMid;  // Bottom wall (same as M, but using B for visual distinction)
+        case 'K': return OW_Floor_Black;
+        case 'E': return OW_Entrance;
+        case 'U': return OW_Bush;
+        case ' ': return OW_Null;  // Space = empty
+        case '\0': return OW_Null;  // Null terminator = empty
+        default: return OW_Null;
+    }
+}
+
 internal tile_room *
-LoadOverworldRoom(memory_arena *Arena, tile_map *TileMap, uint32 *SourceMap, 
+LoadOverworldRoom(memory_arena *Arena, tile_map *TileMap, char *SourceMap, 
                   uint32 RoomIDX, uint32 RoomIDY)
 {
     tile_room *TileRoom = GetTileRoom(TileMap, RoomIDX, RoomIDY);
@@ -291,6 +312,7 @@ LoadOverworldRoom(memory_arena *Arena, tile_map *TileMap, uint32 *SourceMap,
     // Store room coordinates in the room itself
     TileRoom->RoomIDX = RoomIDX;
     TileRoom->RoomIDY = RoomIDY;
+    TileRoom->Type = RoomType_Overworld;
 
     for (int32 SourceY = (int32)TileMap->RoomHeight-1;
             SourceY >= 0;
@@ -300,8 +322,11 @@ LoadOverworldRoom(memory_arena *Arena, tile_map *TileMap, uint32 *SourceMap,
             SourceX < TileMap->RoomWidth;
             SourceX++)
         {
-            uint32 SourceIndex = SourceY*TileMap->RoomWidth + SourceX;
-            uint32 TileValue = SourceMap[SourceIndex];
+            // Calculate flat index using room dimensions
+            // NOTE: We do room width + 1 for the index cuz the null character
+            uint32 FlatIndex = SourceY * (TileMap->RoomWidth+1) + SourceX;
+            char TileChar = SourceMap[FlatIndex];
+            uint32 TileValue = CharToTileID(TileChar);
             uint32 OffsetX = SourceX;
             uint32 OffsetY = (TileMap->RoomHeight-1) - SourceY;
             SetTileValue(Arena, TileMap, TileRoom, OffsetX, OffsetY, TileValue);

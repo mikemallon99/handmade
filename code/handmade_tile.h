@@ -4,10 +4,16 @@
 #include "handmade_position.h"
 #include "handmade_entity.h"
 
+enum room_type {
+    RoomType_Overworld,
+    RoomType_Dungeon
+};
+
 struct tile_room
 {
     uint32 RoomIDX;  // Room's X coordinate in the tile map
     uint32 RoomIDY;  // Room's Y coordinate in the tile map
+    room_type Type;  // Type of room (overworld or dungeon)
     uint32 *Tiles;
     tile_map_position *Up;
     tile_map_position *Down;

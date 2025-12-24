@@ -487,6 +487,33 @@ DrawOctorok(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *Tile
 }
 
 internal void
+DrawOverworldRoom(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
+                 tile_room *Room, uint32 CameraTileX, uint32 CameraTileY,
+                 uint32 ScreenTilesWidth, uint32 ScreenTilesHeight, real32 PlayAreaY)
+{
+    for (uint32 RelRow = 0;
+         RelRow < ScreenTilesHeight;
+         RelRow++)
+    {
+        for (uint32 RelColumn = 0;
+             RelColumn < ScreenTilesWidth;
+             RelColumn++)
+        {
+            uint32 Column = CameraTileX + RelColumn;
+            uint32 Row = CameraTileY - RelRow;
+            uint32 TileID = GetTileValue(TileMap, Room->RoomIDX, Room->RoomIDY, Column, Row);
+            if (TileID > 0)
+            {
+                bmp_tile *TileSprite = &GameState->OverworldTileset.Tiles[TileID];
+                real32 MinX = (real32)(TileMap->TileSideInPixels * RelColumn);
+                real32 MinY = PlayAreaY + (real32)(TileMap->TileSideInPixels * RelRow);
+                DrawBMPTile(TileSprite, Buffer, MinX, MinY);
+            }
+        }
+    }
+}
+
+internal void
 DrawOctorokProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
                       real32 PlayAreaY, uint32 CameraTileX, entity *Projectile, octorok_sprites *OctorokSprites)
 {
@@ -756,9 +783,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         uint32 SpawnRoomX = 7;
         uint32 SpawnRoomY = 0;
-        tile_room *TileRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, HardcodedMap, SpawnRoomX, SpawnRoomY);
+        tile_room *TileRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, (char *)HardcodedMap, SpawnRoomX, SpawnRoomY);
         GameState->RoomDebug1 = TileRoom;
-        GameState->RoomDebug2 = LoadOverworldRoom(&GameState->WorldArena, TileMap, HardcodedMap2, SpawnRoomX+1, SpawnRoomY);
+        GameState->RoomDebug2 = LoadOverworldRoom(&GameState->WorldArena, TileMap, (char *)HardcodedMap2, SpawnRoomX+1, SpawnRoomY);
 
         // NOTE: Overworld is 16x8 but we allocate 16x16, so we store extra rooms in the top 16x8 half
         uint32 CaveRoomX = 0;
@@ -768,7 +795,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         TileRoom->Door.RoomIDX = CaveRoomX;
         TileRoom->Door.RoomIDY = CaveRoomY;
 
-        tile_room *CaveRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, CaveMap, CaveRoomX, CaveRoomY);
+        tile_room *CaveRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, (char *)CaveMap, CaveRoomX, CaveRoomY);
         CaveRoom->Down = PushStruct(&GameState->WorldArena, tile_map_position);
         CaveRoom->Down->RoomIDX = SpawnRoomX;
         CaveRoom->Down->RoomIDY = SpawnRoomY;
@@ -779,17 +806,17 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         // Also whats the point of the Pos.X and Pos.Y stuff?
         uint32 DungeonRoomX = 0;
         uint32 DungeonRoomY = 9;
-        TileRoom->Door.Pos.X = (real32)TileMap->RoomWidth / 2.0f;
-        TileRoom->Door.Pos.Y = 0.5f;
-        TileRoom->Door.RoomIDX = DungeonRoomX;
-        TileRoom->Door.RoomIDY = DungeonRoomY;
+        // TileRoom->Door.Pos.X = (real32)TileMap->RoomWidth / 2.0f;
+        // TileRoom->Door.Pos.Y = 0.5f;
+        // TileRoom->Door.RoomIDX = DungeonRoomX;
+        // TileRoom->Door.RoomIDY = DungeonRoomY;
 
-        tile_room *DungeonRoom = LoadDungeonRoom(&GameState->WorldArena, TileMap, DungeonMap, DungeonRoomX, DungeonRoomY);
-        DungeonRoom->Down = PushStruct(&GameState->WorldArena, tile_map_position);
-        DungeonRoom->Down->RoomIDX = SpawnRoomX;
-        DungeonRoom->Down->RoomIDY = SpawnRoomY;
-        DungeonRoom->Down->Pos.X = 4.5f;
-        DungeonRoom->Down->Pos.Y = 8.5f;
+        // tile_room *DungeonRoom = LoadDungeonRoom(&GameState->WorldArena, TileMap, DungeonMap, DungeonRoomX, DungeonRoomY);
+        // DungeonRoom->Down = PushStruct(&GameState->WorldArena, tile_map_position);
+        // DungeonRoom->Down->RoomIDX = SpawnRoomX;
+        // DungeonRoom->Down->RoomIDY = SpawnRoomY;
+        // DungeonRoom->Down->Pos.X = 4.5f;
+        // DungeonRoom->Down->Pos.Y = 8.5f;
 
         GameState->PlayerHealth = 6;
         GameState->MaxHealth = 6;
@@ -1401,30 +1428,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     real32 PlayAreaY = (real32)Buffer->Height - 11.0f * TileMap->TileSideInPixels;
 
-    // NOTE: Maybe this should be its own isolated buffer or something so we dont 
-    //       draw the player into the UI
-    for (uint32 RelRow = 0;
-         RelRow < ScreenTilesHeight;
-         RelRow++)
+    // Draw room tiles based on room type
+    tile_room *CurrentRoom = GetTileRoom(TileMap, GameState->PlayerP.RoomIDX, GameState->PlayerP.RoomIDY);
+    if (CurrentRoom && CurrentRoom->Type == RoomType_Overworld)
     {
-        for (uint32 RelColumn = 0;
-             RelColumn < ScreenTilesWidth;
-             RelColumn++)
-        {
-            uint32 Column = CameraTileX + RelColumn;
-            uint32 Row = CameraTileY - RelRow;
-            uint32 TileID = GetTileValue(TileMap, 
-                                         GameState->PlayerP.RoomIDX,
-                                         GameState->PlayerP.RoomIDY, 
-                                         Column, Row);
-            if (TileID > 0)
-            {
-                bmp_tile *TileSprite = &GameState->OverworldTileset.Tiles[TileID];
-                real32 MinX = (real32)(TileMap->TileSideInPixels * RelColumn);
-                real32 MinY = PlayAreaY + (real32)(TileMap->TileSideInPixels * RelRow);
-                DrawBMPTile(TileSprite, Buffer, MinX, MinY);
-            }
-        }
+        DrawOverworldRoom(GameState, Buffer, TileMap, CurrentRoom, 
+                         CameraTileX, CameraTileY, ScreenTilesWidth, ScreenTilesHeight, PlayAreaY);
     }
 
     vector2 HeroOrigin = WorldToScreen(TileMap, GameState->PlayerP.Pos, CameraTileX, PlayAreaY);
