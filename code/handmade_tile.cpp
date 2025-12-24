@@ -303,6 +303,27 @@ CharToTileID(char C)
     }
 }
 
+internal uint32
+CharToDungeonTileID(char C)
+{
+    switch (C)
+    {
+        case '_': return DN_Floor;
+        case 'B': return DN_Block;
+        case 'S': return DN_Statue1;
+        case 's': return DN_Statue2;
+        case 'K': return DN_Black;
+        case 'G': return DN_Gravel;
+        case 'W': return DN_Water;
+        case '^': return DN_Stairs;
+        case '#': return DN_GreyWall;
+        case 'H': return DN_GreyLadder;
+        case ' ': return DN_Null;  // Space = empty
+        case '\0': return DN_Null;  // Null terminator = empty
+        default: return DN_Null;
+    }
+}
+
 internal tile_room *
 LoadOverworldRoom(memory_arena *Arena, tile_map *TileMap, char *SourceMap, 
                   uint32 RoomIDX, uint32 RoomIDY)
@@ -329,6 +350,43 @@ LoadOverworldRoom(memory_arena *Arena, tile_map *TileMap, char *SourceMap,
             uint32 TileValue = CharToTileID(TileChar);
             uint32 OffsetX = SourceX;
             uint32 OffsetY = (TileMap->RoomHeight-1) - SourceY;
+            SetTileValue(Arena, TileMap, TileRoom, OffsetX, OffsetY, TileValue);
+        }
+    }
+
+    return TileRoom;
+}
+
+internal tile_room *
+LoadDungeonRoom(memory_arena *Arena, tile_map *TileMap, char *SourceMap, 
+                uint32 RoomIDX, uint32 RoomIDY)
+{
+    tile_room *TileRoom = GetTileRoom(TileMap, RoomIDX, RoomIDY);
+    
+    // Store room coordinates in the room itself
+    TileRoom->RoomIDX = RoomIDX;
+    TileRoom->RoomIDY = RoomIDY;
+    TileRoom->Type = RoomType_Dungeon;
+    
+    // Dungeon rooms are 12x7 (inside the border sprite)
+    uint32 DungeonRoomWidth = 12;
+    uint32 DungeonRoomHeight = 7;
+
+    for (int32 SourceY = (int32)DungeonRoomHeight-1;
+            SourceY >= 0;
+            SourceY--)
+    {
+        for (uint32 SourceX = 0;
+            SourceX < DungeonRoomWidth;
+            SourceX++)
+        {
+            // Calculate flat index using dungeon room dimensions
+            // NOTE: We do room width + 1 for the index cuz the null character
+            uint32 FlatIndex = SourceY * (DungeonRoomWidth+1) + SourceX;
+            char TileChar = SourceMap[FlatIndex];
+            uint32 TileValue = CharToDungeonTileID(TileChar);
+            uint32 OffsetX = SourceX;
+            uint32 OffsetY = (DungeonRoomHeight-1) - SourceY;
             SetTileValue(Arena, TileMap, TileRoom, OffsetX, OffsetY, TileValue);
         }
     }

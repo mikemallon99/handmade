@@ -384,7 +384,7 @@ LoadDungeonTileset(dungeon_tileset *DungeonTileset, bmp_file *BaseBMP)
         DungeonTileset->BaseBMP = BaseBMP;
 
         DungeonTileset->Tiles[DN_Floor].Tileset = DungeonTileset->BaseBMP;
-        DungeonTileset->Tiles[DN_Floor].X = 985;
+        DungeonTileset->Tiles[DN_Floor].X = 984;
         DungeonTileset->Tiles[DN_Floor].Y = 11;
         DungeonTileset->Tiles[DN_Floor].Width = 16;
         DungeonTileset->Tiles[DN_Floor].Height = 16;
@@ -426,7 +426,7 @@ LoadDungeonTileset(dungeon_tileset *DungeonTileset, bmp_file *BaseBMP)
         DungeonTileset->Tiles[DN_Water].Height = 16;
 
         DungeonTileset->Tiles[DN_Stairs].Tileset = DungeonTileset->BaseBMP;
-        DungeonTileset->Tiles[DN_Stairs].X = 1036;
+        DungeonTileset->Tiles[DN_Stairs].X = 1035;
         DungeonTileset->Tiles[DN_Stairs].Y = 28;
         DungeonTileset->Tiles[DN_Stairs].Width = 16;
         DungeonTileset->Tiles[DN_Stairs].Height = 16;
@@ -444,7 +444,7 @@ LoadDungeonTileset(dungeon_tileset *DungeonTileset, bmp_file *BaseBMP)
         DungeonTileset->Tiles[DN_GreyLadder].Height = 16;
 
         DungeonTileset->RoomBorder.Tileset = DungeonTileset->BaseBMP;
-        DungeonTileset->RoomBorder.X = 522;
+        DungeonTileset->RoomBorder.X = 521;
         DungeonTileset->RoomBorder.Y = 11;
         DungeonTileset->RoomBorder.Width = 256;
         DungeonTileset->RoomBorder.Height = 176;
@@ -452,7 +452,7 @@ LoadDungeonTileset(dungeon_tileset *DungeonTileset, bmp_file *BaseBMP)
         for (int32 i = 0; i < 5; i++)
         {
             DungeonTileset->DoorsTop[i].Tileset = DungeonTileset->BaseBMP;
-            DungeonTileset->DoorsTop[i].X = 816 + 17*i;
+            DungeonTileset->DoorsTop[i].X = 815 + 17*i;
             DungeonTileset->DoorsTop[i].Y = 11;
             DungeonTileset->DoorsTop[i].Width = 32;
             DungeonTileset->DoorsTop[i].Height = 32;
@@ -461,7 +461,7 @@ LoadDungeonTileset(dungeon_tileset *DungeonTileset, bmp_file *BaseBMP)
         for (int32 i = 0; i < 5; i++)
         {
             DungeonTileset->DoorsLeft[i].Tileset = DungeonTileset->BaseBMP;
-            DungeonTileset->DoorsLeft[i].X = 816 + 17*i;
+            DungeonTileset->DoorsLeft[i].X = 815 + 17*i;
             DungeonTileset->DoorsLeft[i].Y = 44;
             DungeonTileset->DoorsLeft[i].Width = 32;
             DungeonTileset->DoorsLeft[i].Height = 32;
@@ -470,7 +470,7 @@ LoadDungeonTileset(dungeon_tileset *DungeonTileset, bmp_file *BaseBMP)
         for (int32 i = 0; i < 5; i++)
         {
             DungeonTileset->DoorsRight[i].Tileset = DungeonTileset->BaseBMP;
-            DungeonTileset->DoorsRight[i].X = 816 + 17*i;
+            DungeonTileset->DoorsRight[i].X = 815 + 17*i;
             DungeonTileset->DoorsRight[i].Y = 77;
             DungeonTileset->DoorsRight[i].Width = 32;
             DungeonTileset->DoorsRight[i].Height = 32;
@@ -479,7 +479,7 @@ LoadDungeonTileset(dungeon_tileset *DungeonTileset, bmp_file *BaseBMP)
         for (int32 i = 0; i < 5; i++)
         {
             DungeonTileset->DoorsBottom[i].Tileset = DungeonTileset->BaseBMP;
-            DungeonTileset->DoorsBottom[i].X = 816 + 17*i;
+            DungeonTileset->DoorsBottom[i].X = 815 + 17*i;
             DungeonTileset->DoorsBottom[i].Y = 110;
             DungeonTileset->DoorsBottom[i].Width = 32;
             DungeonTileset->DoorsBottom[i].Height = 32;

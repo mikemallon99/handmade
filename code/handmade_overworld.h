@@ -1,5 +1,5 @@
-#ifndef HANDMADE_MAP_H
-#define HANDMADE_MAP_H
+#ifndef HANDMADE_OVERWORLD_H
+#define HANDMADE_OVERWORLD_H
 
 #include "handmade_sprite.h"
 

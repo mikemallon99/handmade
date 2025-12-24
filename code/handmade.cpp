@@ -1,7 +1,8 @@
 #include "handmade.h"
 
 #include "handmade_random.h"
-#include "handmade_map.h"
+#include "handmade_overworld.h"
+#include "handmade_dungeon.h"
 #include "handmade_tile.cpp"
 #include "handmade_entity.cpp"
 #include "handmade_sprite.cpp"
@@ -514,6 +515,74 @@ DrawOverworldRoom(game_state *GameState, game_offscreen_buffer *Buffer, tile_map
 }
 
 internal void
+DrawDungeonRoom(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
+                tile_room *Room, real32 PlayAreaY)
+{
+    // Layer 1: Draw room border (full screen background)
+    // Border is 256x176 pixels, which matches 16x11 tiles at 16px per tile
+    DrawBMPTile(&GameState->DungeonTileset.RoomBorder, Buffer, 0.0f, PlayAreaY);
+    
+    // Layer 2: Draw doors based on room connections
+    // Doors are 32x32 pixels (2 tiles x 2 tiles)
+    uint32 DoorIndex = 0;  // Could vary based on door state (open/closed/locked)
+    
+    // Top door (if Up connection exists)
+    if (Room->Up)
+    {
+        real32 DoorX = (real32)(TileMap->RoomWidth * TileMap->TileSideInPixels) / 2.0f - 16.0f;  // Center - half door width
+        real32 DoorY = PlayAreaY;
+        DrawBMPTile(&GameState->DungeonTileset.DoorsTop[DoorIndex], Buffer, DoorX, DoorY);
+    }
+    
+    // Bottom door (if Down connection exists)
+    if (Room->Down)
+    {
+        real32 DoorX = (real32)(TileMap->RoomWidth * TileMap->TileSideInPixels) / 2.0f - 16.0f;
+        real32 DoorY = PlayAreaY + (real32)(TileMap->RoomHeight * TileMap->TileSideInPixels) - 32.0f;  // Bottom - door height
+        DrawBMPTile(&GameState->DungeonTileset.DoorsBottom[DoorIndex], Buffer, DoorX, DoorY);
+    }
+    
+    // Left door (if Left connection exists)
+    if (Room->Left)
+    {
+        real32 DoorX = 0.0f;
+        real32 DoorY = PlayAreaY + (real32)(TileMap->RoomHeight * TileMap->TileSideInPixels) / 2.0f - 16.0f;  // Center vertically - half door height
+        DrawBMPTile(&GameState->DungeonTileset.DoorsLeft[DoorIndex], Buffer, DoorX, DoorY);
+    }
+    
+    // Right door (if Right connection exists)
+    if (Room->Right)
+    {
+        real32 DoorX = (real32)(TileMap->RoomWidth * TileMap->TileSideInPixels) - 32.0f;  // Right edge - door width
+        real32 DoorY = PlayAreaY + (real32)(TileMap->RoomHeight * TileMap->TileSideInPixels) / 2.0f - 16.0f;
+        DrawBMPTile(&GameState->DungeonTileset.DoorsRight[DoorIndex], Buffer, DoorX, DoorY);
+    }
+    
+    // Layer 3: Draw regular tiles (12x7 dungeon room tiles)
+    // Dungeon rooms are 12x7, but screen is 16x11, so we need to center them
+    uint32 DungeonRoomWidth = 12;
+    uint32 DungeonRoomHeight = 7;
+    uint32 TileOffsetX = (TileMap->RoomWidth - DungeonRoomWidth) / 2;   // Center horizontally: (16-12)/2 = 2
+    uint32 TileOffsetY = (TileMap->RoomHeight - DungeonRoomHeight) / 2; // Center vertically: (11-7)/2 = 2
+    
+    for (uint32 RelRow = 0; RelRow < DungeonRoomHeight; RelRow++)
+    {
+        for (uint32 RelColumn = 0; RelColumn < DungeonRoomWidth; RelColumn++)
+        {
+            uint32 TileID = GetTileValue(TileMap, Room->RoomIDX, Room->RoomIDY, RelColumn, RelRow);
+            if (TileID > 0 && TileID < DN_TileCount)
+            {
+                bmp_tile *TileSprite = &GameState->DungeonTileset.Tiles[TileID];
+                // Offset tiles to center them in the 16x11 screen
+                real32 MinX = (real32)(TileMap->TileSideInPixels * (TileOffsetX + RelColumn));
+                real32 MinY = PlayAreaY + (real32)(TileMap->TileSideInPixels * (TileOffsetY + RelRow));
+                DrawBMPTile(TileSprite, Buffer, MinX, MinY);
+            }
+        }
+    }
+}
+
+internal void
 DrawOctorokProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
                       real32 PlayAreaY, uint32 CameraTileX, entity *Projectile, octorok_sprites *OctorokSprites)
 {
@@ -802,21 +871,23 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         CaveRoom->Down->Pos.X = 4.5f;
         CaveRoom->Down->Pos.Y = 8.5f;
 
-        // TODO: Should dungeon rooms be a new tile map?
         // Also whats the point of the Pos.X and Pos.Y stuff?
         uint32 DungeonRoomX = 0;
         uint32 DungeonRoomY = 9;
-        // TileRoom->Door.Pos.X = (real32)TileMap->RoomWidth / 2.0f;
-        // TileRoom->Door.Pos.Y = 0.5f;
-        // TileRoom->Door.RoomIDX = DungeonRoomX;
-        // TileRoom->Door.RoomIDY = DungeonRoomY;
 
-        // tile_room *DungeonRoom = LoadDungeonRoom(&GameState->WorldArena, TileMap, DungeonMap, DungeonRoomX, DungeonRoomY);
-        // DungeonRoom->Down = PushStruct(&GameState->WorldArena, tile_map_position);
-        // DungeonRoom->Down->RoomIDX = SpawnRoomX;
-        // DungeonRoom->Down->RoomIDY = SpawnRoomY;
-        // DungeonRoom->Down->Pos.X = 4.5f;
-        // DungeonRoom->Down->Pos.Y = 8.5f;
+        // TODO: This seems complicated
+        tile_room *DungeonRoom = LoadDungeonRoom(&GameState->WorldArena, TileMap, (char *)DungeonRoom1, DungeonRoomX, DungeonRoomY);
+        DungeonRoom->Down = PushStruct(&GameState->WorldArena, tile_map_position);
+        DungeonRoom->Down->RoomIDX = SpawnRoomX;
+        DungeonRoom->Down->RoomIDY = SpawnRoomY;
+        DungeonRoom->Down->Pos.X = 4.5f;
+        DungeonRoom->Down->Pos.Y = 8.5f;
+
+        TileRoom->Up = PushStruct(&GameState->WorldArena, tile_map_position);
+        TileRoom->Up->RoomIDX = DungeonRoomX;
+        TileRoom->Up->RoomIDY = DungeonRoomY;
+        TileRoom->Up->Pos.X = 4.5f;
+        TileRoom->Up->Pos.Y = 8.5f;
 
         GameState->PlayerHealth = 6;
         GameState->MaxHealth = 6;
@@ -1434,6 +1505,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     {
         DrawOverworldRoom(GameState, Buffer, TileMap, CurrentRoom, 
                          CameraTileX, CameraTileY, ScreenTilesWidth, ScreenTilesHeight, PlayAreaY);
+    }
+    else if (CurrentRoom && CurrentRoom->Type == RoomType_Dungeon)
+    {
+        DrawDungeonRoom(GameState, Buffer, TileMap, CurrentRoom, PlayAreaY);
     }
 
     vector2 HeroOrigin = WorldToScreen(TileMap, GameState->PlayerP.Pos, CameraTileX, PlayAreaY);
