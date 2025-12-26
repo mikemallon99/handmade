@@ -6,6 +6,7 @@
 #include "handmade_tile.cpp"
 #include "handmade_entity.cpp"
 #include "handmade_sprite.cpp"
+#include "handmade_position.cpp"
 
 
 struct game_offscreen_buffer;
@@ -148,13 +149,182 @@ WorldToScreen(tile_map *TileMap, vector2 WorldPos, uint32 CameraTileX, real32 Pl
 }
 
 internal void
-DrawDebugPoint(game_offscreen_buffer *Buffer, tile_map *TileMap, real32 PlayAreaY, tile_map_position Point)
+DrawDebugPoint(game_offscreen_buffer *Buffer, tile_map *TileMap, real32 PlayAreaY, world_position Point)
 {
     // Debug point doesn't account for camera - uses absolute position
     real32 PointX = TileMap->TileSideInPixels * Point.Pos.X;
     real32 PointY = PlayAreaY - TileMap->TileSideInPixels * (Point.Pos.Y - 11.0f);
     DrawRectangle(Buffer, PointX, PointY-2, PointX+2, PointY, 
                     1.0f, 0.0f, 0.0f);
+}
+
+internal world_position
+GetNewPlayerPos(game_state *GameState, world_position PlayerP, real32 dtForFrame)
+{
+    // Player movement stuff
+    // NOTE: Translate origin to the center of player cuz of legacy calculations
+    tile_map_position NewPlayerOrigin = {};
+    NewPlayerOrigin.Pos.X = PlayerP.Pos.X;
+    NewPlayerOrigin.Pos.Y = PlayerP.Pos.Y;
+    tile_map_index TileMapIndex = RoomIDToTileMapIndex(PlayerP.RoomID);
+    NewPlayerOrigin.RoomIDX = TileMapIndex.X;
+    NewPlayerOrigin.RoomIDY = TileMapIndex.Y;
+
+    tile_map_position NewPlayerP = NewPlayerOrigin;
+    NewPlayerP.Pos.X += 0.5f;
+    tile_map_position InitialPlayerP = NewPlayerP;
+
+    if (!GameState->PlayerUsingSword && !GameState->PlayerUsingBoomerang)
+    {
+        vector2 MovementDelta = dtForFrame * GameState->PlayerSpeed * GameState->PlayerDirection;
+        NewPlayerP.Pos.X += MovementDelta.X;
+        NewPlayerP.Pos.Y += MovementDelta.Y;
+    }
+
+    tile_map_position NewPlayerUp = NewPlayerP;
+    NewPlayerUp.Pos.Y += 0.1f*GameState->PlayerHeight;
+    tile_map_position NewPlayerLeft = NewPlayerP;
+    NewPlayerLeft.Pos.X -= 0.5f*GameState->PlayerWidth;
+    tile_map_position NewPlayerRight = NewPlayerP;
+    NewPlayerRight.Pos.X += 0.5f*GameState->PlayerWidth;
+
+    NewPlayerUp = NewPlayerP;
+    NewPlayerUp.Pos.Y += 0.1f*GameState->PlayerHeight;
+    NewPlayerLeft = NewPlayerP;
+    NewPlayerLeft.Pos.X -= 0.5f*GameState->PlayerWidth;
+    NewPlayerRight = NewPlayerP;
+    NewPlayerRight.Pos.X += 0.5f*GameState->PlayerWidth;
+
+    // Room transitions
+    tile_map *TileMap = GameState->World->TileMap;
+    tile_room *TileRoom = GetTileRoom(TileMap, NewPlayerOrigin.RoomIDX, NewPlayerOrigin.RoomIDY);
+    bool32 SkipCollisions = false;
+    if (IsPointOffscreen(TileMap, NewPlayerUp))
+    {
+        SkipCollisions = true;
+        if (TileRoom->Up)
+        {
+            NewPlayerP = *TileRoom->Up;
+        }
+        else
+        {
+            NewPlayerP.Pos.Y = 0.1f*GameState->PlayerHeight + 0.0001f;
+            NewPlayerP.RoomIDY += 1;
+        }
+    }
+    // NOTE: Regular center point is player down
+    else if (IsPointOffscreen(TileMap, NewPlayerP))
+    {
+        SkipCollisions = true;
+        if (TileRoom->Down)
+        {
+            NewPlayerP = *TileRoom->Down;
+        }
+        else
+        {
+            NewPlayerP.Pos.Y = (real32)TileMap->RoomHeight - 0.1f*GameState->PlayerHeight - 0.0001f;
+            NewPlayerP.RoomIDY -= 1;
+        }
+    }
+    else if (IsPointOffscreen(TileMap, NewPlayerLeft))
+    {
+        SkipCollisions = true;
+        if (TileRoom->Left)
+        {
+            NewPlayerP = *TileRoom->Left;
+        }
+        else
+        {
+            NewPlayerP.Pos.X = (real32)TileMap->RoomWidth - 0.5f*GameState->PlayerWidth - 0.0001f;
+            NewPlayerP.RoomIDX -= 1;
+        }
+    }
+    else if (IsPointOffscreen(TileMap, NewPlayerRight))
+    {
+        SkipCollisions = true;
+        if (TileRoom->Right)
+        {
+            NewPlayerP = *TileRoom->Right;
+        }
+        else
+        {
+            NewPlayerP.Pos.X = 0.5f*GameState->PlayerWidth + 0.0001f;
+            NewPlayerP.RoomIDX += 1;
+        }
+    }
+
+    // Collisions
+    if (!SkipCollisions)
+    {
+        // Wall Collisions
+        if (IsTileMapPointEmpty(TileMap, NewPlayerUp) &&
+            IsTileMapPointEmpty(TileMap, NewPlayerP) &&
+            IsTileMapPointEmpty(TileMap, NewPlayerLeft) &&
+            IsTileMapPointEmpty(TileMap, NewPlayerRight))
+        {
+            if (!IsOnSameTile(InitialPlayerP, NewPlayerP))
+            {
+                uint32 TileValue = GetTileValue(TileMap, NewPlayerP);
+                if (TileValue == OW_Entrance)
+                {
+                    NewPlayerP = GetDoorDestination(TileMap, NewPlayerP);
+                }
+            }
+        }
+        else
+        {
+            // NOTE: Dont change players position
+            NewPlayerP = NewPlayerOrigin;
+            NewPlayerP.Pos.X += 0.5f;
+        }
+
+        if (GameState->PlayerUsingSword)
+        {
+            tile_map_position SwordPoint = NewPlayerOrigin;
+            int32 PixelOffsetX = 0;
+            int32 PixelOffsetY = 0;
+            direction PlayerDir = Vector2ToDirectionEnum(&GameState->PlayerDirection);
+            if (PlayerDir == FRONT)
+            {
+                // NOTE: XY values taken from sprite sheet
+                PixelOffsetX = 26 - 18;
+                PixelOffsetY = 73 - 62;
+            }
+            else if (PlayerDir == RIGHT)
+            {
+                PixelOffsetX = 44 - 18;
+                PixelOffsetY = 86 - 92;
+            }
+            else if (PlayerDir == BACK)
+            {
+                PixelOffsetX = 24 - 18;
+                PixelOffsetY = 97 - 124;
+            }
+            else if (PlayerDir == LEFT)
+            {
+                // This math here is weird cuz of the flippy
+                PixelOffsetX = -1*(44 - 18) + 16;
+                PixelOffsetY = 86 - 92;
+            }
+            SwordPoint.Pos.X += (real32)PixelOffsetX / TileMap->MetersToPixels;
+            SwordPoint.Pos.Y -= (real32)PixelOffsetY / TileMap->MetersToPixels;
+            GameState->SwordPoint = SwordPoint;
+        }
+    }
+
+    // Lock in player position
+    NewPlayerOrigin = NewPlayerP;
+    NewPlayerOrigin.Pos.X -= 0.5f;
+
+    // Convert backend position to world_position
+    world_position Result = {};
+    Result.Pos.X = NewPlayerOrigin.Pos.X;
+    Result.Pos.Y = NewPlayerOrigin.Pos.Y;
+    TileMapIndex.X = NewPlayerOrigin.RoomIDX;
+    TileMapIndex.Y = NewPlayerOrigin.RoomIDY;
+    Result.RoomID = TileMapIndexToRoomID(TileMapIndex);
+
+    return Result;
 }
 
 internal bool32
@@ -896,13 +1066,17 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->PickupFrame = 0;
         GameState->TotalPickupFrames = 30 * 4;
         GameState->CaveTextCharIndex = 0;
-        GameState->PlayerP.RoomIDX = SpawnRoomX;
-        GameState->PlayerP.RoomIDY = SpawnRoomY;
-        GameState->PlayerP.Pos.X = 5.0f;
-        GameState->PlayerP.Pos.Y = 5.0f;
         GameState->PlayerDirection = {0.0f, -1.0f}; // FRONT
         GameState->BoomerangMaxDistance = 5.0f;
         GameState->BoomerangSpeed = 8.0f;
+
+        GameState->PlayerP.Pos.X = 5.0f;
+        GameState->PlayerP.Pos.Y = 5.0f;
+        // NOTE: How should the programmer get the room IDs? When were not a cohesive overworld
+        tile_map_index SpawnIndex = {SpawnRoomX, SpawnRoomY};
+        GameState->PlayerP.RoomID = TileMapIndexToRoomID(SpawnIndex);
+
+        tile_map_index TileMapIndex = RoomIDToTileMapIndex(GameState->PlayerP.RoomID);
 
         // Add Octorok1 to entity array
         GameState->Octorok1 = GetNewEntityInRoom(GameState->RoomDebug1);
@@ -1033,10 +1207,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     world *World = GameState->World;
     tile_map *TileMap = World->TileMap;
 
-    real32 PlayerWidth = 0.75f;
-    real32 PlayerHeight = 1.0f;
+    GameState->PlayerWidth = 0.75f;
+    GameState->PlayerHeight = 1.0f;
 
-    real32 PlayerSpeed = 0.0f;
+    GameState->PlayerSpeed = 0.0f;
     for (int ControllerIndex = 0;
          ControllerIndex < ArrayCount(Input->Controllers);
          ControllerIndex++)
@@ -1056,7 +1230,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             // Prevent movement during animations
             if (GameState->PlayerPickingUpSword || GameState->PlayerUsingSword || GameState->PlayerUsingBoomerang)
             {
-                PlayerSpeed = 0.0f;
+                GameState->PlayerSpeed = 0.0f;
             }
             else
             {
@@ -1064,27 +1238,27 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 if (Controller->MoveUp.EndedDown)
                 {
                     GameState->PlayerDirection = {0.0f, 1.0f}; // BACK
-                    PlayerSpeed = 5.0f;
+                    GameState->PlayerSpeed = 5.0f;
                 }
                 if (Controller->MoveDown.EndedDown)
                 {
                     GameState->PlayerDirection = {0.0f, -1.0f}; // FRONT
-                    PlayerSpeed = 5.0f;
+                    GameState->PlayerSpeed = 5.0f;
                 }
                 if (Controller->MoveLeft.EndedDown)
                 {
                     GameState->PlayerDirection = {-1.0f, 0.0f}; // LEFT
-                    PlayerSpeed = 5.0f;
+                    GameState->PlayerSpeed = 5.0f;
                 }
                 if (Controller->MoveRight.EndedDown)
                 {
                     GameState->PlayerDirection = {1.0f, 0.0f}; // RIGHT
-                    PlayerSpeed = 5.0f;
+                    GameState->PlayerSpeed = 5.0f;
                 }
 
                 if (Controller->ActionUp.EndedDown)
                 {
-                    PlayerSpeed = 10.0f;
+                    GameState->PlayerSpeed = 10.0f;
                 }
             }
 
@@ -1192,8 +1366,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
 
         // Keep boomerang in same room as player
-        GameState->BoomerangP.RoomIDX = GameState->PlayerP.RoomIDX;
-        GameState->BoomerangP.RoomIDY = GameState->PlayerP.RoomIDY;
+        GameState->BoomerangP.RoomID = GameState->PlayerP.RoomID;
 
         // Calculate squared distance from start (avoid sqrt for comparison)
         real32 DistanceX = GameState->BoomerangP.Pos.X - GameState->BoomerangStartP.Pos.X;
@@ -1244,156 +1417,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->BoomerangUsageFrame += 1;
     }
 
-    // Player movement stuff
-    // NOTE: Translate origin to the center of player cuz of legacy calculations
-    tile_map_position NewPlayerOrigin = GameState->PlayerP;
-    tile_map_position NewPlayerP = NewPlayerOrigin;
-    NewPlayerP.Pos.X += 0.5f;
-
-    if (!GameState->PlayerUsingSword && !GameState->PlayerUsingBoomerang)
-    {
-        vector2 MovementDelta = Input->dtForFrame * PlayerSpeed * GameState->PlayerDirection;
-        NewPlayerP.Pos.X += MovementDelta.X;
-        NewPlayerP.Pos.Y += MovementDelta.Y;
-    }
-
-    tile_map_position NewPlayerUp = NewPlayerP;
-    NewPlayerUp.Pos.Y += 0.1f*PlayerHeight;
-    tile_map_position NewPlayerLeft = NewPlayerP;
-    NewPlayerLeft.Pos.X -= 0.5f*PlayerWidth;
-    tile_map_position NewPlayerRight = NewPlayerP;
-    NewPlayerRight.Pos.X += 0.5f*PlayerWidth;
-
-    NewPlayerUp = NewPlayerP;
-    NewPlayerUp.Pos.Y += 0.1f*PlayerHeight;
-    NewPlayerLeft = NewPlayerP;
-    NewPlayerLeft.Pos.X -= 0.5f*PlayerWidth;
-    NewPlayerRight = NewPlayerP;
-    NewPlayerRight.Pos.X += 0.5f*PlayerWidth;
-
-    // Room transitions
-    tile_room *TileRoom = GetTileRoom(TileMap, GameState->PlayerP.RoomIDX, GameState->PlayerP.RoomIDY);
-    bool32 SkipCollisions = false;
-    if (IsPointOffscreen(TileMap, NewPlayerUp))
-    {
-        SkipCollisions = true;
-        if (TileRoom->Up)
-        {
-            NewPlayerP = *TileRoom->Up;
-        }
-        else
-        {
-            NewPlayerP.Pos.Y = 0.1f*PlayerHeight + 0.0001f;
-            NewPlayerP.RoomIDY += 1;
-        }
-    }
-    // NOTE: Regular center point is player down
-    else if (IsPointOffscreen(TileMap, NewPlayerP))
-    {
-        SkipCollisions = true;
-        if (TileRoom->Down)
-        {
-            NewPlayerP = *TileRoom->Down;
-        }
-        else
-        {
-            NewPlayerP.Pos.Y = (real32)TileMap->RoomHeight - 0.1f*PlayerHeight - 0.0001f;
-            NewPlayerP.RoomIDY -= 1;
-        }
-    }
-    else if (IsPointOffscreen(TileMap, NewPlayerLeft))
-    {
-        SkipCollisions = true;
-        if (TileRoom->Left)
-        {
-            NewPlayerP = *TileRoom->Left;
-        }
-        else
-        {
-            NewPlayerP.Pos.X = (real32)TileMap->RoomWidth - 0.5f*PlayerWidth - 0.0001f;
-            NewPlayerP.RoomIDX -= 1;
-        }
-    }
-    else if (IsPointOffscreen(TileMap, NewPlayerRight))
-    {
-        SkipCollisions = true;
-        if (TileRoom->Right)
-        {
-            NewPlayerP = *TileRoom->Right;
-        }
-        else
-        {
-            NewPlayerP.Pos.X = 0.5f*PlayerWidth + 0.0001f;
-            NewPlayerP.RoomIDX += 1;
-        }
-    }
-
-    // Collisions
-    if (!SkipCollisions)
-    {
-        // Wall Collisions
-        if (IsTileMapPointEmpty(TileMap, NewPlayerUp) &&
-            IsTileMapPointEmpty(TileMap, NewPlayerP) &&
-            IsTileMapPointEmpty(TileMap, NewPlayerLeft) &&
-            IsTileMapPointEmpty(TileMap, NewPlayerRight))
-        {
-            if (!IsOnSameTile(GameState->PlayerP, NewPlayerP))
-            {
-                uint32 TileValue = GetTileValue(TileMap, NewPlayerP);
-                if (TileValue == OW_Entrance)
-                {
-                    NewPlayerP = GetDoorDestination(TileMap, NewPlayerP);
-                }
-            }
-        }
-        else
-        {
-            // NOTE: Dont change players position
-            NewPlayerP = NewPlayerOrigin;
-            NewPlayerP.Pos.X += 0.5f;
-        }
-
-        if (GameState->PlayerUsingSword)
-        {
-            tile_map_position SwordPoint = NewPlayerOrigin;
-            int32 PixelOffsetX = 0;
-            int32 PixelOffsetY = 0;
-            direction PlayerDir = Vector2ToDirectionEnum(&GameState->PlayerDirection);
-            if (PlayerDir == FRONT)
-            {
-                // NOTE: XY values taken from sprite sheet
-                PixelOffsetX = 26 - 18;
-                PixelOffsetY = 73 - 62;
-            }
-            else if (PlayerDir == RIGHT)
-            {
-                PixelOffsetX = 44 - 18;
-                PixelOffsetY = 86 - 92;
-            }
-            else if (PlayerDir == BACK)
-            {
-                PixelOffsetX = 24 - 18;
-                PixelOffsetY = 97 - 124;
-            }
-            else if (PlayerDir == LEFT)
-            {
-                // This math here is weird cuz of the flippy
-                PixelOffsetX = -1*(44 - 18) + 16;
-                PixelOffsetY = 86 - 92;
-            }
-            SwordPoint.Pos.X += (real32)PixelOffsetX / TileMap->MetersToPixels;
-            SwordPoint.Pos.Y -= (real32)PixelOffsetY / TileMap->MetersToPixels;
-            GameState->SwordPoint = SwordPoint;
-        }
-    }
-
-    // Lock in player position
-    NewPlayerOrigin = NewPlayerP;
-    NewPlayerOrigin.Pos.X -= 0.5f;
-    GameState->PlayerP = NewPlayerOrigin;
+    // Movement
+    GameState->PlayerP = GetNewPlayerPos(GameState, GameState->PlayerP, Input->dtForFrame);
 
     // Update all entities
-    tile_room *PlayerRoom = GetTileRoom(TileMap, GameState->PlayerP);
+    // NOTE: This kinda uses the tile map system, investigate
+    tile_map_index TileMapIndex = RoomIDToTileMapIndex(GameState->PlayerP.RoomID);
+    tile_room *PlayerRoom = GetTileRoom(TileMap, TileMapIndex.X, TileMapIndex.Y);
     for (uint32 EntityIndex = 0; EntityIndex < MAX_ENTITIES; EntityIndex++)
     {
         entity *Entity = &PlayerRoom->Entities[EntityIndex];
@@ -1409,8 +1439,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     {
         // Convert player position to room position for collision checks
         vector2 PlayerRoomPos;
-        PlayerRoomPos.X = NewPlayerP.Pos.X;
-        PlayerRoomPos.Y = NewPlayerP.Pos.Y;
+        PlayerRoomPos.X = GameState->PlayerP.Pos.X;
+        PlayerRoomPos.Y = GameState->PlayerP.Pos.Y;
         
         for (uint32 EntityIndex = 0; EntityIndex < MAX_ENTITIES; EntityIndex++)
         {
@@ -1500,7 +1530,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     real32 PlayAreaY = (real32)Buffer->Height - 11.0f * TileMap->TileSideInPixels;
 
     // Draw room tiles based on room type
-    tile_room *CurrentRoom = GetTileRoom(TileMap, GameState->PlayerP.RoomIDX, GameState->PlayerP.RoomIDY);
+    TileMapIndex = RoomIDToTileMapIndex(GameState->PlayerP.RoomID);
+    tile_room *CurrentRoom = GetTileRoom(TileMap, TileMapIndex.X, TileMapIndex.Y);
     if (CurrentRoom && CurrentRoom->Type == RoomType_Overworld)
     {
         DrawOverworldRoom(GameState, Buffer, TileMap, CurrentRoom, 
@@ -1695,7 +1726,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     }
 
     // Draw cave room text
-    if (GameState->PlayerP.RoomIDX == 0 && GameState->PlayerP.RoomIDY == 8)
+    if (GameState->PlayerP.RoomID == Room_Overworld_SwordCave)
     {
         // Increment character index every 2 frames (adjust speed here)
         // Only increment when actually in the cave room

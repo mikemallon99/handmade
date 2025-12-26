@@ -16,49 +16,29 @@ struct vector2
     };
 };
 
-inline vector2
-operator+(vector2 A, vector2 B)
+enum room_id
 {
-    vector2 Result;
-    Result.X = A.X + B.X;
-    Result.Y = A.Y + B.Y;
-    return Result;
-}
+    // Overworld rooms
+    Room_Overworld_Spawn,
+    Room_Overworld_Bushes,
+    Room_Overworld_SwordCave,
 
-inline vector2
-operator*(vector2 A, real32 Scalar)
-{
-    vector2 Result;
-    Result.X = A.X * Scalar;
-    Result.Y = A.Y * Scalar;
-    return Result;
-}
-
-inline vector2
-operator*(real32 Scalar, vector2 A)
-{
-    return A * Scalar;
-}
-
-inline real32
-LengthSq(vector2 V)
-{
-    real32 Result = V.X * V.X + V.Y * V.Y;
-    return Result;
-}
-
-inline real32
-Length(vector2 V)
-{
-    real32 Result = sqrtf(V.X * V.X + V.Y * V.Y);
-    return Result;
-}
+    // Dungeon 1 Rooms
+    Room_Dungeon1_Entrance,
+};
 
 struct tile_map_position
 {
     uint32 RoomIDX; 
     uint32 RoomIDY;
 
+    vector2 Pos;
+};
+
+struct world_position
+{
+    // TODO: This should be room_id
+    room_id RoomID;
     vector2 Pos;
 };
 

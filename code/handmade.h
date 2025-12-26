@@ -241,7 +241,10 @@ struct game_state
     uint32 FrameCounter;
     world *World;
 
-    tile_map_position PlayerP;
+    world_position PlayerP;
+    real32 PlayerSpeed;
+    real32 PlayerHeight;
+    real32 PlayerWidth;
     uint32 PlayerHealth;
     uint32 MaxHealth;
     bool32 HasSword;
@@ -250,11 +253,11 @@ struct game_state
     bool32 PlayerPickingUpSword;
     int32 PickupFrame;
     int32 TotalPickupFrames;
-    tile_map_position BoomerangP;
+    world_position BoomerangP;
     vector2 BoomerangDirection;
     bool32 PlayerUsingBoomerang;
     int32 BoomerangUsageFrame;
-    tile_map_position BoomerangStartP;
+    world_position BoomerangStartP;
     real32 BoomerangMaxDistance;
     bool32 BoomerangReturning;
     real32 BoomerangSpeed;

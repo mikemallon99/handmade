@@ -39,5 +39,11 @@ struct tile_map
     tile_room *TileRooms;
 };
 
+struct tile_map_index
+{
+    uint32 X;
+    uint32 Y;
+};
+
 
 #endif
