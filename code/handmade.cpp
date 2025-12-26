@@ -880,14 +880,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         DungeonRoom->Down = PushStruct(&GameState->WorldArena, tile_map_position);
         DungeonRoom->Down->RoomIDX = SpawnRoomX;
         DungeonRoom->Down->RoomIDY = SpawnRoomY;
-        DungeonRoom->Down->Pos.X = 4.5f;
-        DungeonRoom->Down->Pos.Y = 8.5f;
+        DungeonRoom->Down->Pos.X = 9.0f;
+        DungeonRoom->Down->Pos.Y = 10.0f;
 
         TileRoom->Up = PushStruct(&GameState->WorldArena, tile_map_position);
         TileRoom->Up->RoomIDX = DungeonRoomX;
         TileRoom->Up->RoomIDY = DungeonRoomY;
-        TileRoom->Up->Pos.X = 4.5f;
-        TileRoom->Up->Pos.Y = 8.5f;
+        TileRoom->Up->Pos.X = 8.0f;
+        TileRoom->Up->Pos.Y = 1.0f;
 
         GameState->PlayerHealth = 6;
         GameState->MaxHealth = 6;
