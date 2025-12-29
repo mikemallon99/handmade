@@ -688,39 +688,28 @@ DrawDungeonRoom(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *
     
     // Layer 2: Draw doors based on room connections
     // Doors are 32x32 pixels (2 tiles x 2 tiles)
-    uint32 DoorIndex = 0;  // Could vary based on door state (open/closed/locked)
+    real32 DoorX = 0;
+    real32 DoorY = 0;
     
-    // Top door (if Up connection exists)
-    if (Room->Up)
-    {
-        real32 DoorX = (real32)(TileMap->RoomWidth * TileMap->TileSideInPixels) / 2.0f - 16.0f;  // Center - half door width
-        real32 DoorY = PlayAreaY;
-        DrawBMPTile(&GameState->DungeonTileset.DoorsTop[DoorIndex], Buffer, DoorX, DoorY);
-    }
+    // Top door 
+    DoorX = (real32)(TileMap->RoomWidth * TileMap->TileSideInPixels) / 2.0f - 16.0f;  // Center - half door width
+    DoorY = PlayAreaY;
+    DrawBMPTile(&GameState->DungeonTileset.DoorsTop[Room->DoorStateUp], Buffer, DoorX, DoorY);
     
-    // Bottom door (if Down connection exists)
-    if (Room->Down)
-    {
-        real32 DoorX = (real32)(TileMap->RoomWidth * TileMap->TileSideInPixels) / 2.0f - 16.0f;
-        real32 DoorY = PlayAreaY + (real32)(TileMap->RoomHeight * TileMap->TileSideInPixels) - 32.0f;  // Bottom - door height
-        DrawBMPTile(&GameState->DungeonTileset.DoorsBottom[DoorIndex], Buffer, DoorX, DoorY);
-    }
+    // Bottom door 
+    DoorX = (real32)(TileMap->RoomWidth * TileMap->TileSideInPixels) / 2.0f - 16.0f;
+    DoorY = PlayAreaY + (real32)(TileMap->RoomHeight * TileMap->TileSideInPixels) - 32.0f;  // Bottom - door height
+    DrawBMPTile(&GameState->DungeonTileset.DoorsBottom[Room->DoorStateDown], Buffer, DoorX, DoorY);
     
-    // Left door (if Left connection exists)
-    if (Room->Left)
-    {
-        real32 DoorX = 0.0f;
-        real32 DoorY = PlayAreaY + (real32)(TileMap->RoomHeight * TileMap->TileSideInPixels) / 2.0f - 16.0f;  // Center vertically - half door height
-        DrawBMPTile(&GameState->DungeonTileset.DoorsLeft[DoorIndex], Buffer, DoorX, DoorY);
-    }
+    // Left door 
+    DoorX = 0.0f;
+    DoorY = PlayAreaY + (real32)(TileMap->RoomHeight * TileMap->TileSideInPixels) / 2.0f - 16.0f;  // Center vertically - half door height
+    DrawBMPTile(&GameState->DungeonTileset.DoorsLeft[Room->DoorStateLeft], Buffer, DoorX, DoorY);
     
-    // Right door (if Right connection exists)
-    if (Room->Right)
-    {
-        real32 DoorX = (real32)(TileMap->RoomWidth * TileMap->TileSideInPixels) - 32.0f;  // Right edge - door width
-        real32 DoorY = PlayAreaY + (real32)(TileMap->RoomHeight * TileMap->TileSideInPixels) / 2.0f - 16.0f;
-        DrawBMPTile(&GameState->DungeonTileset.DoorsRight[DoorIndex], Buffer, DoorX, DoorY);
-    }
+    // Right door 
+    DoorX = (real32)(TileMap->RoomWidth * TileMap->TileSideInPixels) - 32.0f;  // Right edge - door width
+    DoorY = PlayAreaY + (real32)(TileMap->RoomHeight * TileMap->TileSideInPixels) / 2.0f - 16.0f;
+    DrawBMPTile(&GameState->DungeonTileset.DoorsRight[Room->DoorStateRight], Buffer, DoorX, DoorY);
     
     // Layer 3: Draw regular tiles (12x7 dungeon room tiles)
     // Dungeon rooms are 12x7, but screen is 16x11, so we need to center them
@@ -994,6 +983,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     game_state *GameState = (game_state *)Memory->PermanentStorage;
     if (!Memory->IsInitialized)
     {
+        // QUESTION: Should we be using a separate arena for sprite data?
+        InitializeArena(&GameState->WorldArena, Memory->PermanentStorageSize - sizeof(game_state), 
+                        (uint8 *)Memory->PermanentStorage + sizeof(game_state));
+
         // PLAYER INIT
 
         GameState->PlayerHealth = 6;
@@ -1010,10 +1003,39 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->PlayerP.Pos.Y = 5.0f;
         GameState->PlayerP.RoomID = Room_Overworld_Spawn;
 
-        // WORLD INIT
+        // SPRITE DATA LOADING
 
-        InitializeArena(&GameState->WorldArena, Memory->PermanentStorageSize - sizeof(game_state), 
-                        (uint8 *)Memory->PermanentStorage + sizeof(game_state));
+        GameState->LinkBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
+                                           "tiles/link.bmp");
+        LoadLinkSprites(&GameState->LinkSprites, &GameState->LinkBMP);
+        LoadBoomerangSprites(&GameState->BoomerangSprites, &GameState->LinkBMP);
+
+        GameState->NPCBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
+                                           "tiles/npcs.bmp");
+        LoadNPCSprites(&GameState->NPCSprites, &GameState->NPCBMP);
+
+        GameState->OverworldBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
+                                                "tiles/overworld_tileset.bmp");
+        LoadOverworldTileset(&GameState->OverworldTileset, &GameState->OverworldBMP);
+
+        GameState->DungeonBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
+                                                "tiles/dungeon_tileset.bmp");
+        LoadDungeonTileset(&GameState->DungeonTileset, &GameState->DungeonBMP);
+
+        LoadTextTileset(&GameState->TextTileset, &GameState->OverworldBMP);
+
+        GameState->HudBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
+                                                "tiles/hud_tileset.bmp");
+        LoadHudTileset(&GameState->HudTileset, &GameState->HudBMP);
+
+        GameState->OWEnemiesBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
+                                                "tiles/overworld_enemies.bmp");
+        
+        LoadOctorokSprites(&GameState->OctorokSprites, &GameState->OWEnemiesBMP);
+
+        LoadMoblinSprites(&GameState->MoblinSprites, &GameState->OWEnemiesBMP);
+
+        // WORLD INIT
 
         GameState->World = PushStruct(&GameState->WorldArena, world);
         world *World = GameState->World;
@@ -1112,12 +1134,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         CaveRoom->Down->Pos.X = 4.5f;
         CaveRoom->Down->Pos.Y = 8.5f;
 
-        tile_room *DungeonRoom = LoadDungeonRoom(&GameState->WorldArena, TileMap, (char *)DungeonRoom1, Room_Dungeon1_Entrance);
-        DungeonRoom->Down = PushStruct(&GameState->WorldArena, tile_map_position);
-        DungeonRoom->Down->RoomID = Room_Overworld_Spawn;
-        DungeonRoom->Down->Pos.X = 9.0f;
-        DungeonRoom->Down->Pos.Y = 10.0f;
-
         entity *OldMan = GetNewEntityInRoom(CaveRoom);
         if (OldMan)
         {
@@ -1151,40 +1167,30 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             GameState->Sword = Sword;
         }
 
-        // NOTE: We should probably start a new arena for this image? 
-        // Memory->Background = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_background.bmp");
-        // GameState->Background = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-        //                                     "backgrounds_processed/kitchen.bmp");
+        // DUNGEON 1 ENTRANCE INIT
 
-        GameState->LinkBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                           "tiles/link.bmp");
-        LoadLinkSprites(&GameState->LinkSprites, &GameState->LinkBMP);
-        LoadBoomerangSprites(&GameState->BoomerangSprites, &GameState->LinkBMP);
+        tile_room *DungeonRoom = LoadDungeonRoom(&GameState->WorldArena, TileMap, (char *)DungeonRoom1, Room_Dungeon1_Entrance);
 
-        GameState->NPCBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                           "tiles/npcs.bmp");
-        LoadNPCSprites(&GameState->NPCSprites, &GameState->NPCBMP);
+        DungeonRoom->Down = PushStruct(&GameState->WorldArena, tile_map_position);
+        DungeonRoom->Down->RoomID = Room_Overworld_Spawn;
+        DungeonRoom->Down->Pos.X = 9.0f;
+        DungeonRoom->Down->Pos.Y = 10.0f;
+        DungeonRoom->DoorStateDown = Dungeon_Door_Open;
 
-        GameState->OverworldBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                                "tiles/overworld_tileset.bmp");
-        LoadOverworldTileset(&GameState->OverworldTileset, &GameState->OverworldBMP);
+        DungeonRoom->Up = PushStruct(&GameState->WorldArena, tile_map_position);
+        DungeonRoom->Up->RoomID = Room_Dungeon1_Two;
+        DungeonRoom->Up->Pos.X = 8.0f;
+        DungeonRoom->Up->Pos.Y = 5.0f;
+        DungeonRoom->DoorStateUp = Dungeon_Door_Open;
 
-        GameState->DungeonBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                                "tiles/dungeon_tileset.bmp");
-        LoadDungeonTileset(&GameState->DungeonTileset, &GameState->DungeonBMP);
+        // DUNGEON 2 TEST ROOM INIT
 
-        LoadTextTileset(&GameState->TextTileset, &GameState->OverworldBMP);
-
-        GameState->HudBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                                "tiles/hud_tileset.bmp");
-        LoadHudTileset(&GameState->HudTileset, &GameState->HudBMP);
-
-        GameState->OWEnemiesBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                                "tiles/overworld_enemies.bmp");
-        
-        LoadOctorokSprites(&GameState->OctorokSprites, &GameState->OWEnemiesBMP);
-
-        LoadMoblinSprites(&GameState->MoblinSprites, &GameState->OWEnemiesBMP);
+        DungeonRoom = LoadDungeonRoom(&GameState->WorldArena, TileMap, (char *)DungeonRoom1, Room_Dungeon1_Two);
+        DungeonRoom->Down = PushStruct(&GameState->WorldArena, tile_map_position);
+        DungeonRoom->Down->RoomID = Room_Dungeon1_Entrance;
+        DungeonRoom->Down->Pos.X = 8.0f;
+        DungeonRoom->Down->Pos.Y = 8.0f;
+        DungeonRoom->DoorStateDown = Dungeon_Door_Open;
 
         // NOTE: maybe move this to platform layer
         Memory->IsInitialized = true;

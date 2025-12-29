@@ -358,5 +358,14 @@ LoadDungeonRoom(memory_arena *Arena, tile_map *TileMap, char *SourceMap,
         }
     }
 
+    TileRoom->DoorAreaUp.BottomLeft = {8.0f, 9.0f};
+    TileRoom->DoorAreaUp.TopRight = {10.0f, 11.0f};
+    TileRoom->DoorAreaDown.BottomLeft = {8.0f, 0.0f};
+    TileRoom->DoorAreaDown.TopRight = {10.0f, 2.0f};
+    TileRoom->DoorAreaLeft.BottomLeft = {0.0f, 4.5f};
+    TileRoom->DoorAreaLeft.TopRight = {2.0f, 6.5f};
+    TileRoom->DoorAreaRight.BottomLeft = {14.0f, 4.5f};
+    TileRoom->DoorAreaRight.TopRight = {16.0f, 6.5f};
+
     return TileRoom;
 }

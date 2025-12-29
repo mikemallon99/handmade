@@ -27,6 +27,7 @@ enum room_id
 
     // Dungeon 1 Rooms
     Room_Dungeon1_Entrance,
+    Room_Dungeon1_Two,
 
     Room_Size,
 };
