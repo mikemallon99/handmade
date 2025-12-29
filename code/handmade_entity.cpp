@@ -27,3 +27,11 @@ GetNewEntityInRoom(tile_room *Room)
     }
     return Entity;
 }
+
+internal entity *
+GetNewEntityInRoom(tile_map *TileMap, room_id RoomID)
+{
+    entity *Entity = GetNewEntityInRoom(&TileMap->TileRooms[RoomID]);
+
+    return Entity;
+}

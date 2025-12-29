@@ -1068,7 +1068,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->PlayerP.RoomID = Room_Overworld_Spawn;
 
         // Add Octorok1 to entity array
-        GameState->Octorok1 = GetNewEntityInRoom(GameState->RoomDebug1);
+        GameState->Octorok1 = GetNewEntityInRoom(TileMap, Room_Overworld_Spawn);
         SetEntityTypeDefaults(GameState->Octorok1, EntityType_Octorok);
         GameState->Octorok1->Health = 3;
         GameState->Octorok1->P.X = 8;
@@ -1077,7 +1077,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->Octorok1->Direction.Y = 0.0f;
 
         // Add Octorok2 to entity array
-        GameState->Octorok2 = GetNewEntityInRoom(GameState->RoomDebug1);
+        GameState->Octorok2 = GetNewEntityInRoom(TileMap, Room_Overworld_Spawn);
         SetEntityTypeDefaults(GameState->Octorok2, EntityType_Octorok);
         GameState->Octorok2->Health = 3;
         GameState->Octorok2->P.X = 9;
@@ -1086,7 +1086,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->Octorok2->Direction.Y = 0.0f;
 
         // Add Octorok3 to entity array
-        GameState->Octorok3 = GetNewEntityInRoom(GameState->RoomDebug1);
+        GameState->Octorok3 = GetNewEntityInRoom(TileMap, Room_Overworld_Spawn);
         SetEntityTypeDefaults(GameState->Octorok3, EntityType_Octorok);
         GameState->Octorok3->Health = 3;
         GameState->Octorok3->P.X = 4;
@@ -1128,7 +1128,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
 
         // Add Moblin to entity array
-        GameState->Moblin1 = GetNewEntityInRoom(GameState->RoomDebug1);
+        GameState->Moblin1 = GetNewEntityInRoom(TileMap, Room_Overworld_Spawn);
         SetEntityTypeDefaults(GameState->Moblin1, EntityType_Moblin);
         GameState->Moblin1->Health = 3;
         GameState->Moblin1->P.X = 6;
@@ -1137,7 +1137,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->Moblin1->Direction.Y = 0.0f;
 
         // Add Moblin to entity array
-        GameState->Moblin2 = GetNewEntityInRoom(GameState->RoomDebug1);
+        GameState->Moblin2 = GetNewEntityInRoom(TileMap, Room_Overworld_Spawn);
         SetEntityTypeDefaults(GameState->Moblin2, EntityType_Moblin);
         GameState->Moblin2->Health = 3;
         GameState->Moblin2->P.X = 7;
@@ -1146,7 +1146,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->Moblin2->Direction.Y = 0.0f;
 
         // Add Octorok1 to entity array
-        GameState->Octorok4 = GetNewEntityInRoom(GameState->RoomDebug2);
+        GameState->Octorok4 = GetNewEntityInRoom(TileMap, Room_Overworld_Bushes);
         SetEntityTypeDefaults(GameState->Octorok4, EntityType_Octorok);
         GameState->Octorok4->Health = 3;
         GameState->Octorok4->P.X = 8;
