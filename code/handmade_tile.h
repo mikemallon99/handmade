@@ -11,8 +11,8 @@ enum room_type {
 
 struct tile_room
 {
-    uint32 RoomIDX;  // Room's X coordinate in the tile map
-    uint32 RoomIDY;  // Room's Y coordinate in the tile map
+    // TODO: Replace this with single number ID system
+    room_id RoomID;  // Room's X coordinate in the tile map
     room_type Type;  // Type of room (overworld or dungeon)
     uint32 *Tiles;
     tile_map_position *Up;
@@ -30,11 +30,8 @@ struct tile_map
     int32 TileSideInPixels;
     real32 MetersToPixels;
 
-    uint32 MapWidth;
-    uint32 MapHeight;
     uint32 RoomWidth;
     uint32 RoomHeight;
-    uint32 NumRooms;
 
     tile_room *TileRooms;
 };

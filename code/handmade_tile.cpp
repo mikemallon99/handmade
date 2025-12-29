@@ -47,14 +47,13 @@ SetTileValue(tile_map *TileMap, tile_room *TileRoom,
 }
 
 internal tile_room *
-GetTileRoom(tile_map *TileMap, uint32 RoomX, uint32 RoomY)
+GetTileRoom(tile_map *TileMap, room_id RoomID)
 {
     tile_room *TileRoom = 0;
 
-    if (RoomX >= 0 && RoomX < TileMap->MapWidth &&
-        RoomY >= 0 && RoomY < TileMap->MapHeight)
+    if (RoomID > 0 && RoomID < Room_Size)
     {
-        TileRoom = &TileMap->TileRooms[RoomY*TileMap->MapWidth + RoomX];
+        TileRoom = &TileMap->TileRooms[RoomID];
     }
 
     return TileRoom;
@@ -64,7 +63,7 @@ internal tile_room *
 GetTileRoom(tile_map *TileMap, tile_map_position Pos)
 {
     tile_room *TileRoom = 0;
-    TileRoom = GetTileRoom(TileMap, Pos.RoomIDX, Pos.RoomIDY);
+    TileRoom = GetTileRoom(TileMap, Pos.RoomID);
 
     return TileRoom;
 }
@@ -93,18 +92,18 @@ GetTileValue(tile_map *TileMap, tile_room *TileRoom, real32 X, real32 Y)
 }
 
 inline uint32
-GetTileValue(tile_map *TileMap, uint32 RoomIDX, uint32 RoomIDY, uint32 TileX, uint32 TileY)
+GetTileValue(tile_map *TileMap, room_id RoomID, uint32 TileX, uint32 TileY)
 {
-    tile_room *TileRoom = GetTileRoom(TileMap, RoomIDX, RoomIDY);
+    tile_room *TileRoom = GetTileRoom(TileMap, RoomID);
     uint32 TileValue = GetTileValue(TileMap, TileRoom, TileX, TileY);
 
     return TileValue;
 }
 
 inline uint32
-GetTileValue(tile_map *TileMap, uint32 RoomIDX, uint32 RoomIDY, vector2 Pos)
+GetTileValue(tile_map *TileMap, room_id RoomID, vector2 Pos)
 {
-    tile_room *TileRoom = GetTileRoom(TileMap, RoomIDX, RoomIDY);
+    tile_room *TileRoom = GetTileRoom(TileMap, RoomID);
     uint32 TileValue = GetTileValue(TileMap, TileRoom, Pos.X, Pos.Y);
 
     return TileValue;
@@ -113,7 +112,7 @@ GetTileValue(tile_map *TileMap, uint32 RoomIDX, uint32 RoomIDY, vector2 Pos)
 inline uint32
 GetTileValue(tile_map *TileMap, tile_map_position Pos)
 {
-    uint32 TileValue = GetTileValue(TileMap, Pos.RoomIDX, Pos.RoomIDY, Pos.Pos);
+    uint32 TileValue = GetTileValue(TileMap, Pos.RoomID, Pos.Pos);
 
     return TileValue;
 }
@@ -124,7 +123,7 @@ GetDoorDestination(tile_map *TileMap, tile_map_position Pos)
     tile_map_position Result;
 
     Assert(GetTileValue(TileMap, Pos) == OW_Entrance);
-    tile_room *TileRoom = GetTileRoom(TileMap, Pos.RoomIDX, Pos.RoomIDY);
+    tile_room *TileRoom = GetTileRoom(TileMap, Pos.RoomID);
     Result = TileRoom->Door;
 
     return Result;
@@ -164,7 +163,7 @@ IsTileRoomPointEmpty(tile_map *TileMap, tile_room *Room, vector2 Pos)
     }
 
     // Get tile value using room coordinates
-    uint32 TileValue = GetTileValue(TileMap, Room->RoomIDX, Room->RoomIDY, (uint32)Pos.X, (uint32)Pos.Y);
+    uint32 TileValue = GetTileValue(TileMap, Room->RoomID, (uint32)Pos.X, (uint32)Pos.Y);
     Empty = (TileValue == OW_Floor || TileValue == OW_Floor_Dusty ||
              TileValue == OW_Entrance);
 
@@ -176,7 +175,7 @@ IsInSameTileRoom(tile_map_position PosA, tile_map_position PosB)
 {
     bool32 SameRoom = false;
 
-    SameRoom = (PosA.RoomIDX == PosB.RoomIDX && PosA.RoomIDY == PosB.RoomIDY);
+    SameRoom = (PosA.RoomID == PosB.RoomID);
 
     return SameRoom;
 }
@@ -203,35 +202,6 @@ SetTileValue(memory_arena *Arena, tile_map *TileMap,
     }
 
     SetTileValue(TileMap, TileRoom, OffsetX, OffsetY, TileValue);
-}
-
-internal tile_map_position
-RecanonicalizePosition(tile_map *TileMap, tile_map_position Pos)
-{
-    tile_map_position Result = Pos;
-
-    if (Pos.Pos.X > (real32)TileMap->RoomWidth)
-    {
-        Result.RoomIDX += 1;
-        Result.Pos.X -= (real32)TileMap->RoomWidth;
-    }
-    if (Pos.Pos.X < 0.0f)
-    {
-        Result.RoomIDX -= 1;
-        Result.Pos.X += (real32)TileMap->RoomWidth;
-    }
-    if (Pos.Pos.Y > (real32)TileMap->RoomHeight)
-    {
-        Result.RoomIDY += 1;
-        Result.Pos.Y -= (real32)TileMap->RoomHeight;
-    }
-    if (Pos.Pos.Y < 0.0f)
-    {
-        Result.RoomIDY -= 1;
-        Result.Pos.Y += (real32)TileMap->RoomHeight;
-    }
-
-    return Result;
 }
 
 internal tile_map_position
@@ -275,8 +245,7 @@ IsOnSameTile(tile_map_position PosA, tile_map_position PosB)
 {
     bool32 SameTile = (PosA.Pos.X == PosB.Pos.X &&
                        PosA.Pos.Y == PosB.Pos.Y &&
-                       PosA.RoomIDX == PosB.RoomIDY &&
-                       PosA.RoomIDY == PosB.RoomIDY);
+                       PosA.RoomID == PosB.RoomID);
 
     return SameTile;
 }
@@ -326,13 +295,12 @@ CharToDungeonTileID(char C)
 
 internal tile_room *
 LoadOverworldRoom(memory_arena *Arena, tile_map *TileMap, char *SourceMap, 
-                  uint32 RoomIDX, uint32 RoomIDY)
+                  room_id RoomID)
 {
-    tile_room *TileRoom = GetTileRoom(TileMap, RoomIDX, RoomIDY);
+    tile_room *TileRoom = GetTileRoom(TileMap, RoomID);
     
     // Store room coordinates in the room itself
-    TileRoom->RoomIDX = RoomIDX;
-    TileRoom->RoomIDY = RoomIDY;
+    TileRoom->RoomID = RoomID;
     TileRoom->Type = RoomType_Overworld;
 
     for (int32 SourceY = (int32)TileMap->RoomHeight-1;
@@ -359,13 +327,12 @@ LoadOverworldRoom(memory_arena *Arena, tile_map *TileMap, char *SourceMap,
 
 internal tile_room *
 LoadDungeonRoom(memory_arena *Arena, tile_map *TileMap, char *SourceMap, 
-                uint32 RoomIDX, uint32 RoomIDY)
+                room_id RoomID)
 {
-    tile_room *TileRoom = GetTileRoom(TileMap, RoomIDX, RoomIDY);
+    tile_room *TileRoom = GetTileRoom(TileMap, RoomID);
     
     // Store room coordinates in the room itself
-    TileRoom->RoomIDX = RoomIDX;
-    TileRoom->RoomIDY = RoomIDY;
+    TileRoom->RoomID = RoomID;
     TileRoom->Type = RoomType_Dungeon;
     
     // Dungeon rooms are 12x7 (inside the border sprite)

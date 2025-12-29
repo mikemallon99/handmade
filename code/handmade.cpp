@@ -166,9 +166,7 @@ GetNewPlayerPos(game_state *GameState, world_position PlayerP, real32 dtForFrame
     tile_map_position NewPlayerOrigin = {};
     NewPlayerOrigin.Pos.X = PlayerP.Pos.X;
     NewPlayerOrigin.Pos.Y = PlayerP.Pos.Y;
-    tile_map_index TileMapIndex = RoomIDToTileMapIndex(PlayerP.RoomID);
-    NewPlayerOrigin.RoomIDX = TileMapIndex.X;
-    NewPlayerOrigin.RoomIDY = TileMapIndex.Y;
+    NewPlayerOrigin.RoomID = PlayerP.RoomID;
 
     tile_map_position NewPlayerP = NewPlayerOrigin;
     NewPlayerP.Pos.X += 0.5f;
@@ -197,8 +195,9 @@ GetNewPlayerPos(game_state *GameState, world_position PlayerP, real32 dtForFrame
 
     // Room transitions
     tile_map *TileMap = GameState->World->TileMap;
-    tile_room *TileRoom = GetTileRoom(TileMap, NewPlayerOrigin.RoomIDX, NewPlayerOrigin.RoomIDY);
+    tile_room *TileRoom = GetTileRoom(TileMap, NewPlayerOrigin.RoomID);
     bool32 SkipCollisions = false;
+    bool32 UpdatePosition = true;
     if (IsPointOffscreen(TileMap, NewPlayerUp))
     {
         SkipCollisions = true;
@@ -208,8 +207,7 @@ GetNewPlayerPos(game_state *GameState, world_position PlayerP, real32 dtForFrame
         }
         else
         {
-            NewPlayerP.Pos.Y = 0.1f*GameState->PlayerHeight + 0.0001f;
-            NewPlayerP.RoomIDY += 1;
+            UpdatePosition = false;
         }
     }
     // NOTE: Regular center point is player down
@@ -222,8 +220,7 @@ GetNewPlayerPos(game_state *GameState, world_position PlayerP, real32 dtForFrame
         }
         else
         {
-            NewPlayerP.Pos.Y = (real32)TileMap->RoomHeight - 0.1f*GameState->PlayerHeight - 0.0001f;
-            NewPlayerP.RoomIDY -= 1;
+            UpdatePosition = false;
         }
     }
     else if (IsPointOffscreen(TileMap, NewPlayerLeft))
@@ -235,8 +232,7 @@ GetNewPlayerPos(game_state *GameState, world_position PlayerP, real32 dtForFrame
         }
         else
         {
-            NewPlayerP.Pos.X = (real32)TileMap->RoomWidth - 0.5f*GameState->PlayerWidth - 0.0001f;
-            NewPlayerP.RoomIDX -= 1;
+            UpdatePosition = false;
         }
     }
     else if (IsPointOffscreen(TileMap, NewPlayerRight))
@@ -248,8 +244,7 @@ GetNewPlayerPos(game_state *GameState, world_position PlayerP, real32 dtForFrame
         }
         else
         {
-            NewPlayerP.Pos.X = 0.5f*GameState->PlayerWidth + 0.0001f;
-            NewPlayerP.RoomIDX += 1;
+            UpdatePosition = false;
         }
     }
 
@@ -273,9 +268,7 @@ GetNewPlayerPos(game_state *GameState, world_position PlayerP, real32 dtForFrame
         }
         else
         {
-            // NOTE: Dont change players position
-            NewPlayerP = NewPlayerOrigin;
-            NewPlayerP.Pos.X += 0.5f;
+            UpdatePosition = false;
         }
 
         if (GameState->PlayerUsingSword)
@@ -312,17 +305,18 @@ GetNewPlayerPos(game_state *GameState, world_position PlayerP, real32 dtForFrame
         }
     }
 
-    // Lock in player position
-    NewPlayerOrigin = NewPlayerP;
-    NewPlayerOrigin.Pos.X -= 0.5f;
+    if (UpdatePosition)
+    {
+        // Lock in player position
+        NewPlayerOrigin = NewPlayerP;
+        NewPlayerOrigin.Pos.X -= 0.5f;
+    }
 
     // Convert backend position to world_position
     world_position Result = {};
     Result.Pos.X = NewPlayerOrigin.Pos.X;
     Result.Pos.Y = NewPlayerOrigin.Pos.Y;
-    TileMapIndex.X = NewPlayerOrigin.RoomIDX;
-    TileMapIndex.Y = NewPlayerOrigin.RoomIDY;
-    Result.RoomID = TileMapIndexToRoomID(TileMapIndex);
+    Result.RoomID = NewPlayerP.RoomID;
 
     return Result;
 }
@@ -672,7 +666,7 @@ DrawOverworldRoom(game_state *GameState, game_offscreen_buffer *Buffer, tile_map
         {
             uint32 Column = CameraTileX + RelColumn;
             uint32 Row = CameraTileY - RelRow;
-            uint32 TileID = GetTileValue(TileMap, Room->RoomIDX, Room->RoomIDY, Column, Row);
+            uint32 TileID = GetTileValue(TileMap, Room->RoomID, Column, Row);
             if (TileID > 0)
             {
                 bmp_tile *TileSprite = &GameState->OverworldTileset.Tiles[TileID];
@@ -739,7 +733,7 @@ DrawDungeonRoom(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *
     {
         for (uint32 RelColumn = 0; RelColumn < DungeonRoomWidth; RelColumn++)
         {
-            uint32 TileID = GetTileValue(TileMap, Room->RoomIDX, Room->RoomIDY, RelColumn, RelRow);
+            uint32 TileID = GetTileValue(TileMap, Room->RoomID, RelColumn, RelRow);
             if (TileID > 0 && TileID < DN_TileCount)
             {
                 bmp_tile *TileSprite = &GameState->DungeonTileset.Tiles[TileID];
@@ -1008,10 +1002,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         World->TileMap = PushStruct(&GameState->WorldArena, tile_map);
 
         tile_map *TileMap = World->TileMap;
-        TileMap->MapWidth = 16;
-        TileMap->MapHeight = 16;
         TileMap->TileRooms = PushArray(&GameState->WorldArena, 
-                                       TileMap->MapWidth*TileMap->MapHeight,
+                                       (int32)Room_Size,
                                        tile_room);
         TileMap->RoomWidth = 16;
         TileMap->RoomHeight = 11;
@@ -1020,44 +1012,45 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         TileMap->TileSideInPixels = 16;
         TileMap->MetersToPixels = (real32)TileMap->TileSideInPixels/(real32)TileMap->TileSideInMeters;
 
-        uint32 SpawnRoomX = 7;
-        uint32 SpawnRoomY = 0;
-        tile_room *TileRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, (char *)HardcodedMap, SpawnRoomX, SpawnRoomY);
+        tile_room *TileRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, (char *)HardcodedMap, Room_Overworld_Spawn);
         GameState->RoomDebug1 = TileRoom;
-        GameState->RoomDebug2 = LoadOverworldRoom(&GameState->WorldArena, TileMap, (char *)HardcodedMap2, SpawnRoomX+1, SpawnRoomY);
+
+        TileRoom->Right = PushStruct(&GameState->WorldArena, tile_map_position);
+        TileRoom->Right->RoomID = Room_Overworld_Bushes;
+        TileRoom->Right->Pos.X = 0.5f;
+        TileRoom->Right->Pos.Y = 5.5f;
 
         // NOTE: Overworld is 16x8 but we allocate 16x16, so we store extra rooms in the top 16x8 half
-        uint32 CaveRoomX = 0;
-        uint32 CaveRoomY = 8;
         TileRoom->Door.Pos.X = (real32)TileMap->RoomWidth / 2.0f;
         TileRoom->Door.Pos.Y = 0.5f;
-        TileRoom->Door.RoomIDX = CaveRoomX;
-        TileRoom->Door.RoomIDY = CaveRoomY;
+        TileRoom->Door.RoomID = Room_Overworld_SwordCave;
 
-        tile_room *CaveRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, (char *)CaveMap, CaveRoomX, CaveRoomY);
+        TileRoom->Up = PushStruct(&GameState->WorldArena, tile_map_position);
+        TileRoom->Up->RoomID = Room_Dungeon1_Entrance;
+        TileRoom->Up->Pos.X = 8.0f;
+        TileRoom->Up->Pos.Y = 1.0f;
+
+        TileRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, (char *)HardcodedMap2, Room_Overworld_Bushes);
+        GameState->RoomDebug2 = TileRoom;
+
+        TileRoom->Left = PushStruct(&GameState->WorldArena, tile_map_position);
+        TileRoom->Left->RoomID = Room_Overworld_Spawn;
+        TileRoom->Left->Pos.X = 15.5f;
+        TileRoom->Left->Pos.Y = 5.5f;
+
+
+        tile_room *CaveRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, (char *)CaveMap, Room_Overworld_SwordCave);
         CaveRoom->Down = PushStruct(&GameState->WorldArena, tile_map_position);
-        CaveRoom->Down->RoomIDX = SpawnRoomX;
-        CaveRoom->Down->RoomIDY = SpawnRoomY;
+        CaveRoom->Down->RoomID = Room_Overworld_Spawn;
         CaveRoom->Down->Pos.X = 4.5f;
         CaveRoom->Down->Pos.Y = 8.5f;
 
-        // Also whats the point of the Pos.X and Pos.Y stuff?
-        uint32 DungeonRoomX = 0;
-        uint32 DungeonRoomY = 9;
-
         // TODO: This seems complicated
-        tile_room *DungeonRoom = LoadDungeonRoom(&GameState->WorldArena, TileMap, (char *)DungeonRoom1, DungeonRoomX, DungeonRoomY);
+        tile_room *DungeonRoom = LoadDungeonRoom(&GameState->WorldArena, TileMap, (char *)DungeonRoom1, Room_Dungeon1_Entrance);
         DungeonRoom->Down = PushStruct(&GameState->WorldArena, tile_map_position);
-        DungeonRoom->Down->RoomIDX = SpawnRoomX;
-        DungeonRoom->Down->RoomIDY = SpawnRoomY;
+        DungeonRoom->Down->RoomID = Room_Overworld_Spawn;
         DungeonRoom->Down->Pos.X = 9.0f;
         DungeonRoom->Down->Pos.Y = 10.0f;
-
-        TileRoom->Up = PushStruct(&GameState->WorldArena, tile_map_position);
-        TileRoom->Up->RoomIDX = DungeonRoomX;
-        TileRoom->Up->RoomIDY = DungeonRoomY;
-        TileRoom->Up->Pos.X = 8.0f;
-        TileRoom->Up->Pos.Y = 1.0f;
 
         GameState->PlayerHealth = 6;
         GameState->MaxHealth = 6;
@@ -1072,11 +1065,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         GameState->PlayerP.Pos.X = 5.0f;
         GameState->PlayerP.Pos.Y = 5.0f;
-        // NOTE: How should the programmer get the room IDs? When were not a cohesive overworld
-        tile_map_index SpawnIndex = {SpawnRoomX, SpawnRoomY};
-        GameState->PlayerP.RoomID = TileMapIndexToRoomID(SpawnIndex);
-
-        tile_map_index TileMapIndex = RoomIDToTileMapIndex(GameState->PlayerP.RoomID);
+        GameState->PlayerP.RoomID = Room_Overworld_Spawn;
 
         // Add Octorok1 to entity array
         GameState->Octorok1 = GetNewEntityInRoom(GameState->RoomDebug1);
@@ -1422,8 +1411,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     // Update all entities
     // NOTE: This kinda uses the tile map system, investigate
-    tile_map_index TileMapIndex = RoomIDToTileMapIndex(GameState->PlayerP.RoomID);
-    tile_room *PlayerRoom = GetTileRoom(TileMap, TileMapIndex.X, TileMapIndex.Y);
+    tile_room *PlayerRoom = GetTileRoom(TileMap, GameState->PlayerP.RoomID);
     for (uint32 EntityIndex = 0; EntityIndex < MAX_ENTITIES; EntityIndex++)
     {
         entity *Entity = &PlayerRoom->Entities[EntityIndex];
@@ -1530,8 +1518,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     real32 PlayAreaY = (real32)Buffer->Height - 11.0f * TileMap->TileSideInPixels;
 
     // Draw room tiles based on room type
-    TileMapIndex = RoomIDToTileMapIndex(GameState->PlayerP.RoomID);
-    tile_room *CurrentRoom = GetTileRoom(TileMap, TileMapIndex.X, TileMapIndex.Y);
+    tile_room *CurrentRoom = GetTileRoom(TileMap, GameState->PlayerP.RoomID);
     if (CurrentRoom && CurrentRoom->Type == RoomType_Overworld)
     {
         DrawOverworldRoom(GameState, Buffer, TileMap, CurrentRoom, 

@@ -18,6 +18,8 @@ struct vector2
 
 enum room_id
 {
+    Room_Null,
+
     // Overworld rooms
     Room_Overworld_Spawn,
     Room_Overworld_Bushes,
@@ -25,19 +27,19 @@ enum room_id
 
     // Dungeon 1 Rooms
     Room_Dungeon1_Entrance,
+
+    Room_Size,
 };
 
 struct tile_map_position
 {
-    uint32 RoomIDX; 
-    uint32 RoomIDY;
+    room_id RoomID;
 
     vector2 Pos;
 };
 
 struct world_position
 {
-    // TODO: This should be room_id
     room_id RoomID;
     vector2 Pos;
 };
