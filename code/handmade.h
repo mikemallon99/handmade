@@ -289,19 +289,6 @@ struct game_state
 
     octorok_sprites OctorokSprites;
     moblin_sprites MoblinSprites;
-
-    tile_room *RoomDebug1;
-    tile_room *RoomDebug2;
-
-    // Room 1 enemies (point to places in entites array)
-    entity *Octorok1;
-    entity *Octorok2;
-    entity *Octorok3;
-    entity *Moblin1;
-    entity *Moblin2;
-
-    // Room 2 enemies (point to places in entites array)
-    entity *Octorok4;
     
     // Items
     entity *Sword;

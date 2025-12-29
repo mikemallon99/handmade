@@ -994,6 +994,24 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     game_state *GameState = (game_state *)Memory->PermanentStorage;
     if (!Memory->IsInitialized)
     {
+        // PLAYER INIT
+
+        GameState->PlayerHealth = 6;
+        GameState->MaxHealth = 6;
+        GameState->HasSword = false;
+        GameState->PlayerPickingUpSword = false;
+        GameState->PickupFrame = 0;
+        GameState->TotalPickupFrames = 30 * 4;
+        GameState->CaveTextCharIndex = 0;
+        GameState->PlayerDirection = {0.0f, -1.0f}; // FRONT
+        GameState->BoomerangMaxDistance = 5.0f;
+        GameState->BoomerangSpeed = 8.0f;
+        GameState->PlayerP.Pos.X = 5.0f;
+        GameState->PlayerP.Pos.Y = 5.0f;
+        GameState->PlayerP.RoomID = Room_Overworld_Spawn;
+
+        // WORLD INIT
+
         InitializeArena(&GameState->WorldArena, Memory->PermanentStorageSize - sizeof(game_state), 
                         (uint8 *)Memory->PermanentStorage + sizeof(game_state));
 
@@ -1012,32 +1030,81 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         TileMap->TileSideInPixels = 16;
         TileMap->MetersToPixels = (real32)TileMap->TileSideInPixels/(real32)TileMap->TileSideInMeters;
 
-        tile_room *TileRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, (char *)HardcodedMap, Room_Overworld_Spawn);
-        GameState->RoomDebug1 = TileRoom;
+        // SPAWN ROOM INIT
 
+        tile_room *TileRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, (char *)HardcodedMap, Room_Overworld_Spawn);
         TileRoom->Right = PushStruct(&GameState->WorldArena, tile_map_position);
         TileRoom->Right->RoomID = Room_Overworld_Bushes;
         TileRoom->Right->Pos.X = 0.5f;
         TileRoom->Right->Pos.Y = 5.5f;
-
-        // NOTE: Overworld is 16x8 but we allocate 16x16, so we store extra rooms in the top 16x8 half
-        TileRoom->Door.Pos.X = (real32)TileMap->RoomWidth / 2.0f;
-        TileRoom->Door.Pos.Y = 0.5f;
-        TileRoom->Door.RoomID = Room_Overworld_SwordCave;
 
         TileRoom->Up = PushStruct(&GameState->WorldArena, tile_map_position);
         TileRoom->Up->RoomID = Room_Dungeon1_Entrance;
         TileRoom->Up->Pos.X = 8.0f;
         TileRoom->Up->Pos.Y = 1.0f;
 
+        TileRoom->Door.Pos.X = (real32)TileMap->RoomWidth / 2.0f;
+        TileRoom->Door.Pos.Y = 0.5f;
+        TileRoom->Door.RoomID = Room_Overworld_SwordCave;
+
+        entity *Octorok1 = GetNewEntityInRoom(TileMap, Room_Overworld_Spawn);
+        SetEntityTypeDefaults(Octorok1, EntityType_Octorok);
+        Octorok1->Health = 3;
+        Octorok1->P.X = 8;
+        Octorok1->P.Y = 5.0f;
+        Octorok1->Direction.X = -1.0f;
+        Octorok1->Direction.Y = 0.0f;
+
+        entity *Octorok2 = GetNewEntityInRoom(TileMap, Room_Overworld_Spawn);
+        SetEntityTypeDefaults(Octorok2, EntityType_Octorok);
+        Octorok2->Health = 3;
+        Octorok2->P.X = 9;
+        Octorok2->P.Y = 5.0f;
+        Octorok2->Direction.X = -1.0f;
+        Octorok2->Direction.Y = 0.0f;
+
+        entity *Octorok3 = GetNewEntityInRoom(TileMap, Room_Overworld_Spawn);
+        SetEntityTypeDefaults(Octorok3, EntityType_Octorok);
+        Octorok3->Health = 3;
+        Octorok3->P.X = 4;
+        Octorok3->P.Y = 5.0f;
+        Octorok3->Direction.X = -1.0f;
+        Octorok3->Direction.Y = 0.0f;
+
+        entity *Moblin1 = GetNewEntityInRoom(TileMap, Room_Overworld_Spawn);
+        SetEntityTypeDefaults(Moblin1, EntityType_Moblin);
+        Moblin1->Health = 3;
+        Moblin1->P.X = 6;
+        Moblin1->P.Y = 5.0f;
+        Moblin1->Direction.X = -1.0f;
+        Moblin1->Direction.Y = 0.0f;
+
+        entity *Moblin2 = GetNewEntityInRoom(TileMap, Room_Overworld_Spawn);
+        SetEntityTypeDefaults(Moblin2, EntityType_Moblin);
+        Moblin2->Health = 3;
+        Moblin2->P.X = 7;
+        Moblin2->P.Y = 5.0f;
+        Moblin2->Direction.X = -1.0f;
+        Moblin2->Direction.Y = 0.0f;
+
+        // BUSH ROOM INIT
+
         TileRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, (char *)HardcodedMap2, Room_Overworld_Bushes);
-        GameState->RoomDebug2 = TileRoom;
 
         TileRoom->Left = PushStruct(&GameState->WorldArena, tile_map_position);
         TileRoom->Left->RoomID = Room_Overworld_Spawn;
         TileRoom->Left->Pos.X = 15.5f;
         TileRoom->Left->Pos.Y = 5.5f;
 
+        entity *Octorok4 = GetNewEntityInRoom(TileMap, Room_Overworld_Bushes);
+        SetEntityTypeDefaults(Octorok4, EntityType_Octorok);
+        Octorok4->Health = 3;
+        Octorok4->P.X = 8;
+        Octorok4->P.Y = 5.0f;
+        Octorok4->Direction.X = -1.0f;
+        Octorok4->Direction.Y = 0.0f;
+
+        // OLD MAN CAVE ROOM INIT
 
         tile_room *CaveRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, (char *)CaveMap, Room_Overworld_SwordCave);
         CaveRoom->Down = PushStruct(&GameState->WorldArena, tile_map_position);
@@ -1045,54 +1112,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         CaveRoom->Down->Pos.X = 4.5f;
         CaveRoom->Down->Pos.Y = 8.5f;
 
-        // TODO: This seems complicated
         tile_room *DungeonRoom = LoadDungeonRoom(&GameState->WorldArena, TileMap, (char *)DungeonRoom1, Room_Dungeon1_Entrance);
         DungeonRoom->Down = PushStruct(&GameState->WorldArena, tile_map_position);
         DungeonRoom->Down->RoomID = Room_Overworld_Spawn;
         DungeonRoom->Down->Pos.X = 9.0f;
         DungeonRoom->Down->Pos.Y = 10.0f;
-
-        GameState->PlayerHealth = 6;
-        GameState->MaxHealth = 6;
-        GameState->HasSword = false;
-        GameState->PlayerPickingUpSword = false;
-        GameState->PickupFrame = 0;
-        GameState->TotalPickupFrames = 30 * 4;
-        GameState->CaveTextCharIndex = 0;
-        GameState->PlayerDirection = {0.0f, -1.0f}; // FRONT
-        GameState->BoomerangMaxDistance = 5.0f;
-        GameState->BoomerangSpeed = 8.0f;
-
-        GameState->PlayerP.Pos.X = 5.0f;
-        GameState->PlayerP.Pos.Y = 5.0f;
-        GameState->PlayerP.RoomID = Room_Overworld_Spawn;
-
-        // Add Octorok1 to entity array
-        GameState->Octorok1 = GetNewEntityInRoom(TileMap, Room_Overworld_Spawn);
-        SetEntityTypeDefaults(GameState->Octorok1, EntityType_Octorok);
-        GameState->Octorok1->Health = 3;
-        GameState->Octorok1->P.X = 8;
-        GameState->Octorok1->P.Y = 5.0f;
-        GameState->Octorok1->Direction.X = -1.0f;
-        GameState->Octorok1->Direction.Y = 0.0f;
-
-        // Add Octorok2 to entity array
-        GameState->Octorok2 = GetNewEntityInRoom(TileMap, Room_Overworld_Spawn);
-        SetEntityTypeDefaults(GameState->Octorok2, EntityType_Octorok);
-        GameState->Octorok2->Health = 3;
-        GameState->Octorok2->P.X = 9;
-        GameState->Octorok2->P.Y = 5.0f;
-        GameState->Octorok2->Direction.X = -1.0f;
-        GameState->Octorok2->Direction.Y = 0.0f;
-
-        // Add Octorok3 to entity array
-        GameState->Octorok3 = GetNewEntityInRoom(TileMap, Room_Overworld_Spawn);
-        SetEntityTypeDefaults(GameState->Octorok3, EntityType_Octorok);
-        GameState->Octorok3->Health = 3;
-        GameState->Octorok3->P.X = 4;
-        GameState->Octorok3->P.Y = 5.0f;
-        GameState->Octorok3->Direction.X = -1.0f;
-        GameState->Octorok3->Direction.Y = 0.0f;
 
         entity *OldMan = GetNewEntityInRoom(CaveRoom);
         if (OldMan)
@@ -1126,33 +1150,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             Sword->P.Y = 3.0f;
             GameState->Sword = Sword;
         }
-
-        // Add Moblin to entity array
-        GameState->Moblin1 = GetNewEntityInRoom(TileMap, Room_Overworld_Spawn);
-        SetEntityTypeDefaults(GameState->Moblin1, EntityType_Moblin);
-        GameState->Moblin1->Health = 3;
-        GameState->Moblin1->P.X = 6;
-        GameState->Moblin1->P.Y = 5.0f;
-        GameState->Moblin1->Direction.X = -1.0f;
-        GameState->Moblin1->Direction.Y = 0.0f;
-
-        // Add Moblin to entity array
-        GameState->Moblin2 = GetNewEntityInRoom(TileMap, Room_Overworld_Spawn);
-        SetEntityTypeDefaults(GameState->Moblin2, EntityType_Moblin);
-        GameState->Moblin2->Health = 3;
-        GameState->Moblin2->P.X = 7;
-        GameState->Moblin2->P.Y = 5.0f;
-        GameState->Moblin2->Direction.X = -1.0f;
-        GameState->Moblin2->Direction.Y = 0.0f;
-
-        // Add Octorok1 to entity array
-        GameState->Octorok4 = GetNewEntityInRoom(TileMap, Room_Overworld_Bushes);
-        SetEntityTypeDefaults(GameState->Octorok4, EntityType_Octorok);
-        GameState->Octorok4->Health = 3;
-        GameState->Octorok4->P.X = 8;
-        GameState->Octorok4->P.Y = 5.0f;
-        GameState->Octorok4->Direction.X = -1.0f;
-        GameState->Octorok4->Direction.Y = 0.0f;
 
         // NOTE: We should probably start a new arena for this image? 
         // Memory->Background = LoadBMPFile(&GameState->WorldArena, Memory, Thread, "test/test_background.bmp");
@@ -1693,8 +1690,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     DrawString(Buffer, &GameState->TextTileset, TestString, 0.0f, 8.0f);
 
     DrawBMPTile(&GameState->TextTileset.Tiles[GameState->PlayerHealth], Buffer, 0, 16);
-    // Debug code
-    DrawBMPTile(&GameState->TextTileset.Tiles[GameState->Octorok1->Health], Buffer, 32, 16);
 
     // Draw all entities
     for (uint32 EntityIndex = 0; EntityIndex < MAX_ENTITIES; EntityIndex++)
@@ -1797,7 +1792,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             HeartIdx = 0;
         }
 
-        real32 HeartX = 8.0f * (real32)i;
+        // NOTE: Offset just to make space for other shit
+        real32 OffsetX = 8.0f * 6;
+        real32 HeartX = 8.0f * (real32)i + OffsetX;
         DrawBMPTile(&GameState->HudTileset.Hearts[HeartIdx], Buffer, HeartX, 0);
     }
 
