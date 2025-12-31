@@ -369,3 +369,19 @@ LoadDungeonRoom(memory_arena *Arena, tile_map *TileMap, char *SourceMap,
 
     return TileRoom;
 }
+
+internal bool32
+IsPointInArea(vector2 Point, area2d Area)
+{
+    bool32 Result = false;
+
+    if (Point.X >= Area.BottomLeft.X && 
+        Point.X <= Area.TopRight.X &&
+        Point.Y >= Area.BottomLeft.Y && 
+        Point.Y <= Area.TopRight.Y)
+    {
+        Result = true;
+    }
+
+    return Result;
+}

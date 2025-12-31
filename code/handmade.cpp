@@ -198,53 +198,109 @@ GetNewPlayerPos(game_state *GameState, world_position PlayerP, real32 dtForFrame
     tile_room *TileRoom = GetTileRoom(TileMap, NewPlayerOrigin.RoomID);
     bool32 SkipCollisions = false;
     bool32 UpdatePosition = true;
-    if (IsPointOffscreen(TileMap, NewPlayerUp))
+    if (TileRoom->Type == RoomType_Overworld)
     {
-        SkipCollisions = true;
-        if (TileRoom->Up)
+        if (IsPointOffscreen(TileMap, NewPlayerUp))
         {
-            NewPlayerP = *TileRoom->Up;
+            SkipCollisions = true;
+            if (TileRoom->Up)
+            {
+                NewPlayerP = *TileRoom->Up;
+            }
+            else
+            {
+                UpdatePosition = false;
+            }
         }
-        else
+        // NOTE: Regular center point is player down
+        else if (IsPointOffscreen(TileMap, NewPlayerP))
         {
-            UpdatePosition = false;
+            SkipCollisions = true;
+            if (TileRoom->Down)
+            {
+                NewPlayerP = *TileRoom->Down;
+            }
+            else
+            {
+                UpdatePosition = false;
+            }
+        }
+        else if (IsPointOffscreen(TileMap, NewPlayerLeft))
+        {
+            SkipCollisions = true;
+            if (TileRoom->Left)
+            {
+                NewPlayerP = *TileRoom->Left;
+            }
+            else
+            {
+                UpdatePosition = false;
+            }
+        }
+        else if (IsPointOffscreen(TileMap, NewPlayerRight))
+        {
+            SkipCollisions = true;
+            if (TileRoom->Right)
+            {
+                NewPlayerP = *TileRoom->Right;
+            }
+            else
+            {
+                UpdatePosition = false;
+            }
         }
     }
-    // NOTE: Regular center point is player down
-    else if (IsPointOffscreen(TileMap, NewPlayerP))
+    else if (TileRoom->Type == RoomType_Dungeon)
     {
-        SkipCollisions = true;
-        if (TileRoom->Down)
+        // QUESTION: This does the same room logic as overworld. Should we DRY?
+        if (IsPointInArea(NewPlayerUp.Pos, TileRoom->DoorAreaUp))
         {
-            NewPlayerP = *TileRoom->Down;
+            SkipCollisions = true;
+            if (TileRoom->Up)
+            {
+                NewPlayerP = *TileRoom->Up;
+            }
+            else
+            {
+                UpdatePosition = false;
+            }
         }
-        else
+        // NOTE: Regular center point is player down
+        else if (IsPointInArea(NewPlayerP.Pos, TileRoom->DoorAreaDown))
         {
-            UpdatePosition = false;
+            SkipCollisions = true;
+            if (TileRoom->Down)
+            {
+                NewPlayerP = *TileRoom->Down;
+            }
+            else
+            {
+                UpdatePosition = false;
+            }
         }
-    }
-    else if (IsPointOffscreen(TileMap, NewPlayerLeft))
-    {
-        SkipCollisions = true;
-        if (TileRoom->Left)
+        else if (IsPointInArea(NewPlayerLeft.Pos, TileRoom->DoorAreaLeft))
         {
-            NewPlayerP = *TileRoom->Left;
+            SkipCollisions = true;
+            if (TileRoom->Left)
+            {
+                NewPlayerP = *TileRoom->Left;
+            }
+            else
+            {
+                UpdatePosition = false;
+            }
         }
-        else
+        else if (IsPointInArea(NewPlayerRight.Pos, TileRoom->DoorAreaRight))
         {
-            UpdatePosition = false;
-        }
-    }
-    else if (IsPointOffscreen(TileMap, NewPlayerRight))
-    {
-        SkipCollisions = true;
-        if (TileRoom->Right)
-        {
-            NewPlayerP = *TileRoom->Right;
-        }
-        else
-        {
-            UpdatePosition = false;
+            SkipCollisions = true;
+            if (TileRoom->Right)
+            {
+                NewPlayerP = *TileRoom->Right;
+            }
+            else
+            {
+                UpdatePosition = false;
+            }
         }
     }
 
@@ -1063,7 +1119,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         TileRoom->Up = PushStruct(&GameState->WorldArena, tile_map_position);
         TileRoom->Up->RoomID = Room_Dungeon1_Entrance;
         TileRoom->Up->Pos.X = 8.0f;
-        TileRoom->Up->Pos.Y = 1.0f;
+        TileRoom->Up->Pos.Y = 2.5f;
 
         TileRoom->Door.Pos.X = (real32)TileMap->RoomWidth / 2.0f;
         TileRoom->Door.Pos.Y = 0.5f;
@@ -1180,7 +1236,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         DungeonRoom->Up = PushStruct(&GameState->WorldArena, tile_map_position);
         DungeonRoom->Up->RoomID = Room_Dungeon1_Two;
         DungeonRoom->Up->Pos.X = 8.0f;
-        DungeonRoom->Up->Pos.Y = 5.0f;
+        DungeonRoom->Up->Pos.Y = 2.5f;
         DungeonRoom->DoorStateUp = Dungeon_Door_Open;
 
         // DUNGEON 2 TEST ROOM INIT
@@ -1189,7 +1245,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         DungeonRoom->Down = PushStruct(&GameState->WorldArena, tile_map_position);
         DungeonRoom->Down->RoomID = Room_Dungeon1_Entrance;
         DungeonRoom->Down->Pos.X = 8.0f;
-        DungeonRoom->Down->Pos.Y = 8.0f;
+        DungeonRoom->Down->Pos.Y = 8.5f;
         DungeonRoom->DoorStateDown = Dungeon_Door_Open;
 
         // NOTE: maybe move this to platform layer
