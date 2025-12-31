@@ -336,32 +336,75 @@ LoadDungeonRoom(memory_arena *Arena, tile_map *TileMap, char *SourceMap,
     TileRoom->Type = RoomType_Dungeon;
     
     // Dungeon rooms are 12x7 (inside the border sprite)
-    uint32 DungeonRoomWidth = 12;
-    uint32 DungeonRoomHeight = 7;
+    int32 DungeonRoomWidth = 12;
+    int32 DungeonRoomHeight = 7;
 
-    for (int32 SourceY = (int32)DungeonRoomHeight-1;
+    // Everything starts as boxes
+    for (int32 SourceY = (int32)TileMap->RoomHeight-1;
             SourceY >= 0;
             SourceY--)
     {
         for (uint32 SourceX = 0;
-            SourceX < DungeonRoomWidth;
+            SourceX < TileMap->RoomWidth;
             SourceX++)
         {
-            // Calculate flat index using dungeon room dimensions
+            // Calculate flat index using room dimensions
             // NOTE: We do room width + 1 for the index cuz the null character
-            uint32 FlatIndex = SourceY * (DungeonRoomWidth+1) + SourceX;
+            uint32 FlatIndex = SourceY * (TileMap->RoomWidth+1) + SourceX;
             char TileChar = SourceMap[FlatIndex];
-            uint32 TileValue = CharToDungeonTileID(TileChar);
+            uint32 TileValue = DN_Block;
             uint32 OffsetX = SourceX;
-            uint32 OffsetY = (DungeonRoomHeight-1) - SourceY;
+            uint32 OffsetY = (TileMap->RoomHeight-1) - SourceY;
             SetTileValue(Arena, TileMap, TileRoom, OffsetX, OffsetY, TileValue);
         }
     }
 
-    TileRoom->DoorAreaUp.BottomLeft = {8.0f, 9.0f};
-    TileRoom->DoorAreaUp.TopRight = {10.0f, 11.0f};
-    TileRoom->DoorAreaDown.BottomLeft = {8.0f, 0.0f};
-    TileRoom->DoorAreaDown.TopRight = {10.0f, 2.0f};
+    // Then draw in empty spots for the doors
+    for (int32 SourceY = 0;
+            SourceY <= 1;
+            SourceY++)
+    {
+        for (uint32 SourceX = 7;
+            SourceX <= 8;
+            SourceX++)
+        {
+            // Calculate flat index using room dimensions
+            // NOTE: We do room width + 1 for the index cuz the null character
+            uint32 FlatIndex = SourceY * (TileMap->RoomWidth+1) + SourceX;
+            char TileChar = SourceMap[FlatIndex];
+            uint32 TileValue = DN_Floor;
+            uint32 OffsetX = SourceX;
+            uint32 OffsetY = (TileMap->RoomHeight-1) - SourceY;
+            SetTileValue(Arena, TileMap, TileRoom, OffsetX, OffsetY, TileValue);
+        }
+    }
+
+    // Then draw in the designed dungeon room
+    int32 DungeonTilesTop = 9;
+    int32 DungeonTilesLeft = 2;
+    for (int32 SourceY = DungeonTilesTop;
+            SourceY >= DungeonTilesTop - DungeonRoomHeight;
+            SourceY--)
+    {
+        for (int32 SourceX = DungeonTilesLeft;
+            SourceX < DungeonTilesLeft + DungeonRoomWidth;
+            SourceX++)
+        {
+            // Calculate flat index using dungeon room dimensions
+            // NOTE: We do room width + 1 for the index cuz the null character
+            uint32 FlatIndex = (SourceY - DungeonTilesLeft) * (DungeonRoomWidth+1) + SourceX;
+            char TileChar = SourceMap[FlatIndex];
+            uint32 TileValue = CharToDungeonTileID(TileChar);
+            uint32 OffsetX = SourceX;
+            uint32 OffsetY = (TileMap->RoomHeight-1) - SourceY;
+            SetTileValue(Arena, TileMap, TileRoom, OffsetX, OffsetY, TileValue);
+        }
+    }
+
+    TileRoom->DoorAreaUp.BottomLeft = {7.0f, 9.0f};
+    TileRoom->DoorAreaUp.TopRight = {9.0f, 11.0f};
+    TileRoom->DoorAreaDown.BottomLeft = {7.0f, 0.0f};
+    TileRoom->DoorAreaDown.TopRight = {9.0f, 2.0f};
     TileRoom->DoorAreaLeft.BottomLeft = {0.0f, 4.5f};
     TileRoom->DoorAreaLeft.TopRight = {2.0f, 6.5f};
     TileRoom->DoorAreaRight.BottomLeft = {14.0f, 4.5f};

@@ -253,7 +253,8 @@ GetNewPlayerPos(game_state *GameState, world_position PlayerP, real32 dtForFrame
     else if (TileRoom->Type == RoomType_Dungeon)
     {
         // QUESTION: This does the same room logic as overworld. Should we DRY?
-        if (IsPointInArea(NewPlayerUp.Pos, TileRoom->DoorAreaUp))
+        if (TileRoom->DoorStateUp == Dungeon_Door_Open && 
+            IsPointInArea(NewPlayerUp.Pos, TileRoom->DoorAreaUp))
         {
             SkipCollisions = true;
             if (TileRoom->Up)
@@ -266,7 +267,8 @@ GetNewPlayerPos(game_state *GameState, world_position PlayerP, real32 dtForFrame
             }
         }
         // NOTE: Regular center point is player down
-        else if (IsPointInArea(NewPlayerP.Pos, TileRoom->DoorAreaDown))
+        else if (TileRoom->DoorStateDown == Dungeon_Door_Open && 
+                 IsPointInArea(NewPlayerP.Pos, TileRoom->DoorAreaDown))
         {
             SkipCollisions = true;
             if (TileRoom->Down)
@@ -278,7 +280,8 @@ GetNewPlayerPos(game_state *GameState, world_position PlayerP, real32 dtForFrame
                 UpdatePosition = false;
             }
         }
-        else if (IsPointInArea(NewPlayerLeft.Pos, TileRoom->DoorAreaLeft))
+        else if (TileRoom->DoorStateLeft == Dungeon_Door_Open && 
+                 IsPointInArea(NewPlayerLeft.Pos, TileRoom->DoorAreaLeft))
         {
             SkipCollisions = true;
             if (TileRoom->Left)
@@ -290,7 +293,8 @@ GetNewPlayerPos(game_state *GameState, world_position PlayerP, real32 dtForFrame
                 UpdatePosition = false;
             }
         }
-        else if (IsPointInArea(NewPlayerRight.Pos, TileRoom->DoorAreaRight))
+        else if (TileRoom->DoorStateRight == Dungeon_Door_Open &&
+                 IsPointInArea(NewPlayerRight.Pos, TileRoom->DoorAreaRight))
         {
             SkipCollisions = true;
             if (TileRoom->Right)
@@ -576,6 +580,11 @@ UpdateOctorok(game_state *GameState, entity *Octorok)
     {
         SpawnOctorokProjectile(GameState, Octorok->Room, Octorok->P);
     }
+
+    if (Octorok->Health == 0)
+    {
+        Octorok->IsActive = false;
+    }
 }
 
 internal void
@@ -628,6 +637,11 @@ UpdateMoblin(game_state *GameState, entity *Moblin)
     if (GameState->FrameCounter % Moblin->FireFrequency == 0)
     {
         SpawnMoblinProjectile(GameState, Moblin->Room, Moblin->P, Moblin->Direction);
+    }
+
+    if (Moblin->Health == 0)
+    {
+        Moblin->IsActive = false;
     }
 }
 
@@ -738,11 +752,27 @@ internal void
 DrawDungeonRoom(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
                 tile_room *Room, real32 PlayAreaY)
 {
-    // Layer 1: Draw room border (full screen background)
+    // Layer 1: Draw regular tiles 
+    for (uint32 RelRow = 0; RelRow < TileMap->RoomHeight; RelRow++)
+    {
+        for (uint32 RelColumn = 0; RelColumn < TileMap->RoomWidth; RelColumn++)
+        {
+            uint32 TileID = GetTileValue(TileMap, Room->RoomID, RelColumn, RelRow);
+            if (TileID > 0 && TileID < DN_TileCount)
+            {
+                bmp_tile *TileSprite = &GameState->DungeonTileset.Tiles[TileID];
+                // Offset tiles to center them in the 16x11 screen
+                real32 MinX = (real32)(TileMap->TileSideInPixels * (RelColumn));
+                real32 MinY = PlayAreaY + (real32)(TileMap->TileSideInPixels * (RelRow));
+                DrawBMPTile(TileSprite, Buffer, MinX, MinY);
+            }
+        }
+    }
+    // Layer 2: Draw room border (full screen background)
     // Border is 256x176 pixels, which matches 16x11 tiles at 16px per tile
     DrawBMPTile(&GameState->DungeonTileset.RoomBorder, Buffer, 0.0f, PlayAreaY);
     
-    // Layer 2: Draw doors based on room connections
+    // Layer 3: Draw doors based on room connections
     // Doors are 32x32 pixels (2 tiles x 2 tiles)
     real32 DoorX = 0;
     real32 DoorY = 0;
@@ -766,29 +796,6 @@ DrawDungeonRoom(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *
     DoorX = (real32)(TileMap->RoomWidth * TileMap->TileSideInPixels) - 32.0f;  // Right edge - door width
     DoorY = PlayAreaY + (real32)(TileMap->RoomHeight * TileMap->TileSideInPixels) / 2.0f - 16.0f;
     DrawBMPTile(&GameState->DungeonTileset.DoorsRight[Room->DoorStateRight], Buffer, DoorX, DoorY);
-    
-    // Layer 3: Draw regular tiles (12x7 dungeon room tiles)
-    // Dungeon rooms are 12x7, but screen is 16x11, so we need to center them
-    uint32 DungeonRoomWidth = 12;
-    uint32 DungeonRoomHeight = 7;
-    uint32 TileOffsetX = (TileMap->RoomWidth - DungeonRoomWidth) / 2;   // Center horizontally: (16-12)/2 = 2
-    uint32 TileOffsetY = (TileMap->RoomHeight - DungeonRoomHeight) / 2; // Center vertically: (11-7)/2 = 2
-    
-    for (uint32 RelRow = 0; RelRow < DungeonRoomHeight; RelRow++)
-    {
-        for (uint32 RelColumn = 0; RelColumn < DungeonRoomWidth; RelColumn++)
-        {
-            uint32 TileID = GetTileValue(TileMap, Room->RoomID, RelColumn, RelRow);
-            if (TileID > 0 && TileID < DN_TileCount)
-            {
-                bmp_tile *TileSprite = &GameState->DungeonTileset.Tiles[TileID];
-                // Offset tiles to center them in the 16x11 screen
-                real32 MinX = (real32)(TileMap->TileSideInPixels * (TileOffsetX + RelColumn));
-                real32 MinY = PlayAreaY + (real32)(TileMap->TileSideInPixels * (TileOffsetY + RelRow));
-                DrawBMPTile(TileSprite, Buffer, MinX, MinY);
-            }
-        }
-    }
 }
 
 internal void
@@ -1246,7 +1253,15 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         DungeonRoom->Down->RoomID = Room_Dungeon1_Entrance;
         DungeonRoom->Down->Pos.X = 8.0f;
         DungeonRoom->Down->Pos.Y = 8.5f;
-        DungeonRoom->DoorStateDown = Dungeon_Door_Open;
+        DungeonRoom->DoorStateDown = Dungeon_Door_Shut;
+
+        entity *DungeonOctorok = GetNewEntityInRoom(TileMap, Room_Dungeon1_Two);
+        SetEntityTypeDefaults(DungeonOctorok, EntityType_Octorok);
+        DungeonOctorok->Health = 3;
+        DungeonOctorok->P.X = 8;
+        DungeonOctorok->P.Y = 5.0f;
+        DungeonOctorok->Direction.X = -1.0f;
+        DungeonOctorok->Direction.Y = 0.0f;
 
         // NOTE: maybe move this to platform layer
         Memory->IsInitialized = true;
@@ -1477,6 +1492,40 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         if (Entity->IsActive)
         {
             UpdateEntity(GameState, Entity);
+        }
+    }
+
+    // Dungeon room completion check
+    if (PlayerRoom->Type == RoomType_Dungeon)
+    {
+        bool32 AreEnemiesDefeated = true;
+        for (uint32 EntityIndex = 0; EntityIndex < MAX_ENTITIES; EntityIndex++)
+        {
+            entity *Entity = &PlayerRoom->Entities[EntityIndex];
+            if (IsEntityTypeEnemy(Entity->Type) && Entity->IsActive)
+            {
+                AreEnemiesDefeated = false;
+            }
+        }
+
+        if (AreEnemiesDefeated)
+        {
+            if (PlayerRoom->DoorStateUp == Dungeon_Door_Shut)
+            {
+                PlayerRoom->DoorStateUp = Dungeon_Door_Open;
+            }
+            if (PlayerRoom->DoorStateDown == Dungeon_Door_Shut)
+            {
+                PlayerRoom->DoorStateDown = Dungeon_Door_Open;
+            }
+            if (PlayerRoom->DoorStateRight == Dungeon_Door_Shut)
+            {
+                PlayerRoom->DoorStateRight = Dungeon_Door_Open;
+            }
+            if (PlayerRoom->DoorStateLeft == Dungeon_Door_Shut)
+            {
+                PlayerRoom->DoorStateLeft = Dungeon_Door_Open;
+            }
         }
     }
 

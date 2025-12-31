@@ -35,3 +35,22 @@ GetNewEntityInRoom(tile_map *TileMap, room_id RoomID)
 
     return Entity;
 }
+
+internal bool32
+IsEntityTypeEnemy(entity_type EntityType)
+{
+    bool32 Result = false;
+
+    switch (EntityType)
+    {
+        case EntityType_Octorok:
+        case EntityType_Moblin:
+            Result = true;
+            break;
+        default:
+            Result = false;
+            break;
+    }
+
+    return Result;
+}
