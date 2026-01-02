@@ -120,6 +120,12 @@ struct link_sprites
     bmp_tile Sword[3];
 };
 
+struct item_sprites
+{
+    bmp_file *BaseBMP;
+    bmp_tile BasicKey;
+};
+
 struct boomerang_sprites
 {
     bmp_file *BaseBMP;

@@ -903,6 +903,18 @@ LoadLinkSprites(link_sprites *LinkSprites, bmp_file *BaseBMP)
 }
 
 internal void
+LoadItemSprites(item_sprites *ItemSprites, bmp_file *BaseBMP)
+{
+    ItemSprites->BaseBMP = BaseBMP;
+
+    ItemSprites->BasicKey.Tileset = ItemSprites->BaseBMP;
+    ItemSprites->BasicKey.X = 240;
+    ItemSprites->BasicKey.Y = 0;
+    ItemSprites->BasicKey.Width = 8;
+    ItemSprites->BasicKey.Height = 16;
+}
+
+internal void
 LoadBoomerangSprites(boomerang_sprites *BoomerangSprites, bmp_file *BaseBMP)
 {
     BoomerangSprites->BaseBMP = BaseBMP;

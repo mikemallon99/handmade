@@ -312,10 +312,10 @@ GetNewPlayerPos(game_state *GameState, world_position PlayerP, real32 dtForFrame
     if (!SkipCollisions)
     {
         // Wall Collisions
-        if (IsTileMapPointEmpty(TileMap, NewPlayerUp) &&
-            IsTileMapPointEmpty(TileMap, NewPlayerP) &&
-            IsTileMapPointEmpty(TileMap, NewPlayerLeft) &&
-            IsTileMapPointEmpty(TileMap, NewPlayerRight))
+        if (IsTileRoomPointEmpty(TileMap, TileRoom, NewPlayerUp.Pos) &&
+            IsTileRoomPointEmpty(TileMap, TileRoom, NewPlayerP.Pos) &&
+            IsTileRoomPointEmpty(TileMap, TileRoom, NewPlayerLeft.Pos) &&
+            IsTileRoomPointEmpty(TileMap, TileRoom, NewPlayerRight.Pos))
         {
             if (!IsOnSameTile(InitialPlayerP, NewPlayerP))
             {
@@ -493,11 +493,29 @@ UpdateSword(game_state *GameState, entity *Sword)
     PlayerRoomPos.X = GameState->PlayerP.Pos.X;
     PlayerRoomPos.Y = GameState->PlayerP.Pos.Y;
     bool32 IsColliding = IsEntityCollidingWithPlayer(Sword, PlayerRoomPos);
-    if (IsColliding && !GameState->PlayerPickingUpSword)
+    if (IsColliding && !GameState->PlayerPickingUpThing)
     {
         // Don't deactivate yet - keep it active for animation
         GameState->HasSword = true;
-        GameState->PlayerPickingUpSword = true;
+        GameState->PlayerPickingUpThing = true;
+        GameState->PickUpEntity = Sword;
+        GameState->PickupFrame = 0;
+    }
+}
+
+internal void
+UpdateBasicKey(game_state *GameState, entity *BasicKey)
+{
+    vector2 PlayerRoomPos;
+    PlayerRoomPos.X = GameState->PlayerP.Pos.X;
+    PlayerRoomPos.Y = GameState->PlayerP.Pos.Y;
+    bool32 IsColliding = IsEntityCollidingWithPlayer(BasicKey, PlayerRoomPos);
+    if (IsColliding && !GameState->PlayerPickingUpThing)
+    {
+        // Don't deactivate yet - keep it active for animation
+        GameState->HasSword = true;
+        GameState->PlayerPickingUpThing = true;
+        GameState->PickUpEntity = BasicKey;
         GameState->PickupFrame = 0;
     }
 }
@@ -680,6 +698,10 @@ UpdateEntity(game_state *GameState, entity *Entity)
     {
         UpdateSword(GameState, Entity);
     }
+    else if (Entity->Type == EntityType_BasicKey)
+    {
+        UpdateBasicKey(GameState, Entity);
+    }
 }
 
 internal void
@@ -802,65 +824,76 @@ internal void
 DrawOctorokProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
                       real32 PlayAreaY, uint32 CameraTileX, entity *Projectile, octorok_sprites *OctorokSprites)
 {
-    vector2 ProjOrigin = WorldToScreen(TileMap, Projectile->P, CameraTileX, PlayAreaY);
-    real32 ProjScreenX = ProjOrigin.X;
+    vector2 Origin = WorldToScreen(TileMap, Projectile->P, CameraTileX, PlayAreaY);
+    real32 ScreenX = Origin.X;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
-    real32 ProjScreenY = ProjOrigin.Y - TileMap->TileSideInPixels*1.0f;
-    DrawBMPTile(&OctorokSprites->Projectile, Buffer, ProjScreenX, ProjScreenY);
+    real32 ScreenY = Origin.Y - TileMap->TileSideInPixels*1.0f;
+    DrawBMPTile(&OctorokSprites->Projectile, Buffer, ScreenX, ScreenY);
 }
 
 internal void
 DrawOldMan(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
            real32 PlayAreaY, uint32 CameraTileX, entity *OldMan, npc_sprites *NPCSprites)
 {
-    vector2 OldManOrigin = WorldToScreen(TileMap, OldMan->P, CameraTileX, PlayAreaY);
-    real32 OldManScreenX = OldManOrigin.X;
+    vector2 Origin = WorldToScreen(TileMap, OldMan->P, CameraTileX, PlayAreaY);
+    real32 ScreenX = Origin.X;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
-    real32 OldManScreenY = OldManOrigin.Y - TileMap->TileSideInPixels*1.0f;
+    real32 ScreenY = Origin.Y - TileMap->TileSideInPixels*1.0f;
     
     // NOTE: Old man is not animated
     // uint32 OldManSpriteIndex = (GameState->FrameCounter / 30) % 2;
-    DrawBMPTile(&NPCSprites->OldMan[1], Buffer, OldManScreenX, OldManScreenY);
+    DrawBMPTile(&NPCSprites->OldMan[1], Buffer, ScreenX, ScreenY);
 }
 
 internal void
 DrawSword(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
           real32 PlayAreaY, uint32 CameraTileX, entity *Sword, link_sprites *LinkSprites)
 {
-    vector2 SwordOrigin = WorldToScreen(TileMap, Sword->P, CameraTileX, PlayAreaY);
-    real32 SwordScreenX = SwordOrigin.X;
+    vector2 Origin = WorldToScreen(TileMap, Sword->P, CameraTileX, PlayAreaY);
+    real32 ScreenX = Origin.X;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
-    real32 SwordScreenY = SwordOrigin.Y - TileMap->TileSideInPixels*1.0f;
+    real32 ScreenY = Origin.Y - TileMap->TileSideInPixels*1.0f;
     
-    // NOTE: Old man is not animated
-    // uint32 OldManSpriteIndex = (GameState->FrameCounter / 30) % 2;
-    DrawBMPTile(&LinkSprites->Sword[0], Buffer, SwordScreenX, SwordScreenY);
+    DrawBMPTile(&LinkSprites->Sword[0], Buffer, ScreenX, ScreenY);
+}
+
+internal void
+DrawBasicKey(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
+             real32 PlayAreaY, uint32 CameraTileX, entity *BasicKey, item_sprites *ItemSprites)
+{
+    // TODO: Something isnt right about this world to screen stuff
+    vector2 Origin = WorldToScreen(TileMap, BasicKey->P, CameraTileX, PlayAreaY);
+    real32 ScreenX = Origin.X;
+    // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
+    real32 ScreenY = Origin.Y - TileMap->TileSideInPixels*1.0f;
+    
+    DrawBMPTile(&ItemSprites->BasicKey, Buffer, ScreenX, ScreenY);
 }
 
 internal void
 DrawFire(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
            real32 PlayAreaY, uint32 CameraTileX, entity *Fire, npc_sprites *NPCSprites)
 {
-    vector2 FireOrigin = WorldToScreen(TileMap, Fire->P, CameraTileX, PlayAreaY);
-    real32 FireScreenX = FireOrigin.X;
+    vector2 Origin = WorldToScreen(TileMap, Fire->P, CameraTileX, PlayAreaY);
+    real32 ScreenX = Origin.X;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
-    real32 FireScreenY = FireOrigin.Y - TileMap->TileSideInPixels*1.0f;
+    real32 ScreenY = Origin.Y - TileMap->TileSideInPixels*1.0f;
     
     // Animate between two sprites (idle animation)
     uint32 FireSpriteIndex = (GameState->FrameCounter / 30) % 2;
-    DrawBMPTile(&NPCSprites->Fire[FireSpriteIndex], Buffer, FireScreenX, FireScreenY);
+    DrawBMPTile(&NPCSprites->Fire[FireSpriteIndex], Buffer, ScreenX, ScreenY);
 }
 
 internal void
 DrawMoblin(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
            real32 PlayAreaY, uint32 CameraTileX, entity *Moblin, moblin_sprites *MoblinSprites)
 {
-    vector2 MoblinOrigin = WorldToScreen(TileMap, Moblin->P, CameraTileX, PlayAreaY);
-    real32 MoblinScreenX = MoblinOrigin.X;
+    vector2 Origin = WorldToScreen(TileMap, Moblin->P, CameraTileX, PlayAreaY);
+    real32 ScreenX = Origin.X;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
-    real32 MoblinScreenY = MoblinOrigin.Y - TileMap->TileSideInPixels*1.0f;
+    real32 ScreenY = Origin.Y - TileMap->TileSideInPixels*1.0f;
     // Origin
-    DrawRectangle(Buffer, MoblinOrigin.X, MoblinOrigin.Y-2, MoblinOrigin.X+2, MoblinOrigin.Y, 
+    DrawRectangle(Buffer, Origin.X, Origin.Y-2, Origin.X+2, Origin.Y, 
                     1.0f, 0.0f, 0.0f);
 
     // Hurt/Invincible rendering
@@ -911,7 +944,7 @@ DrawMoblin(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileM
 
         uint32 MoblinSpriteIndex = (GameState->FrameCounter & 0x10) == 0x10;
 
-        DrawBMPTile(&MoblinDirSprite[MoblinSpriteIndex], Buffer, MoblinScreenX, MoblinScreenY);
+        DrawBMPTile(&MoblinDirSprite[MoblinSpriteIndex], Buffer, ScreenX, ScreenY);
     }
 }
 
@@ -919,10 +952,10 @@ internal void
 DrawMoblinProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
                      real32 PlayAreaY, uint32 CameraTileX, entity *Projectile, moblin_sprites *MoblinSprites)
 {
-    vector2 ProjOrigin = WorldToScreen(TileMap, Projectile->P, CameraTileX, PlayAreaY);
-    real32 ProjScreenX = ProjOrigin.X;
+    vector2 Origin = WorldToScreen(TileMap, Projectile->P, CameraTileX, PlayAreaY);
+    real32 ScreenX = Origin.X;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
-    real32 ProjScreenY = ProjOrigin.Y - TileMap->TileSideInPixels*1.0f;
+    real32 ScreenY = Origin.Y - TileMap->TileSideInPixels*1.0f;
 
     direction ArrowDir = Vector2ToDirectionEnum(&Projectile->Direction);
     bmp_tile *ArrowSprite;
@@ -948,20 +981,20 @@ DrawMoblinProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile_
         Assert(0);
     }
 
-    DrawBMPTile(ArrowSprite, Buffer, ProjScreenX, ProjScreenY);
+    DrawBMPTile(ArrowSprite, Buffer, ScreenX, ScreenY);
 }
 
 internal void
 DrawBoomerang(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
               real32 PlayAreaY, uint32 CameraTileX)
 {
-    vector2 BoomerangOrigin = WorldToScreen(TileMap, GameState->BoomerangP.Pos, CameraTileX, PlayAreaY);
-    real32 BoomerangScreenX = BoomerangOrigin.X;
+    vector2 Origin = WorldToScreen(TileMap, GameState->BoomerangP.Pos, CameraTileX, PlayAreaY);
+    real32 ScreenX = Origin.X;
     // NOTE: Dont forget that screen Y and tile Y are flipped. For screen, increasing Y goes downward. For Tiles, increasing Y goes up
-    real32 BoomerangScreenY = BoomerangOrigin.Y - TileMap->TileSideInPixels*0.5f;
+    real32 ScreenY = Origin.Y - TileMap->TileSideInPixels*0.5f;
     
     uint32 SpriteIndex = (GameState->FrameCounter / 5) % 8;
-    DrawBMPTile(&GameState->BoomerangSprites.Sprites[SpriteIndex], Buffer, BoomerangScreenX, BoomerangScreenY);
+    DrawBMPTile(&GameState->BoomerangSprites.Sprites[SpriteIndex], Buffer, ScreenX, ScreenY);
 }
 
 internal void
@@ -992,6 +1025,11 @@ DrawEntity(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileM
     {
         DrawSword(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
                   Entity, &GameState->LinkSprites);
+    }
+    else if (Entity->Type == EntityType_BasicKey)
+    {
+        DrawBasicKey(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
+                     Entity, &GameState->ItemSprites);
     }
     else if (Entity->Type == EntityType_OctorokRock)
     {
@@ -1055,7 +1093,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->PlayerHealth = 6;
         GameState->MaxHealth = 6;
         GameState->HasSword = false;
-        GameState->PlayerPickingUpSword = false;
+        GameState->PlayerPickingUpThing = false;
         GameState->PickupFrame = 0;
         GameState->TotalPickupFrames = 30 * 4;
         GameState->CaveTextCharIndex = 0;
@@ -1072,6 +1110,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                                            "tiles/link.bmp");
         LoadLinkSprites(&GameState->LinkSprites, &GameState->LinkBMP);
         LoadBoomerangSprites(&GameState->BoomerangSprites, &GameState->LinkBMP);
+
+        GameState->ItemBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
+                                           "tiles/items.bmp");
+        LoadItemSprites(&GameState->ItemSprites, &GameState->ItemBMP);
 
         GameState->NPCBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
                                            "tiles/npcs.bmp");
@@ -1246,6 +1288,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         DungeonRoom->Up->Pos.Y = 2.5f;
         DungeonRoom->DoorStateUp = Dungeon_Door_Open;
 
+        entity *BasicKey = GetNewEntityInRoom(DungeonRoom);
+        if (BasicKey)
+        {
+            SetEntityTypeDefaults(BasicKey, EntityType_BasicKey);
+            BasicKey->P.X = 9.5f;
+            BasicKey->P.Y = 3.0f;
+        }
+
         // DUNGEON 2 TEST ROOM INIT
 
         DungeonRoom = LoadDungeonRoom(&GameState->WorldArena, TileMap, (char *)DungeonRoom1, Room_Dungeon1_Two);
@@ -1291,7 +1341,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         else
         {
             // Prevent movement during animations
-            if (GameState->PlayerPickingUpSword || GameState->PlayerUsingSword || GameState->PlayerUsingBoomerang)
+            if (GameState->PlayerPickingUpThing || GameState->PlayerUsingSword || GameState->PlayerUsingBoomerang)
             {
                 GameState->PlayerSpeed = 0.0f;
             }
@@ -1380,12 +1430,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     }
 
     // Update pickup animation
-    if (GameState->PlayerPickingUpSword)
+    if (GameState->PlayerPickingUpThing)
     {
         GameState->PickupFrame += 1;
         
-        // Update sword entity position using pointer
-        if (GameState->Sword && GameState->Sword->IsActive)
+        // Update entity position using pointer
+        if (GameState->PickUpEntity && GameState->PickUpEntity->IsActive)
         {
             // Calculate animation progress (0.0 to 1.0)
             real32 t = (real32)GameState->PickupFrame / ((real32)GameState->TotalPickupFrames / 4);
@@ -1396,23 +1446,23 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             real32 StartY = GameState->PlayerP.Pos.Y + 0.75f;  // Slightly above Link's feet
             real32 EndY = GameState->PlayerP.Pos.Y + 1.25f;    // Above Link's head
             
-            // Interpolate Y position (sword moves upward)
-            GameState->Sword->P.Y = StartY + (EndY - StartY) * t;
+            // Interpolate Y position (item moves upward)
+            GameState->PickUpEntity->P.Y = StartY + (EndY - StartY) * t;
             
             // Keep X position aligned with Link (centered)
-            GameState->Sword->P.X = GameState->PlayerP.Pos.X + 0.25f;  // Center on Link
+            GameState->PickUpEntity->P.X = GameState->PlayerP.Pos.X + 0.25f;  // Center on Link
         }
         
         // Animation duration
         if (GameState->PickupFrame > GameState->TotalPickupFrames)
         {
-            // Now deactivate the sword entity
-            if (GameState->Sword)
+            // Now deactivate the entity
+            if (GameState->PickUpEntity)
             {
-                GameState->Sword->IsActive = false;
+                GameState->PickUpEntity->IsActive = false;
             }
             
-            GameState->PlayerPickingUpSword = false;
+            GameState->PlayerPickingUpThing = false;
             GameState->PickupFrame = 0;
         }
     }
@@ -1651,7 +1701,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     direction PlayerDir = Vector2ToDirectionEnum(&GameState->PlayerDirection);
     
     // Priority: Pickup animation > Sword usage > Normal walking
-    if (GameState->PlayerPickingUpSword)
+    if (GameState->PlayerPickingUpThing)
     {
         // Animate between the 2 pickup sprites (15 frames per sprite)
         uint32 PickupSpriteIndex = 1;

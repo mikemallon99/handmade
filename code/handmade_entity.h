@@ -10,6 +10,8 @@ enum direction {FRONT, BACK, LEFT, RIGHT};
 
 enum entity_type
 {
+    EntityType_Null,
+
     // Enemies & Projectiles
     EntityType_Octorok,
     EntityType_Moblin,
@@ -24,6 +26,9 @@ enum entity_type
 
     // Items
     EntityType_Sword,
+    EntityType_BasicKey,
+
+    EntityType_Total,
 };
 
 // Unified entity structure - used by all enemies and projectiles

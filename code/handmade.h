@@ -250,7 +250,8 @@ struct game_state
     bool32 HasSword;
     bool32 PlayerUsingSword;
     int32 SwordUsageFrame;
-    bool32 PlayerPickingUpSword;
+    bool32 PlayerPickingUpThing;
+    entity *PickUpEntity;
     int32 PickupFrame;
     int32 TotalPickupFrames;
     world_position BoomerangP;
@@ -271,6 +272,8 @@ struct game_state
     bmp_file LinkBMP;
     link_sprites LinkSprites;
     boomerang_sprites BoomerangSprites;
+    bmp_file ItemBMP;
+    item_sprites ItemSprites;
     uint32 WalkStep;
 
     bmp_file NPCBMP;
