@@ -29,6 +29,7 @@ enum entity_type
 
     // Random stuff
     EntityType_Fire,
+    EntityType_PushBlock,
 
     // Items
     EntityType_Sword,
