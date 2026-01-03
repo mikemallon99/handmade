@@ -23,6 +23,14 @@ enum dungeon_door_state
     Dungeon_Door_Locked,
     Dungeon_Door_Shut,
     Dungeon_Door_Exploded,
+    Dungeon_Door_TopLayer,
+};
+
+struct dungeon_door
+{
+    area2d DoorArea;
+    dungeon_door_state DoorState;
+    direction Direction;
 };
 
 struct tile_room
@@ -42,14 +50,7 @@ struct tile_room
     entity Entities[MAX_ENTITIES];
 
     // Used for dungeons
-    area2d DoorAreaUp;
-    area2d DoorAreaDown;
-    area2d DoorAreaLeft;
-    area2d DoorAreaRight;
-    dungeon_door_state DoorStateUp;
-    dungeon_door_state DoorStateDown;
-    dungeon_door_state DoorStateLeft;
-    dungeon_door_state DoorStateRight;
+    dungeon_door DungeonDoors[4];
 };
 
 struct tile_map

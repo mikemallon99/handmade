@@ -6,7 +6,13 @@
 // Forward declaration to avoid circular dependency
 struct tile_room;
 
-enum direction {FRONT, BACK, LEFT, RIGHT};
+enum direction 
+{
+    Direction_Up, 
+    Direction_Down, 
+    Direction_Left, 
+    Direction_Right,
+};
 
 enum entity_type
 {

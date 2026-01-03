@@ -222,7 +222,6 @@ DrawBMPFile(bmp_file *BMPFile, game_offscreen_buffer *Buffer,
     }
 }
 
-
 internal void
 DrawBMPTile(bmp_tile *BMPTile, game_offscreen_buffer *Buffer,
             real32 RealMinX, real32 RealMinY)
@@ -304,6 +303,20 @@ DrawBMPTile(bmp_tile *BMPTile, game_offscreen_buffer *Buffer,
             WritePixelValue(ImagePixel, BufferPixel);
         }
     }
+}
+
+internal void
+DrawBMPTilePartial(bmp_tile *BMPTile, game_offscreen_buffer *Buffer,
+                   int32 StartX, int32 EndX,
+                   int32 StartY, int32 EndY,
+                   real32 RealMinX, real32 RealMinY)
+{
+    bmp_tile BMPCopy = *BMPTile;
+    BMPCopy.Width = EndX - StartX;
+    BMPCopy.Height = EndY - StartY;
+    BMPCopy.AnchorX = BMPCopy.X + StartX;
+    BMPCopy.AnchorY = BMPCopy.Y + StartY;
+    DrawBMPTile(&BMPCopy, Buffer, RealMinX, RealMinY);
 }
 
 internal void
@@ -457,6 +470,12 @@ LoadDungeonTileset(dungeon_tileset *DungeonTileset, bmp_file *BaseBMP)
             DungeonTileset->DoorsTop[i].Width = 32;
             DungeonTileset->DoorsTop[i].Height = 32;
         }
+        // Grab the top half of the door
+        DungeonTileset->DoorsTop[5].Tileset = DungeonTileset->BaseBMP;
+        DungeonTileset->DoorsTop[5].X = 815 + 33*1;
+        DungeonTileset->DoorsTop[5].Y = 11;
+        DungeonTileset->DoorsTop[5].Width = 32;
+        DungeonTileset->DoorsTop[5].Height = 16;
 
         for (int32 i = 0; i < 5; i++)
         {
@@ -466,6 +485,11 @@ LoadDungeonTileset(dungeon_tileset *DungeonTileset, bmp_file *BaseBMP)
             DungeonTileset->DoorsLeft[i].Width = 32;
             DungeonTileset->DoorsLeft[i].Height = 32;
         }
+        DungeonTileset->DoorsLeft[5].Tileset = DungeonTileset->BaseBMP;
+        DungeonTileset->DoorsLeft[5].X = 815 + 33*1;
+        DungeonTileset->DoorsLeft[5].Y = 44;
+        DungeonTileset->DoorsLeft[5].Width = 16;
+        DungeonTileset->DoorsLeft[5].Height = 32;
 
         for (int32 i = 0; i < 5; i++)
         {
@@ -475,6 +499,11 @@ LoadDungeonTileset(dungeon_tileset *DungeonTileset, bmp_file *BaseBMP)
             DungeonTileset->DoorsRight[i].Width = 32;
             DungeonTileset->DoorsRight[i].Height = 32;
         }
+        DungeonTileset->DoorsRight[5].Tileset = DungeonTileset->BaseBMP;
+        DungeonTileset->DoorsRight[5].X = 815 + 33*1 + 16;
+        DungeonTileset->DoorsRight[5].Y = 77;
+        DungeonTileset->DoorsRight[5].Width = 16;
+        DungeonTileset->DoorsRight[5].Height = 32;
 
         for (int32 i = 0; i < 5; i++)
         {
@@ -484,6 +513,11 @@ LoadDungeonTileset(dungeon_tileset *DungeonTileset, bmp_file *BaseBMP)
             DungeonTileset->DoorsBottom[i].Width = 32;
             DungeonTileset->DoorsBottom[i].Height = 32;
         }
+        DungeonTileset->DoorsBottom[5].Tileset = DungeonTileset->BaseBMP;
+        DungeonTileset->DoorsBottom[5].X = 815 + 33*1;
+        DungeonTileset->DoorsBottom[5].Y = 110 + 16;
+        DungeonTileset->DoorsBottom[5].Width = 32;
+        DungeonTileset->DoorsBottom[5].Height = 16;
 }
 
 internal void

@@ -79,10 +79,10 @@ struct dungeon_tileset
 
     bmp_tile RoomBorder;
 
-    bmp_tile DoorsTop[5];
-    bmp_tile DoorsBottom[5];
-    bmp_tile DoorsLeft[5];
-    bmp_tile DoorsRight[5];
+    bmp_tile DoorsTop[6];
+    bmp_tile DoorsBottom[6];
+    bmp_tile DoorsLeft[6];
+    bmp_tile DoorsRight[6];
 };
 
 struct text_tileset

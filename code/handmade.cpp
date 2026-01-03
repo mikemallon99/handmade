@@ -41,7 +41,7 @@ RenderWeirdGradient(game_offscreen_buffer *Buffer, int XOffset, int YOffset)
 internal direction
 Vector2ToDirectionEnum(vector2 *Vector2)
 {
-    direction DirectionEnum = FRONT;
+    direction DirectionEnum = Direction_Up;
     
     // Determine primary direction based on which component has larger absolute value
     real32 AbsX = (Vector2->X < 0.0f) ? -Vector2->X : Vector2->X;
@@ -52,11 +52,11 @@ Vector2ToDirectionEnum(vector2 *Vector2)
         // Vertical direction is primary
         if (Vector2->Y > 0.0f)
         {
-            DirectionEnum = BACK;
+            DirectionEnum = Direction_Down;
         }
         else
         {
-            DirectionEnum = FRONT;
+            DirectionEnum = Direction_Up;
         }
     }
     else
@@ -64,11 +64,11 @@ Vector2ToDirectionEnum(vector2 *Vector2)
         // Horizontal direction is primary
         if (Vector2->X > 0.0f)
         {
-            DirectionEnum = RIGHT;
+            DirectionEnum = Direction_Right;
         }
         else
         {
-            DirectionEnum = LEFT;
+            DirectionEnum = Direction_Left;
         }
     }
     
@@ -79,10 +79,10 @@ internal bool32
 IsDirectionOpposite(direction DirA, direction DirB)
 {
     bool32 Result = false;
-    if (DirA == FRONT && DirB == BACK ||
-        DirA == BACK && DirB == FRONT ||
-        DirA == LEFT && DirB == RIGHT ||
-        DirA == RIGHT && DirB == LEFT)
+    if (DirA == Direction_Up && DirB == Direction_Down ||
+        DirA == Direction_Down && DirB == Direction_Up ||
+        DirA == Direction_Left && DirB == Direction_Right ||
+        DirA == Direction_Right && DirB == Direction_Left)
     {
         Result = true;
     }
@@ -252,58 +252,38 @@ GetNewPlayerPos(game_state *GameState, world_position PlayerP, real32 dtForFrame
     }
     else if (TileRoom->Type == RoomType_Dungeon)
     {
-        // QUESTION: This does the same room logic as overworld. Should we DRY?
-        if (TileRoom->DoorStateUp == Dungeon_Door_Open && 
-            IsPointInArea(NewPlayerUp.Pos, TileRoom->DoorAreaUp))
+        // TODO: Eventually make it so player just uses area2d as hitbox
+        area2d PlayerArea = {};
+        PlayerArea.BottomLeft.X = NewPlayerLeft.Pos.X;
+        PlayerArea.BottomLeft.Y = NewPlayerP.Pos.Y;
+        PlayerArea.TopRight.X = NewPlayerRight.Pos.X;
+        PlayerArea.TopRight.Y = NewPlayerUp.Pos.Y;
+
+        for (int32 DoorIndex = 0;
+             DoorIndex < 4;
+             DoorIndex++)
         {
-            SkipCollisions = true;
-            if (TileRoom->Up)
+            dungeon_door *DungeonDoor = &TileRoom->DungeonDoors[DoorIndex];
+            if (IsAreaInArea(PlayerArea, DungeonDoor->DoorArea))
             {
-                NewPlayerP = *TileRoom->Up;
-            }
-            else
-            {
-                UpdatePosition = false;
-            }
-        }
-        // NOTE: Regular center point is player down
-        else if (TileRoom->DoorStateDown == Dungeon_Door_Open && 
-                 IsPointInArea(NewPlayerP.Pos, TileRoom->DoorAreaDown))
-        {
-            SkipCollisions = true;
-            if (TileRoom->Down)
-            {
-                NewPlayerP = *TileRoom->Down;
-            }
-            else
-            {
-                UpdatePosition = false;
-            }
-        }
-        else if (TileRoom->DoorStateLeft == Dungeon_Door_Open && 
-                 IsPointInArea(NewPlayerLeft.Pos, TileRoom->DoorAreaLeft))
-        {
-            SkipCollisions = true;
-            if (TileRoom->Left)
-            {
-                NewPlayerP = *TileRoom->Left;
-            }
-            else
-            {
-                UpdatePosition = false;
-            }
-        }
-        else if (TileRoom->DoorStateRight == Dungeon_Door_Open &&
-                 IsPointInArea(NewPlayerRight.Pos, TileRoom->DoorAreaRight))
-        {
-            SkipCollisions = true;
-            if (TileRoom->Right)
-            {
-                NewPlayerP = *TileRoom->Right;
-            }
-            else
-            {
-                UpdatePosition = false;
+                if (DungeonDoor->DoorState == Dungeon_Door_Open)
+                {
+                    SkipCollisions = true;
+                    // if (TileRoom->Up)
+                    // {
+                    //     NewPlayerP = *TileRoom->Up;
+                    // }
+                    // else
+                    // {
+                    //     UpdatePosition = false;
+                    // }
+                }
+                else if (DungeonDoor->DoorState == Dungeon_Door_Locked && 
+                         GameState->KeyInventory > 0)
+                {
+                    GameState->KeyInventory -= 1;
+                    DungeonDoor->DoorState = Dungeon_Door_Open;
+                }
             }
         }
     }
@@ -337,23 +317,23 @@ GetNewPlayerPos(game_state *GameState, world_position PlayerP, real32 dtForFrame
             int32 PixelOffsetX = 0;
             int32 PixelOffsetY = 0;
             direction PlayerDir = Vector2ToDirectionEnum(&GameState->PlayerDirection);
-            if (PlayerDir == FRONT)
+            if (PlayerDir == Direction_Up)
             {
                 // NOTE: XY values taken from sprite sheet
                 PixelOffsetX = 26 - 18;
                 PixelOffsetY = 73 - 62;
             }
-            else if (PlayerDir == RIGHT)
+            else if (PlayerDir == Direction_Right)
             {
                 PixelOffsetX = 44 - 18;
                 PixelOffsetY = 86 - 92;
             }
-            else if (PlayerDir == BACK)
+            else if (PlayerDir == Direction_Down)
             {
                 PixelOffsetX = 24 - 18;
                 PixelOffsetY = 97 - 124;
             }
-            else if (PlayerDir == LEFT)
+            else if (PlayerDir == Direction_Left)
             {
                 // This math here is weird cuz of the flippy
                 PixelOffsetX = -1*(44 - 18) + 16;
@@ -513,7 +493,7 @@ UpdateBasicKey(game_state *GameState, entity *BasicKey)
     if (IsColliding && !GameState->PlayerPickingUpThing)
     {
         // Don't deactivate yet - keep it active for animation
-        GameState->HasSword = true;
+        GameState->KeyInventory += 1;
         GameState->PlayerPickingUpThing = true;
         GameState->PickUpEntity = BasicKey;
         GameState->PickupFrame = 0;
@@ -772,14 +752,17 @@ DrawOverworldRoom(game_state *GameState, game_offscreen_buffer *Buffer, tile_map
 
 internal void
 DrawDungeonRoom(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
-                tile_room *Room, real32 PlayAreaY)
+                tile_room *Room, uint32 CameraTileX, uint32 CameraTileY,
+                uint32 ScreenTilesWidth, uint32 ScreenTilesHeight, real32 PlayAreaY)
 {
     // Layer 1: Draw regular tiles 
     for (uint32 RelRow = 0; RelRow < TileMap->RoomHeight; RelRow++)
     {
         for (uint32 RelColumn = 0; RelColumn < TileMap->RoomWidth; RelColumn++)
         {
-            uint32 TileID = GetTileValue(TileMap, Room->RoomID, RelColumn, RelRow);
+            uint32 Column = CameraTileX + RelColumn;
+            uint32 Row = CameraTileY - RelRow;
+            uint32 TileID = GetTileValue(TileMap, Room->RoomID, Column, Row);
             if (TileID > 0 && TileID < DN_TileCount)
             {
                 bmp_tile *TileSprite = &GameState->DungeonTileset.Tiles[TileID];
@@ -790,6 +773,7 @@ DrawDungeonRoom(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *
             }
         }
     }
+
     // Layer 2: Draw room border (full screen background)
     // Border is 256x176 pixels, which matches 16x11 tiles at 16px per tile
     DrawBMPTile(&GameState->DungeonTileset.RoomBorder, Buffer, 0.0f, PlayAreaY);
@@ -802,22 +786,59 @@ DrawDungeonRoom(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *
     // Top door 
     DoorX = (real32)(TileMap->RoomWidth * TileMap->TileSideInPixels) / 2.0f - 16.0f;  // Center - half door width
     DoorY = PlayAreaY;
-    DrawBMPTile(&GameState->DungeonTileset.DoorsTop[Room->DoorStateUp], Buffer, DoorX, DoorY);
+    DrawBMPTile(&GameState->DungeonTileset.DoorsTop[Room->DungeonDoors[Direction_Up].DoorState], 
+                Buffer, DoorX, DoorY);
     
     // Bottom door 
     DoorX = (real32)(TileMap->RoomWidth * TileMap->TileSideInPixels) / 2.0f - 16.0f;
     DoorY = PlayAreaY + (real32)(TileMap->RoomHeight * TileMap->TileSideInPixels) - 32.0f;  // Bottom - door height
-    DrawBMPTile(&GameState->DungeonTileset.DoorsBottom[Room->DoorStateDown], Buffer, DoorX, DoorY);
+    DrawBMPTile(&GameState->DungeonTileset.DoorsBottom[Room->DungeonDoors[Direction_Down].DoorState], 
+                Buffer, DoorX, DoorY);
     
     // Left door 
     DoorX = 0.0f;
     DoorY = PlayAreaY + (real32)(TileMap->RoomHeight * TileMap->TileSideInPixels) / 2.0f - 16.0f;  // Center vertically - half door height
-    DrawBMPTile(&GameState->DungeonTileset.DoorsLeft[Room->DoorStateLeft], Buffer, DoorX, DoorY);
+    DrawBMPTile(&GameState->DungeonTileset.DoorsLeft[Room->DungeonDoors[Direction_Left].DoorState], 
+                Buffer, DoorX, DoorY);
     
     // Right door 
     DoorX = (real32)(TileMap->RoomWidth * TileMap->TileSideInPixels) - 32.0f;  // Right edge - door width
     DoorY = PlayAreaY + (real32)(TileMap->RoomHeight * TileMap->TileSideInPixels) / 2.0f - 16.0f;
-    DrawBMPTile(&GameState->DungeonTileset.DoorsRight[Room->DoorStateRight], Buffer, DoorX, DoorY);
+    DrawBMPTile(&GameState->DungeonTileset.DoorsRight[Room->DungeonDoors[Direction_Right].DoorState], 
+                Buffer, DoorX, DoorY);
+}
+
+internal void
+DrawDungeonRoomLayer2(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileMap,
+                      tile_room *Room, real32 PlayAreaY)
+{
+    // Draw the top halves of the doors if theyre opened
+    // Doors are 32x32 pixels (2 tiles x 2 tiles)
+    real32 DoorX = 0;
+    real32 DoorY = 0;
+    
+    // Top door 
+    DoorX = (real32)(TileMap->RoomWidth * TileMap->TileSideInPixels) / 2.0f - 16.0f;  // Center - half door width
+    DoorY = PlayAreaY;
+    DrawBMPTile(&GameState->DungeonTileset.DoorsTop[Dungeon_Door_TopLayer], 
+                Buffer, DoorX, DoorY);
+    
+    // Bottom door 
+    DoorX = (real32)(TileMap->RoomWidth * TileMap->TileSideInPixels) / 2.0f - 16.0f;
+    DoorY = PlayAreaY + (real32)(TileMap->RoomHeight * TileMap->TileSideInPixels) - 32.0f;  // Bottom - door height
+    DoorY += 16;
+    DrawBMPTile(&GameState->DungeonTileset.DoorsBottom[Dungeon_Door_TopLayer], Buffer, DoorX, DoorY);
+    
+    // Left door 
+    DoorX = 0.0f;
+    DoorY = PlayAreaY + (real32)(TileMap->RoomHeight * TileMap->TileSideInPixels) / 2.0f - 16.0f;  // Center vertically - half door height
+    DrawBMPTile(&GameState->DungeonTileset.DoorsLeft[Dungeon_Door_TopLayer], Buffer, DoorX, DoorY);
+    
+    // Right door 
+    DoorX = (real32)(TileMap->RoomWidth * TileMap->TileSideInPixels) - 32.0f;  // Right edge - door width
+    DoorX += 16;
+    DoorY = PlayAreaY + (real32)(TileMap->RoomHeight * TileMap->TileSideInPixels) / 2.0f - 16.0f;
+    DrawBMPTile(&GameState->DungeonTileset.DoorsRight[Dungeon_Door_TopLayer], Buffer, DoorX, DoorY);
 }
 
 internal void
@@ -920,19 +941,19 @@ DrawMoblin(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileM
     {
         direction MoblinDir = Vector2ToDirectionEnum(&Moblin->Direction);
         bmp_tile *MoblinDirSprite;
-        if (MoblinDir == FRONT)
+        if (MoblinDir == Direction_Up)
         {
             MoblinDirSprite = (bmp_tile *)&MoblinSprites->Front;
         }
-        else if (MoblinDir == BACK)
+        else if (MoblinDir == Direction_Down)
         {
             MoblinDirSprite = (bmp_tile *)&MoblinSprites->Back;
         }
-        else if (MoblinDir == LEFT)
+        else if (MoblinDir == Direction_Left)
         {
             MoblinDirSprite = (bmp_tile *)&MoblinSprites->Left;
         }
-        else if (MoblinDir == RIGHT)
+        else if (MoblinDir == Direction_Right)
         {
             MoblinDirSprite = (bmp_tile *)&MoblinSprites->Right;
         }
@@ -959,19 +980,19 @@ DrawMoblinProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile_
 
     direction ArrowDir = Vector2ToDirectionEnum(&Projectile->Direction);
     bmp_tile *ArrowSprite;
-    if (ArrowDir == FRONT)
+    if (ArrowDir == Direction_Up)
     {
         ArrowSprite = &MoblinSprites->ArrowFront;
     }
-    else if (ArrowDir == BACK)
+    else if (ArrowDir == Direction_Down)
     {
         ArrowSprite = &MoblinSprites->ArrowBack;
     }
-    else if (ArrowDir == LEFT)
+    else if (ArrowDir == Direction_Left)
     {
         ArrowSprite = &MoblinSprites->ArrowLeft;
     }
-    else if (ArrowDir == RIGHT)
+    else if (ArrowDir == Direction_Right)
     {
         ArrowSprite = &MoblinSprites->ArrowRight;
     }
@@ -1040,6 +1061,71 @@ DrawEntity(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileM
     {
         DrawMoblinProjectile(GameState, Buffer, TileMap, PlayAreaY, CameraTileX, 
                             Entity, &GameState->MoblinSprites);
+    }
+}
+
+internal void
+ProcessPlayerInput(game_state *GameState, game_controller_input *Controller)
+{
+    if (Controller->IsAnalog)
+    {
+        // NOTE: Use analog movement tuning
+    }
+    else
+    {
+        // Prevent movement during animations
+        if (GameState->PlayerPickingUpThing || GameState->PlayerUsingSword || GameState->PlayerUsingBoomerang)
+        {
+            GameState->PlayerSpeed = 0.0f;
+        }
+        else
+        {
+            // NOTE: Use digital movement tuning
+            if (Controller->MoveUp.EndedDown)
+            {
+                GameState->PlayerDirection = {0.0f, 1.0f}; // BACK
+                GameState->PlayerSpeed = 5.0f;
+            }
+            if (Controller->MoveDown.EndedDown)
+            {
+                GameState->PlayerDirection = {0.0f, -1.0f}; // FRONT
+                GameState->PlayerSpeed = 5.0f;
+            }
+            if (Controller->MoveLeft.EndedDown)
+            {
+                GameState->PlayerDirection = {-1.0f, 0.0f}; // LEFT
+                GameState->PlayerSpeed = 5.0f;
+            }
+            if (Controller->MoveRight.EndedDown)
+            {
+                GameState->PlayerDirection = {1.0f, 0.0f}; // RIGHT
+                GameState->PlayerSpeed = 5.0f;
+            }
+
+            if (Controller->ActionUp.EndedDown)
+            {
+                GameState->PlayerSpeed = 10.0f;
+            }
+        }
+
+        // B
+        if (Controller->ActionLeft.EndedDown)
+        {
+            if (GameState->HasSword && !GameState->PlayerUsingSword)
+            {
+                GameState->PlayerUsingSword = true;
+                GameState->SwordUsageFrame = -1;
+            }
+        }
+        // A
+        if (Controller->ActionDown.EndedDown)
+        {
+            if (!GameState->PlayerUsingBoomerang)
+            {
+                GameState->PlayerUsingBoomerang = true;
+                GameState->BoomerangUsageFrame = 0;
+            }
+        }
     }
 }
 
@@ -1280,13 +1366,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         DungeonRoom->Down->RoomID = Room_Overworld_Spawn;
         DungeonRoom->Down->Pos.X = 9.0f;
         DungeonRoom->Down->Pos.Y = 10.0f;
-        DungeonRoom->DoorStateDown = Dungeon_Door_Open;
+        DungeonRoom->DungeonDoors[Direction_Down].DoorState = Dungeon_Door_Open;
 
         DungeonRoom->Up = PushStruct(&GameState->WorldArena, tile_map_position);
         DungeonRoom->Up->RoomID = Room_Dungeon1_Two;
         DungeonRoom->Up->Pos.X = 8.0f;
         DungeonRoom->Up->Pos.Y = 2.5f;
-        DungeonRoom->DoorStateUp = Dungeon_Door_Open;
+        DungeonRoom->DungeonDoors[Direction_Up].DoorState = Dungeon_Door_Locked;
 
         entity *BasicKey = GetNewEntityInRoom(DungeonRoom);
         if (BasicKey)
@@ -1303,7 +1389,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         DungeonRoom->Down->RoomID = Room_Dungeon1_Entrance;
         DungeonRoom->Down->Pos.X = 8.0f;
         DungeonRoom->Down->Pos.Y = 8.5f;
-        DungeonRoom->DoorStateDown = Dungeon_Door_Shut;
+        DungeonRoom->DungeonDoors[Direction_Down].DoorState = Dungeon_Door_Shut;
 
         entity *DungeonOctorok = GetNewEntityInRoom(TileMap, Room_Dungeon1_Two);
         SetEntityTypeDefaults(DungeonOctorok, EntityType_Octorok);
@@ -1334,87 +1420,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             continue;
         }
 
-        if (Controller->IsAnalog)
+        if (!GameState->BlockPlayerInput)
         {
-            // NOTE: Use analog movement tuning
-        }
-        else
-        {
-            // Prevent movement during animations
-            if (GameState->PlayerPickingUpThing || GameState->PlayerUsingSword || GameState->PlayerUsingBoomerang)
-            {
-                GameState->PlayerSpeed = 0.0f;
-            }
-            else
-            {
-                // NOTE: Use digital movement tuning
-                if (Controller->MoveUp.EndedDown)
-                {
-                    GameState->PlayerDirection = {0.0f, 1.0f}; // BACK
-                    GameState->PlayerSpeed = 5.0f;
-                }
-                if (Controller->MoveDown.EndedDown)
-                {
-                    GameState->PlayerDirection = {0.0f, -1.0f}; // FRONT
-                    GameState->PlayerSpeed = 5.0f;
-                }
-                if (Controller->MoveLeft.EndedDown)
-                {
-                    GameState->PlayerDirection = {-1.0f, 0.0f}; // LEFT
-                    GameState->PlayerSpeed = 5.0f;
-                }
-                if (Controller->MoveRight.EndedDown)
-                {
-                    GameState->PlayerDirection = {1.0f, 0.0f}; // RIGHT
-                    GameState->PlayerSpeed = 5.0f;
-                }
-
-                if (Controller->ActionUp.EndedDown)
-                {
-                    GameState->PlayerSpeed = 10.0f;
-                }
-            }
-
-            // B
-            if (Controller->ActionLeft.EndedDown)
-            {
-                if (GameState->HasSword && !GameState->PlayerUsingSword)
-                {
-                    GameState->PlayerUsingSword = true;
-                    GameState->SwordUsageFrame = -1;
-                }
-            }
-            // A
-            if (Controller->ActionDown.EndedDown)
-            {
-                if (!GameState->PlayerUsingBoomerang)
-                {
-                    GameState->PlayerUsingBoomerang = true;
-                    GameState->BoomerangUsageFrame = 0;
-                }
-            }
-        }
-
-        if (Controller->MoveUp.EndedDown || 
-            Controller->MoveDown.EndedDown || 
-            Controller->MoveLeft.EndedDown || 
-            Controller->MoveRight.EndedDown)
-        {
-            if (GameState->FrameCounter % 5 == 0)
-            {
-                if (GameState->WalkStep == 0) 
-                {
-                    GameState->WalkStep = 1;
-                }
-                else
-                {
-                    GameState->WalkStep = 0;
-                }
-            }
-        }
-        else
-        {
-            GameState->WalkStep = 0;
+            ProcessPlayerInput(GameState, Controller);
         }
     }
 
@@ -1427,6 +1435,26 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {
             GameState->PlayerUsingSword = false;
         }
+    }
+
+    // Walking animation update
+    if (GameState->PlayerSpeed > 0)
+    {
+        if (GameState->FrameCounter % 5 == 0)
+        {
+            if (GameState->WalkStep == 0) 
+            {
+                GameState->WalkStep = 1;
+            }
+            else
+            {
+                GameState->WalkStep = 0;
+            }
+        }
+    }
+    else
+    {
+        GameState->WalkStep = 0;
     }
 
     // Update pickup animation
@@ -1560,21 +1588,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         if (AreEnemiesDefeated)
         {
-            if (PlayerRoom->DoorStateUp == Dungeon_Door_Shut)
+            for (int32 DoorIndex = 0;
+                 DoorIndex < 4;
+                 DoorIndex++)
             {
-                PlayerRoom->DoorStateUp = Dungeon_Door_Open;
-            }
-            if (PlayerRoom->DoorStateDown == Dungeon_Door_Shut)
-            {
-                PlayerRoom->DoorStateDown = Dungeon_Door_Open;
-            }
-            if (PlayerRoom->DoorStateRight == Dungeon_Door_Shut)
-            {
-                PlayerRoom->DoorStateRight = Dungeon_Door_Open;
-            }
-            if (PlayerRoom->DoorStateLeft == Dungeon_Door_Shut)
-            {
-                PlayerRoom->DoorStateLeft = Dungeon_Door_Open;
+                if (PlayerRoom->DungeonDoors[DoorIndex].DoorState == Dungeon_Door_Shut)
+                {
+                    PlayerRoom->DungeonDoors[DoorIndex].DoorState = Dungeon_Door_Open;
+                }
             }
         }
     }
@@ -1680,11 +1701,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     if (CurrentRoom && CurrentRoom->Type == RoomType_Overworld)
     {
         DrawOverworldRoom(GameState, Buffer, TileMap, CurrentRoom, 
-                         CameraTileX, CameraTileY, ScreenTilesWidth, ScreenTilesHeight, PlayAreaY);
+                          CameraTileX, CameraTileY, ScreenTilesWidth, ScreenTilesHeight, PlayAreaY);
     }
     else if (CurrentRoom && CurrentRoom->Type == RoomType_Dungeon)
     {
-        DrawDungeonRoom(GameState, Buffer, TileMap, CurrentRoom, PlayAreaY);
+        DrawDungeonRoom(GameState, Buffer, TileMap, CurrentRoom, 
+                        CameraTileX, CameraTileY, ScreenTilesWidth, ScreenTilesHeight, PlayAreaY);
     }
 
     vector2 HeroOrigin = WorldToScreen(TileMap, GameState->PlayerP.Pos, CameraTileX, PlayAreaY);
@@ -1729,19 +1751,19 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             Assert(0);
         }
 
-        if (PlayerDir == FRONT)
+        if (PlayerDir == Direction_Up)
         {
             LinkSprite = &GameState->LinkSprites.UseSwordFront[SwordSpriteIndex];
         }
-        else if (PlayerDir == BACK)
+        else if (PlayerDir == Direction_Down)
         {
             LinkSprite = &GameState->LinkSprites.UseSwordBack[SwordSpriteIndex];
         }
-        else if (PlayerDir == LEFT)
+        else if (PlayerDir == Direction_Left)
         {
             LinkSprite = &GameState->LinkSprites.UseSwordLeft[SwordSpriteIndex];
         }
-        else if (PlayerDir == RIGHT)
+        else if (PlayerDir == Direction_Right)
         {
             LinkSprite = &GameState->LinkSprites.UseSwordRight[SwordSpriteIndex];
         }
@@ -1753,19 +1775,19 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     }
     else
     {
-        if (PlayerDir == FRONT)
+        if (PlayerDir == Direction_Up)
         {
             LinkSprite = &GameState->LinkSprites.Front[GameState->WalkStep];
         }
-        else if (PlayerDir == BACK)
+        else if (PlayerDir == Direction_Down)
         {
             LinkSprite = &GameState->LinkSprites.Back[GameState->WalkStep];
         }
-        else if (PlayerDir == LEFT)
+        else if (PlayerDir == Direction_Left)
         {
             LinkSprite = &GameState->LinkSprites.Left[GameState->WalkStep];
         }
-        else if (PlayerDir == RIGHT)
+        else if (PlayerDir == Direction_Right)
         {
             LinkSprite = &GameState->LinkSprites.Right[GameState->WalkStep];
         }
@@ -1924,6 +1946,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     {
         // Reset animation when not in cave room (so it restarts when re-entering)
         GameState->CaveTextCharIndex = 0;
+    }
+
+    // Dungeon Room Layer 2
+    if (CurrentRoom && CurrentRoom->Type == RoomType_Dungeon)
+    {
+        DrawDungeonRoomLayer2(GameState, Buffer, TileMap, CurrentRoom, PlayAreaY);
     }
 
     // Draw HUD

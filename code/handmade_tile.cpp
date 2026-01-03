@@ -375,6 +375,55 @@ LoadDungeonRoom(memory_arena *Arena, tile_map *TileMap, char *SourceMap,
             SetTileValue(Arena, TileMap, TileRoom, OffsetX, OffsetY, TileValue);
         }
     }
+    
+    // // TOP
+    // for (int32 SourceY = 9; 
+    //      SourceY < 11; 
+    //      SourceY++)
+    // {
+    //     for (uint32 SourceX = 7; 
+    //          SourceX < 9; 
+    //          SourceX++)
+    //     {
+    //         SetTileValue(Arena, TileMap, TileRoom, SourceX, SourceY, DN_Floor);
+    //     }
+    // }
+    // // BOTTOM
+    // for (int32 SourceY = 0; 
+    //      SourceY < 2; 
+    //      SourceY++)
+    // {
+    //     for (uint32 SourceX = 7; 
+    //          SourceX < 9; 
+    //          SourceX++)
+    //     {
+    //         SetTileValue(Arena, TileMap, TileRoom, SourceX, SourceY, DN_Floor);
+    //     }
+    // }
+    // // LEFT
+    // for (int32 SourceY = 5; 
+    //      SourceY < 6; 
+    //      SourceY++)
+    // {
+    //     for (uint32 SourceX = 0; 
+    //          SourceX < 2; 
+    //          SourceX++)
+    //     {
+    //         SetTileValue(Arena, TileMap, TileRoom, SourceX, SourceY, DN_Floor);
+    //     }
+    // }
+    // // RIGHT
+    // for (int32 SourceY = 5; 
+    //      SourceY < 6; 
+    //      SourceY++)
+    // {
+    //     for (uint32 SourceX = 14; 
+    //          SourceX < 16; 
+    //          SourceX++)
+    //     {
+    //         SetTileValue(Arena, TileMap, TileRoom, SourceX, SourceY, DN_Floor);
+    //     }
+    // }
 
     // Then draw in the designed dungeon room
     int32 MarginX = 2;
@@ -398,14 +447,21 @@ LoadDungeonRoom(memory_arena *Arena, tile_map *TileMap, char *SourceMap,
         }
     }
 
-    TileRoom->DoorAreaUp.BottomLeft = {7.0f, 9.0f};
-    TileRoom->DoorAreaUp.TopRight = {9.0f, 11.0f};
-    TileRoom->DoorAreaDown.BottomLeft = {7.0f, 0.0f};
-    TileRoom->DoorAreaDown.TopRight = {9.0f, 2.0f};
-    TileRoom->DoorAreaLeft.BottomLeft = {0.0f, 4.5f};
-    TileRoom->DoorAreaLeft.TopRight = {2.0f, 6.5f};
-    TileRoom->DoorAreaRight.BottomLeft = {14.0f, 4.5f};
-    TileRoom->DoorAreaRight.TopRight = {16.0f, 6.5f};
+    TileRoom->DungeonDoors[Direction_Up].DoorArea.BottomLeft = {7.0f, 9.0f};
+    TileRoom->DungeonDoors[Direction_Up].DoorArea.TopRight = {9.0f, 11.0f};
+    TileRoom->DungeonDoors[Direction_Up].Direction = Direction_Up;
+
+    TileRoom->DungeonDoors[Direction_Down].DoorArea.BottomLeft = {7.0f, 0.0f};
+    TileRoom->DungeonDoors[Direction_Down].DoorArea.TopRight = {9.0f, 2.0f};
+    TileRoom->DungeonDoors[Direction_Down].Direction = Direction_Down;
+
+    TileRoom->DungeonDoors[Direction_Left].DoorArea.BottomLeft = {0.0f, 4.5f};
+    TileRoom->DungeonDoors[Direction_Left].DoorArea.TopRight = {2.0f, 6.5f};
+    TileRoom->DungeonDoors[Direction_Left].Direction = Direction_Left;
+
+    TileRoom->DungeonDoors[Direction_Right].DoorArea.BottomLeft = {14.0f, 4.5f};
+    TileRoom->DungeonDoors[Direction_Right].DoorArea.TopRight = {16.0f, 6.5f};
+    TileRoom->DungeonDoors[Direction_Right].Direction = Direction_Right;
 
     return TileRoom;
 }
@@ -419,6 +475,25 @@ IsPointInArea(vector2 Point, area2d Area)
         Point.X <= Area.TopRight.X &&
         Point.Y >= Area.BottomLeft.Y && 
         Point.Y <= Area.TopRight.Y)
+    {
+        Result = true;
+    }
+
+    return Result;
+}
+
+internal bool32
+IsAreaInArea(area2d AreaA, area2d AreaB)
+{
+    bool32 Result = false;
+
+    bool32 XPlanesOverlap = AreaA.TopRight.X > AreaB.BottomLeft.X && 
+                            AreaA.BottomLeft.X < AreaB.TopRight.X;
+
+    bool32 YPlanesOverlap = AreaA.TopRight.Y > AreaB.BottomLeft.Y && 
+                            AreaA.BottomLeft.Y < AreaB.TopRight.Y;
+
+    if (XPlanesOverlap && YPlanesOverlap)
     {
         Result = true;
     }

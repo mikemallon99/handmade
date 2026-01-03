@@ -247,6 +247,7 @@ struct game_state
     real32 PlayerWidth;
     uint32 PlayerHealth;
     uint32 MaxHealth;
+    uint32 KeyInventory;
     bool32 HasSword;
     bool32 PlayerUsingSword;
     int32 SwordUsageFrame;
@@ -266,6 +267,7 @@ struct game_state
     vector2 PlayerDirection;
     uint32 InvincibilityTimer;
     bool32 IFramesFlicker;
+    bool32 BlockPlayerInput;
 
     bmp_file Background;
 
