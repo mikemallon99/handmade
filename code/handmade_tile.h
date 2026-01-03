@@ -39,10 +39,8 @@ struct tile_room
     room_type Type;  
     uint32 *Tiles;
 
-    tile_map_position *Up;
-    tile_map_position *Down;
-    tile_map_position *Left;
-    tile_map_position *Right;
+    tile_map_position RoomConnector[4];
+    bool32 IsConnectorActive[4];
 
     tile_map_position Door;
 

@@ -247,17 +247,6 @@ TruncatePosition(tile_map *TileMap, tile_map_position Pos)
 }
 
 internal bool32
-IsPointOffscreen(tile_map *TileMap, tile_map_position Pos)
-{
-    bool32 IsOffscreen = (Pos.Pos.X > (real32)TileMap->RoomWidth ||
-                          Pos.Pos.X < 0.0f ||
-                          Pos.Pos.Y > (real32)TileMap->RoomHeight ||
-                          Pos.Pos.Y < 0.0f);
-
-    return IsOffscreen;
-}
-
-internal bool32
 IsOnSameTile(tile_map_position PosA, tile_map_position PosB)
 {
     bool32 SameTile = (PosA.Pos.X == PosB.Pos.X &&
@@ -496,6 +485,63 @@ IsAreaInArea(area2d AreaA, area2d AreaB)
     if (XPlanesOverlap && YPlanesOverlap)
     {
         Result = true;
+    }
+
+    return Result;
+}
+
+internal bool32
+IsPointOffscreen(tile_map *TileMap, tile_map_position Pos)
+{
+    bool32 IsOffscreen = (Pos.Pos.X > (real32)TileMap->RoomWidth ||
+                          Pos.Pos.X < 0.0f ||
+                          Pos.Pos.Y > (real32)TileMap->RoomHeight ||
+                          Pos.Pos.Y < 0.0f);
+
+    return IsOffscreen;
+}
+
+internal bool32
+IsAreaOffscreen(tile_map *TileMap, area2d Area)
+{
+    bool32 Result = false;
+
+    if (Area.BottomLeft.X < 0.0f ||
+        Area.TopRight.X > (real32)TileMap->RoomWidth ||
+        Area.BottomLeft.Y < 0.0f ||
+        Area.TopRight.Y > (real32)TileMap->RoomHeight)
+    {
+        Result = true;
+    }
+
+    return Result;
+}
+
+internal direction
+GetOffscreenDirection(tile_map *TileMap, area2d Area)
+{
+    direction Result;
+
+    if (Area.BottomLeft.X < 0.0f)
+    {
+        Result = Direction_Left;
+    }
+    else if (Area.TopRight.X > (real32)TileMap->RoomWidth)
+    {
+        Result = Direction_Right;
+    }
+    else if (Area.BottomLeft.Y < 0.0f)
+    {
+        Result = Direction_Down;
+    }
+    else if (Area.TopRight.Y > (real32)TileMap->RoomHeight)
+    {
+        Result = Direction_Up;
+    }
+    else
+    {
+        Assert(0);
+        Result = Direction_Up;
     }
 
     return Result;

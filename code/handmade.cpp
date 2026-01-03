@@ -198,67 +198,30 @@ GetNewPlayerPos(game_state *GameState, world_position PlayerP, real32 dtForFrame
     tile_room *TileRoom = GetTileRoom(TileMap, NewPlayerOrigin.RoomID);
     bool32 SkipCollisions = false;
     bool32 UpdatePosition = true;
-    if (TileRoom->Type == RoomType_Overworld)
+
+    // TODO: Eventually make it so player just uses area2d as hitbox
+    area2d PlayerArea = {};
+    PlayerArea.BottomLeft.X = NewPlayerLeft.Pos.X;
+    PlayerArea.BottomLeft.Y = NewPlayerP.Pos.Y;
+    PlayerArea.TopRight.X = NewPlayerRight.Pos.X;
+    PlayerArea.TopRight.Y = NewPlayerUp.Pos.Y;
+
+    if (IsAreaOffscreen(TileMap, PlayerArea))
     {
-        if (IsPointOffscreen(TileMap, NewPlayerUp))
+        direction DirectionIndex = GetOffscreenDirection(TileMap, PlayerArea);
+        if (TileRoom->IsConnectorActive[DirectionIndex])
         {
             SkipCollisions = true;
-            if (TileRoom->Up)
-            {
-                NewPlayerP = *TileRoom->Up;
-            }
-            else
-            {
-                UpdatePosition = false;
-            }
+            NewPlayerP = TileRoom->RoomConnector[DirectionIndex];
         }
-        // NOTE: Regular center point is player down
-        else if (IsPointOffscreen(TileMap, NewPlayerP))
+        else
         {
-            SkipCollisions = true;
-            if (TileRoom->Down)
-            {
-                NewPlayerP = *TileRoom->Down;
-            }
-            else
-            {
-                UpdatePosition = false;
-            }
-        }
-        else if (IsPointOffscreen(TileMap, NewPlayerLeft))
-        {
-            SkipCollisions = true;
-            if (TileRoom->Left)
-            {
-                NewPlayerP = *TileRoom->Left;
-            }
-            else
-            {
-                UpdatePosition = false;
-            }
-        }
-        else if (IsPointOffscreen(TileMap, NewPlayerRight))
-        {
-            SkipCollisions = true;
-            if (TileRoom->Right)
-            {
-                NewPlayerP = *TileRoom->Right;
-            }
-            else
-            {
-                UpdatePosition = false;
-            }
+            UpdatePosition = false;
         }
     }
-    else if (TileRoom->Type == RoomType_Dungeon)
-    {
-        // TODO: Eventually make it so player just uses area2d as hitbox
-        area2d PlayerArea = {};
-        PlayerArea.BottomLeft.X = NewPlayerLeft.Pos.X;
-        PlayerArea.BottomLeft.Y = NewPlayerP.Pos.Y;
-        PlayerArea.TopRight.X = NewPlayerRight.Pos.X;
-        PlayerArea.TopRight.Y = NewPlayerUp.Pos.Y;
 
+    if (TileRoom->Type == RoomType_Dungeon)
+    {
         for (int32 DoorIndex = 0;
              DoorIndex < 4;
              DoorIndex++)
@@ -1245,16 +1208,17 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         // SPAWN ROOM INIT
 
-        tile_room *TileRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, (char *)HardcodedMap, Room_Overworld_Spawn);
-        TileRoom->Right = PushStruct(&GameState->WorldArena, tile_map_position);
-        TileRoom->Right->RoomID = Room_Overworld_Bushes;
-        TileRoom->Right->Pos.X = 0.5f;
-        TileRoom->Right->Pos.Y = 5.5f;
+        tile_room *TileRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, 
+                                                (char *)HardcodedMap, Room_Overworld_Spawn);
+        TileRoom->IsConnectorActive[Direction_Right] = true;
+        TileRoom->RoomConnector[Direction_Right].RoomID = Room_Overworld_Bushes;
+        TileRoom->RoomConnector[Direction_Right].Pos.X = 0.5f;
+        TileRoom->RoomConnector[Direction_Right].Pos.Y = 5.5f;
 
-        TileRoom->Up = PushStruct(&GameState->WorldArena, tile_map_position);
-        TileRoom->Up->RoomID = Room_Dungeon1_Entrance;
-        TileRoom->Up->Pos.X = 8.0f;
-        TileRoom->Up->Pos.Y = 2.5f;
+        TileRoom->IsConnectorActive[Direction_Up] = true;
+        TileRoom->RoomConnector[Direction_Up].RoomID = Room_Dungeon1_Entrance;
+        TileRoom->RoomConnector[Direction_Up].Pos.X = 8.0f;
+        TileRoom->RoomConnector[Direction_Up].Pos.Y = 2.5f;
 
         TileRoom->Door.Pos.X = (real32)TileMap->RoomWidth / 2.0f;
         TileRoom->Door.Pos.Y = 0.5f;
@@ -1302,12 +1266,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         // BUSH ROOM INIT
 
-        TileRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, (char *)HardcodedMap2, Room_Overworld_Bushes);
+        TileRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, 
+                                     (char *)HardcodedMap2, Room_Overworld_Bushes);
 
-        TileRoom->Left = PushStruct(&GameState->WorldArena, tile_map_position);
-        TileRoom->Left->RoomID = Room_Overworld_Spawn;
-        TileRoom->Left->Pos.X = 15.5f;
-        TileRoom->Left->Pos.Y = 5.5f;
+        TileRoom->IsConnectorActive[Direction_Left] = true;
+        TileRoom->RoomConnector[Direction_Left].RoomID = Room_Overworld_Spawn;
+        TileRoom->RoomConnector[Direction_Left].Pos.X = 15.5f;
+        TileRoom->RoomConnector[Direction_Left].Pos.Y = 5.5f;
 
         entity *Octorok4 = GetNewEntityInRoom(TileMap, Room_Overworld_Bushes);
         SetEntityTypeDefaults(Octorok4, EntityType_Octorok);
@@ -1319,11 +1284,12 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         // OLD MAN CAVE ROOM INIT
 
-        tile_room *CaveRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, (char *)CaveMap, Room_Overworld_SwordCave);
-        CaveRoom->Down = PushStruct(&GameState->WorldArena, tile_map_position);
-        CaveRoom->Down->RoomID = Room_Overworld_Spawn;
-        CaveRoom->Down->Pos.X = 4.5f;
-        CaveRoom->Down->Pos.Y = 8.5f;
+        tile_room *CaveRoom = LoadOverworldRoom(&GameState->WorldArena, TileMap, 
+                                                (char *)CaveMap, Room_Overworld_SwordCave);
+        CaveRoom->IsConnectorActive[Direction_Down] = true;
+        CaveRoom->RoomConnector[Direction_Down].RoomID = Room_Overworld_Spawn;
+        CaveRoom->RoomConnector[Direction_Down].Pos.X = 4.5f;
+        CaveRoom->RoomConnector[Direction_Down].Pos.Y = 8.5f;
 
         entity *OldMan = GetNewEntityInRoom(CaveRoom);
         if (OldMan)
@@ -1362,16 +1328,16 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         tile_room *DungeonRoom = LoadDungeonRoom(&GameState->WorldArena, TileMap, (char *)DungeonRoom1, Room_Dungeon1_Entrance);
 
-        DungeonRoom->Down = PushStruct(&GameState->WorldArena, tile_map_position);
-        DungeonRoom->Down->RoomID = Room_Overworld_Spawn;
-        DungeonRoom->Down->Pos.X = 9.0f;
-        DungeonRoom->Down->Pos.Y = 10.0f;
+        DungeonRoom->IsConnectorActive[Direction_Down] = true;
+        DungeonRoom->RoomConnector[Direction_Down].RoomID = Room_Overworld_Spawn;
+        DungeonRoom->RoomConnector[Direction_Down].Pos.X = 9.0f;
+        DungeonRoom->RoomConnector[Direction_Down].Pos.Y = 10.0f;
         DungeonRoom->DungeonDoors[Direction_Down].DoorState = Dungeon_Door_Open;
 
-        DungeonRoom->Up = PushStruct(&GameState->WorldArena, tile_map_position);
-        DungeonRoom->Up->RoomID = Room_Dungeon1_Two;
-        DungeonRoom->Up->Pos.X = 8.0f;
-        DungeonRoom->Up->Pos.Y = 2.5f;
+        DungeonRoom->IsConnectorActive[Direction_Up] = true;
+        DungeonRoom->RoomConnector[Direction_Up].RoomID = Room_Dungeon1_Two;
+        DungeonRoom->RoomConnector[Direction_Up].Pos.X = 8.0f;
+        DungeonRoom->RoomConnector[Direction_Up].Pos.Y = 2.5f;
         DungeonRoom->DungeonDoors[Direction_Up].DoorState = Dungeon_Door_Locked;
 
         entity *BasicKey = GetNewEntityInRoom(DungeonRoom);
@@ -1385,10 +1351,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         // DUNGEON 2 TEST ROOM INIT
 
         DungeonRoom = LoadDungeonRoom(&GameState->WorldArena, TileMap, (char *)DungeonRoom1, Room_Dungeon1_Two);
-        DungeonRoom->Down = PushStruct(&GameState->WorldArena, tile_map_position);
-        DungeonRoom->Down->RoomID = Room_Dungeon1_Entrance;
-        DungeonRoom->Down->Pos.X = 8.0f;
-        DungeonRoom->Down->Pos.Y = 8.5f;
+        DungeonRoom->IsConnectorActive[Direction_Down] = true;
+        DungeonRoom->RoomConnector[Direction_Down].RoomID = Room_Dungeon1_Entrance;
+        DungeonRoom->RoomConnector[Direction_Down].Pos.X = 8.0f;
+        DungeonRoom->RoomConnector[Direction_Down].Pos.Y = 8.5f;
         DungeonRoom->DungeonDoors[Direction_Down].DoorState = Dungeon_Door_Shut;
 
         entity *DungeonOctorok = GetNewEntityInRoom(TileMap, Room_Dungeon1_Two);
