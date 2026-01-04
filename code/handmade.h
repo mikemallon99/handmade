@@ -242,10 +242,10 @@ struct game_state
     world *World;
 
     tile_map_position PlayerP;
-    area2d PlayerArea;
+    // NOTE: This is mostly for floor, may need another for hitting enemies
     real32 PlayerSpeed;
-    real32 PlayerHeight;
-    real32 PlayerWidth;
+    area2d PlayerHitbox;
+    area2d PlayerHitboxCache;
     int32 PlayerHealth;
     uint32 MaxHealth;
     uint32 KeyInventory;

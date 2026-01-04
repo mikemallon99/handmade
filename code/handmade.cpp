@@ -194,7 +194,7 @@ DrawRectangleHollow(game_offscreen_buffer *Buffer,
             // Just 2 pixels on the vertical line
             uint32 *Pixel = (uint32 *)Row;
             *Pixel = Color;
-            *Pixel += MaxX - MinX;
+            Pixel += MaxX - MinX - 1;
             *Pixel = Color;
         }
         Row += Buffer->Pitch;
@@ -232,7 +232,7 @@ DrawDebugArea2D(game_offscreen_buffer *Buffer, tile_map *TileMap, real32 PlayAre
 
     // Problem is our areas exist from bottom left to top right
     // But drawing rectangle goes from top left to bottom right
-    DrawRectangle(Buffer, TopLeftX, TopLeftY, BottomRightX, BottomRightY, 
+    DrawRectangleHollow(Buffer, TopLeftX, TopLeftY, BottomRightX, BottomRightY, 
                         1.0f, 0.0f, 0.0f);
 }
 
@@ -772,8 +772,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->PlayerP.Pos.X = 5.0f;
         GameState->PlayerP.Pos.Y = 5.0f;
         GameState->PlayerP.RoomID = Room_Overworld_Spawn;
-        GameState->PlayerArea = GetArea2D(GameState->PlayerP.Pos, 
-                                          GameState->PlayerWidth, GameState->PlayerHeight);
+        real32 HitboxWidth = 1.0f;
+        real32 HitboxHeight = 0.5f;
+        GameState->PlayerHitbox = {};
+        GameState->PlayerHitbox.BottomLeft.X = 0.1f;
+        GameState->PlayerHitbox.TopRight.X = HitboxWidth - 0.1f;
+        GameState->PlayerHitbox.TopRight.Y = HitboxHeight;
+        GameState->PlayerHitboxCache = GameState->PlayerHitbox;
 
         // SPRITE DATA LOADING
 
@@ -1002,9 +1007,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     world *World = GameState->World;
     tile_map *TileMap = World->TileMap;
 
-    GameState->PlayerWidth = 1.0f;
-    GameState->PlayerHeight = 1.0f;
-
     GameState->PlayerSpeed = 0.0f;
     for (int ControllerIndex = 0;
          ControllerIndex < ArrayCount(Input->Controllers);
@@ -1172,11 +1174,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     bool32 SkipCollisions = false;
     bool32 UpdatePosition = true;
 
-    area2d NewPlayerArea = GetArea2D(NewPlayerOrigin.Pos, GameState->PlayerWidth, GameState->PlayerHeight);
+    // Take the original hitbox and offset it by position
+    area2d NewPlayerHitbox = GameState->PlayerHitbox;
+    NewPlayerHitbox.BottomLeft = NewPlayerHitbox.BottomLeft + NewPlayerOrigin.Pos;
+    NewPlayerHitbox.TopRight = NewPlayerHitbox.TopRight + NewPlayerOrigin.Pos;
 
-    if (IsAreaOffscreen(TileMap, NewPlayerArea))
+    if (IsAreaOffscreen(TileMap, NewPlayerHitbox))
     {
-        direction DirectionIndex = GetOffscreenDirection(TileMap, NewPlayerArea);
+        direction DirectionIndex = GetOffscreenDirection(TileMap, NewPlayerHitbox);
         if (TileRoom->IsConnectorActive[DirectionIndex])
         {
             SkipCollisions = true;
@@ -1195,7 +1200,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
              DoorIndex++)
         {
             dungeon_door *DungeonDoor = &TileRoom->DungeonDoors[DoorIndex];
-            if (IsAreaInArea(NewPlayerArea, DungeonDoor->DoorArea))
+            if (IsAreaInArea(NewPlayerHitbox, DungeonDoor->DoorArea))
             {
                 if (DungeonDoor->DoorState == Dungeon_Door_Open)
                 {
@@ -1214,12 +1219,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     // Collisions
     if (!SkipCollisions)
     {
-        vector2 BottomLeft = NewPlayerArea.BottomLeft;
-        vector2 BottomRight = NewPlayerArea.BottomLeft;
-        BottomRight.X += GameState->PlayerWidth;
-        vector2 TopLeft = NewPlayerArea.BottomLeft;
-        TopLeft.Y += GameState->PlayerHeight;
-        vector2 TopRight = NewPlayerArea.TopRight;
+        vector2 BottomLeft = NewPlayerHitbox.BottomLeft;
+        vector2 BottomRight = {};
+        BottomRight.X = NewPlayerHitbox.TopRight.X;
+        BottomRight.Y = NewPlayerHitbox.BottomLeft.Y;
+        vector2 TopLeft = {};
+        TopLeft.X = NewPlayerHitbox.BottomLeft.X;
+        TopLeft.Y = NewPlayerHitbox.TopRight.Y;
+        vector2 TopRight = NewPlayerHitbox.TopRight;
 
         // Wall Collisions
         if (IsTileRoomPointEmpty(TileMap, TileRoom, BottomLeft) &&
@@ -1245,8 +1252,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             real32 Tolerance = 0.01f;
             if (PlayerDir == Direction_Up)
             {
-                real32 DifferenceY = FloorReal32ToUInt32(NewPlayerArea.TopRight.Y) - 
-                                        GameState->PlayerArea.TopRight.Y;
+                real32 DifferenceY = FloorReal32ToUInt32(NewPlayerHitbox.TopRight.Y) - 
+                                        GameState->PlayerHitboxCache.TopRight.Y;
                 if (DifferenceY > Tolerance)
                 {
                     NewPlayerOrigin = GameState->PlayerP;
@@ -1256,8 +1263,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             }
             else if (PlayerDir == Direction_Down)
             {
-                real32 DifferenceY = GameState->PlayerArea.BottomLeft.Y - 
-                                        FloorReal32ToUInt32(GameState->PlayerArea.BottomLeft.Y);
+                real32 DifferenceY = GameState->PlayerHitboxCache.BottomLeft.Y - 
+                                        FloorReal32ToUInt32(GameState->PlayerHitboxCache.BottomLeft.Y);
                 if (DifferenceY > Tolerance)
                 {
                     NewPlayerOrigin = GameState->PlayerP;
@@ -1267,8 +1274,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             }
             else if (PlayerDir == Direction_Right)
             {
-                real32 DifferenceX = FloorReal32ToUInt32(NewPlayerArea.TopRight.X) - 
-                                        GameState->PlayerArea.TopRight.X;
+                real32 DifferenceX = FloorReal32ToUInt32(NewPlayerHitbox.TopRight.X) - 
+                                        GameState->PlayerHitboxCache.TopRight.X;
                 if (DifferenceX > Tolerance)
                 {
                     NewPlayerOrigin = GameState->PlayerP;
@@ -1278,8 +1285,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             }
             else if (PlayerDir == Direction_Left)
             {
-                real32 DifferenceX = GameState->PlayerArea.BottomLeft.X - 
-                                        FloorReal32ToUInt32(GameState->PlayerArea.BottomLeft.X);
+                real32 DifferenceX = GameState->PlayerHitboxCache.BottomLeft.X - 
+                                        FloorReal32ToUInt32(GameState->PlayerHitboxCache.BottomLeft.X);
                 if (DifferenceX > Tolerance)
                 {
                     NewPlayerOrigin = GameState->PlayerP;
@@ -1298,9 +1305,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     if (UpdatePosition)
     {
         GameState->PlayerP = NewPlayerOrigin;
-        // NOTE: Need to be careful about this PlayerArea guy being outdated
-        GameState->PlayerArea = GetArea2D(NewPlayerOrigin.Pos, 
-                                          GameState->PlayerWidth, GameState->PlayerHeight);
+        // NOTE: Need to be careful about this PlayerHitbox guy being outdated
+        GameState->PlayerHitboxCache = GameState->PlayerHitbox;
+        NewPlayerHitbox.BottomLeft = NewPlayerHitbox.BottomLeft + GameState->PlayerP.Pos;
+        NewPlayerHitbox.TopRight = NewPlayerHitbox.TopRight + GameState->PlayerP.Pos;
     }
 
     if (GameState->PlayerUsingSword)
@@ -1600,7 +1608,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     }
 
     // DrawDebugPoint(Buffer, TileMap, PlayAreaY, GameState->PlayerP);
-    DrawDebugArea2D(Buffer, TileMap, PlayAreaY, GameState->PlayerArea);
+    DrawDebugArea2D(Buffer, TileMap, PlayAreaY, GameState->PlayerHitboxCache);
 
     // if (GameState->PlayerUsingSword)
     // {
