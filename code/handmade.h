@@ -241,7 +241,7 @@ struct game_state
     uint32 FrameCounter;
     world *World;
 
-    world_position PlayerP;
+    tile_map_position PlayerP;
     real32 PlayerSpeed;
     real32 PlayerHeight;
     real32 PlayerWidth;
@@ -255,11 +255,11 @@ struct game_state
     entity *PickUpEntity;
     int32 PickupFrame;
     int32 TotalPickupFrames;
-    world_position BoomerangP;
+    tile_map_position BoomerangP;
     vector2 BoomerangDirection;
     bool32 PlayerUsingBoomerang;
     int32 BoomerangUsageFrame;
-    world_position BoomerangStartP;
+    tile_map_position BoomerangStartP;
     real32 BoomerangMaxDistance;
     bool32 BoomerangReturning;
     real32 BoomerangSpeed;

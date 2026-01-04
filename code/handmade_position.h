@@ -59,13 +59,6 @@ enum room_id
 struct tile_map_position
 {
     room_id RoomID;
-
-    vector2 Pos;
-};
-
-struct world_position
-{
-    room_id RoomID;
     vector2 Pos;
 };
 

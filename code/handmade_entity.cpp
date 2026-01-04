@@ -198,21 +198,6 @@ UpdateBasicKey(game_state *GameState, entity *BasicKey)
 internal void
 UpdatePushBlock(game_state *GameState, entity *PushBlock)
 {
-    vector2 PlayerRoomPos;
-    PlayerRoomPos.X = GameState->PlayerP.Pos.X;
-    PlayerRoomPos.Y = GameState->PlayerP.Pos.Y;
-    bool32 IsColliding = IsEntityCollidingWithPlayer(PushBlock, PlayerRoomPos);
-    if (IsColliding)
-    {
-        // Need to see if push block can move to the next space
-        vector2 PushDirection = GameState->PlayerDirection;
-        vector2 NewPosition = PushBlock->P + PushDirection;
-        tile_map *TileMap = GameState->World->TileMap;
-        if (IsTileRoomPointEmpty(TileMap, PushBlock->Room, NewPosition))
-        {
-            PushBlock->P = NewPosition;
-        }
-    }
 }
 
 internal void
@@ -400,5 +385,27 @@ UpdateEntity(game_state *GameState, entity *Entity)
     else if (Entity->Type == EntityType_PushBlock)
     {
         UpdatePushBlock(GameState, Entity);
+    }
+}
+
+internal void
+HandleCollisionPushBlock(game_state *GameState, entity *Entity)
+{
+    // Need to see if push block can move to the next space
+    vector2 PushDirection = GameState->PlayerDirection;
+    vector2 NewPosition = Entity->P + PushDirection;
+    tile_map *TileMap = GameState->World->TileMap;
+    if (IsTileRoomPointEmpty(TileMap, Entity->Room, NewPosition))
+    {
+        Entity->P = NewPosition;
+    }
+}
+
+internal void
+HandleEntityCollision(game_state *GameState, entity *Entity)
+{
+    if (Entity->Type == EntityType_PushBlock)
+    {
+        HandleCollisionPushBlock(GameState, Entity);
     }
 }
