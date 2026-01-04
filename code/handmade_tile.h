@@ -4,6 +4,8 @@
 #include "handmade_position.h"
 #include "handmade_entity.h"
 
+#define MAX_ENTITIES 32
+
 enum room_type 
 {
     RoomType_Overworld,
@@ -44,7 +46,6 @@ struct tile_room
 
     tile_map_position Door;
 
-    #define MAX_ENTITIES 32
     entity Entities[MAX_ENTITIES];
 
     // Used for dungeons

@@ -52,11 +52,11 @@ Vector2ToDirectionEnum(vector2 *Vector2)
         // Vertical direction is primary
         if (Vector2->Y > 0.0f)
         {
-            DirectionEnum = Direction_Down;
+            DirectionEnum = Direction_Up;
         }
         else
         {
-            DirectionEnum = Direction_Up;
+            DirectionEnum = Direction_Down;
         }
     }
     else
@@ -139,6 +139,68 @@ DrawRectangle(game_offscreen_buffer *Buffer,
     }
 }
 
+internal void
+DrawRectangleHollow(game_offscreen_buffer *Buffer, 
+              real32 RealMinX, real32 RealMinY, real32 RealMaxX, real32 RealMaxY,
+              real32 R, real32 G, real32 B)
+{
+    int32 MinX = RoundReal32ToInt32(RealMinX);
+    int32 MinY = RoundReal32ToInt32(RealMinY);
+    int32 MaxX = RoundReal32ToInt32(RealMaxX);
+    int32 MaxY = RoundReal32ToInt32(RealMaxY);
+
+    uint32 Color = (RoundReal32ToUInt32(R * 255.0f) << 16 |
+                    RoundReal32ToUInt32(G * 255.0f) << 8 |
+                    RoundReal32ToUInt32(B * 255.0f));
+
+    if (MinX < 0)
+    {
+        MinX = 0;
+    }
+    if (MinY < 0)
+    {
+        MinY = 0;
+    }
+    if (MaxX > Buffer->Width)
+    {
+        MaxX = Buffer->Width;
+    }
+    if (MaxY > Buffer->Height)
+    {
+        MaxY = Buffer->Height;
+    }
+
+    uint8 *Row = ((uint8 *)Buffer->Memory + 
+                    MinX*Buffer->BytesPerPixel + 
+                    MinY*Buffer->Pitch);
+    for (int Y = MinY;
+         Y < MaxY;
+         Y++)
+    {
+        // QUESTION: Are we expecting MaxY to be inclusive in other code?
+        if (Y == MinY || Y == MaxY - 1)
+        {
+            // Line straight across
+            uint32 *Pixel = (uint32 *)Row;
+            for(int X = MinX;
+                X < MaxX;
+                X++)
+            {
+                *Pixel++ = Color;
+            }
+        }
+        else
+        {
+            // Just 2 pixels on the vertical line
+            uint32 *Pixel = (uint32 *)Row;
+            *Pixel = Color;
+            *Pixel += MaxX - MinX;
+            *Pixel = Color;
+        }
+        Row += Buffer->Pitch;
+    }
+}
+
 internal vector2
 WorldToScreen(tile_map *TileMap, vector2 WorldPos, uint32 CameraTileX, real32 PlayAreaY)
 {
@@ -157,6 +219,21 @@ DrawDebugPoint(game_offscreen_buffer *Buffer, tile_map *TileMap, real32 PlayArea
 
     DrawRectangle(Buffer, PointX, PointY-2, PointX+2, PointY, 
                     1.0f, 0.0f, 0.0f);
+}
+
+internal void
+DrawDebugArea2D(game_offscreen_buffer *Buffer, tile_map *TileMap, real32 PlayAreaY, area2d Area)
+{
+    // Debug point doesn't account for camera - uses absolute position
+    real32 TopLeftX = TileMap->TileSideInPixels * Area.BottomLeft.X;
+    real32 TopLeftY = PlayAreaY - TileMap->TileSideInPixels * (Area.TopRight.Y - 11.0f);
+    real32 BottomRightX = TileMap->TileSideInPixels * Area.TopRight.X;
+    real32 BottomRightY = PlayAreaY - TileMap->TileSideInPixels * (Area.BottomLeft.Y - 11.0f);
+
+    // Problem is our areas exist from bottom left to top right
+    // But drawing rectangle goes from top left to bottom right
+    DrawRectangle(Buffer, TopLeftX, TopLeftY, BottomRightX, BottomRightY, 
+                        1.0f, 0.0f, 0.0f);
 }
 
 internal area2d
@@ -444,11 +521,11 @@ DrawMoblin(game_state *GameState, game_offscreen_buffer *Buffer, tile_map *TileM
         bmp_tile *MoblinDirSprite;
         if (MoblinDir == Direction_Up)
         {
-            MoblinDirSprite = (bmp_tile *)&MoblinSprites->Front;
+            MoblinDirSprite = (bmp_tile *)&MoblinSprites->Back;
         }
         else if (MoblinDir == Direction_Down)
         {
-            MoblinDirSprite = (bmp_tile *)&MoblinSprites->Back;
+            MoblinDirSprite = (bmp_tile *)&MoblinSprites->Front;
         }
         else if (MoblinDir == Direction_Left)
         {
@@ -483,11 +560,11 @@ DrawMoblinProjectile(game_state *GameState, game_offscreen_buffer *Buffer, tile_
     bmp_tile *ArrowSprite;
     if (ArrowDir == Direction_Up)
     {
-        ArrowSprite = &MoblinSprites->ArrowFront;
+        ArrowSprite = &MoblinSprites->ArrowBack;
     }
     else if (ArrowDir == Direction_Down)
     {
-        ArrowSprite = &MoblinSprites->ArrowBack;
+        ArrowSprite = &MoblinSprites->ArrowFront;
     }
     else if (ArrowDir == Direction_Left)
     {
@@ -695,6 +772,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->PlayerP.Pos.X = 5.0f;
         GameState->PlayerP.Pos.Y = 5.0f;
         GameState->PlayerP.RoomID = Room_Overworld_Spawn;
+        GameState->PlayerArea = GetArea2D(GameState->PlayerP.Pos, 
+                                          GameState->PlayerWidth, GameState->PlayerHeight);
 
         // SPRITE DATA LOADING
 
@@ -923,7 +1002,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     world *World = GameState->World;
     tile_map *TileMap = World->TileMap;
 
-    GameState->PlayerWidth = 0.75f;
+    GameState->PlayerWidth = 1.0f;
     GameState->PlayerHeight = 1.0f;
 
     GameState->PlayerSpeed = 0.0f;
@@ -1159,46 +1238,103 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
         else
         {
-            UpdatePosition = false;
-        }
-
-        if (GameState->PlayerUsingSword)
-        {
-            tile_map_position SwordPoint = NewPlayerOrigin;
-            int32 PixelOffsetX = 0;
-            int32 PixelOffsetY = 0;
+            // Check if theres a gap between area2d and the wall
+            // Assumption is that this behavior only happens on tile map collisions
+            bool32 FoundGap = false;
             direction PlayerDir = Vector2ToDirectionEnum(&GameState->PlayerDirection);
+            real32 Tolerance = 0.01f;
             if (PlayerDir == Direction_Up)
             {
-                // NOTE: XY values taken from sprite sheet
-                PixelOffsetX = 26 - 18;
-                PixelOffsetY = 73 - 62;
-            }
-            else if (PlayerDir == Direction_Right)
-            {
-                PixelOffsetX = 44 - 18;
-                PixelOffsetY = 86 - 92;
+                real32 DifferenceY = FloorReal32ToUInt32(NewPlayerArea.TopRight.Y) - 
+                                        GameState->PlayerArea.TopRight.Y;
+                if (DifferenceY > Tolerance)
+                {
+                    NewPlayerOrigin = GameState->PlayerP;
+                    NewPlayerOrigin.Pos.Y += DifferenceY - Tolerance;
+                    FoundGap = true;
+                }
             }
             else if (PlayerDir == Direction_Down)
             {
-                PixelOffsetX = 24 - 18;
-                PixelOffsetY = 97 - 124;
+                real32 DifferenceY = GameState->PlayerArea.BottomLeft.Y - 
+                                        FloorReal32ToUInt32(GameState->PlayerArea.BottomLeft.Y);
+                if (DifferenceY > Tolerance)
+                {
+                    NewPlayerOrigin = GameState->PlayerP;
+                    NewPlayerOrigin.Pos.Y -= DifferenceY - Tolerance;
+                    FoundGap = true;
+                }
+            }
+            else if (PlayerDir == Direction_Right)
+            {
+                real32 DifferenceX = FloorReal32ToUInt32(NewPlayerArea.TopRight.X) - 
+                                        GameState->PlayerArea.TopRight.X;
+                if (DifferenceX > Tolerance)
+                {
+                    NewPlayerOrigin = GameState->PlayerP;
+                    NewPlayerOrigin.Pos.X += DifferenceX - Tolerance;
+                    FoundGap = true;
+                }
             }
             else if (PlayerDir == Direction_Left)
             {
-                // This math here is weird cuz of the flippy
-                PixelOffsetX = -1*(44 - 18) + 16;
-                PixelOffsetY = 86 - 92;
+                real32 DifferenceX = GameState->PlayerArea.BottomLeft.X - 
+                                        FloorReal32ToUInt32(GameState->PlayerArea.BottomLeft.X);
+                if (DifferenceX > Tolerance)
+                {
+                    NewPlayerOrigin = GameState->PlayerP;
+                    NewPlayerOrigin.Pos.X -= DifferenceX - Tolerance;
+                    FoundGap = true;
+                }
             }
-            SwordPoint.Pos.X += (real32)PixelOffsetX / TileMap->MetersToPixels;
-            SwordPoint.Pos.Y -= (real32)PixelOffsetY / TileMap->MetersToPixels;
-            GameState->SwordPoint = SwordPoint;
+
+            if (!FoundGap)
+            {
+                UpdatePosition = false;
+            }
         }
     }
 
     if (UpdatePosition)
     {
         GameState->PlayerP = NewPlayerOrigin;
+        // NOTE: Need to be careful about this PlayerArea guy being outdated
+        GameState->PlayerArea = GetArea2D(NewPlayerOrigin.Pos, 
+                                          GameState->PlayerWidth, GameState->PlayerHeight);
+    }
+
+    if (GameState->PlayerUsingSword)
+    {
+        tile_map_position SwordPoint = GameState->PlayerP;
+        int32 PixelOffsetX = 0;
+        int32 PixelOffsetY = 0;
+        direction PlayerDir = Vector2ToDirectionEnum(&GameState->PlayerDirection);
+        if (PlayerDir == Direction_Up)
+        {
+            // NOTE: XY values taken from sprite sheet
+            // TODO: Make sure this works, messed up cuz direction bug
+            PixelOffsetX = 24 - 18;
+            PixelOffsetY = 97 - 124;
+        }
+        else if (PlayerDir == Direction_Right)
+        {
+            PixelOffsetX = 44 - 18;
+            PixelOffsetY = 86 - 92;
+        }
+        else if (PlayerDir == Direction_Down)
+        {
+            PixelOffsetX = 26 - 18;
+            PixelOffsetY = 73 - 62;
+        }
+        else if (PlayerDir == Direction_Left)
+        {
+            // This math here is weird cuz of the flippy
+            PixelOffsetX = -1*(44 - 18) + 16;
+            PixelOffsetY = 86 - 92;
+        }
+        SwordPoint.Pos.X += (real32)PixelOffsetX / TileMap->MetersToPixels;
+        SwordPoint.Pos.Y -= (real32)PixelOffsetY / TileMap->MetersToPixels;
+        GameState->SwordPoint = SwordPoint;
     }
 
     // Update all entities
@@ -1393,11 +1529,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         if (PlayerDir == Direction_Up)
         {
-            LinkSprite = &GameState->LinkSprites.UseSwordFront[SwordSpriteIndex];
+            LinkSprite = &GameState->LinkSprites.UseSwordBack[SwordSpriteIndex];
         }
         else if (PlayerDir == Direction_Down)
         {
-            LinkSprite = &GameState->LinkSprites.UseSwordBack[SwordSpriteIndex];
+            LinkSprite = &GameState->LinkSprites.UseSwordFront[SwordSpriteIndex];
         }
         else if (PlayerDir == Direction_Left)
         {
@@ -1417,11 +1553,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     {
         if (PlayerDir == Direction_Up)
         {
-            LinkSprite = &GameState->LinkSprites.Front[GameState->WalkStep];
+            LinkSprite = &GameState->LinkSprites.Back[GameState->WalkStep];
         }
         else if (PlayerDir == Direction_Down)
         {
-            LinkSprite = &GameState->LinkSprites.Back[GameState->WalkStep];
+            LinkSprite = &GameState->LinkSprites.Front[GameState->WalkStep];
         }
         else if (PlayerDir == Direction_Left)
         {
@@ -1463,7 +1599,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         DrawBMPTile(LinkSprite, Buffer, SpriteMinX, SpriteMinY);
     }
 
-    DrawDebugPoint(Buffer, TileMap, PlayAreaY, GameState->PlayerP);
+    // DrawDebugPoint(Buffer, TileMap, PlayAreaY, GameState->PlayerP);
+    DrawDebugArea2D(Buffer, TileMap, PlayAreaY, GameState->PlayerArea);
 
     // if (GameState->PlayerUsingSword)
     // {
@@ -1512,7 +1649,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     uint8 TestString[] = "IT'S DANGEROUS TO GO ALONE, 420";
     DrawString(Buffer, &GameState->TextTileset, TestString, 0.0f, 8.0f);
 
-    DrawBMPTile(&GameState->TextTileset.Tiles[GameState->PlayerHealth], Buffer, 0, 16);
+    if (GameState->PlayerHealth >= 0)
+    {
+        DrawBMPTile(&GameState->TextTileset.Tiles[GameState->PlayerHealth], Buffer, 0, 16);
+    }
 
     // Draw all entities
     for (uint32 EntityIndex = 0; EntityIndex < MAX_ENTITIES; EntityIndex++)

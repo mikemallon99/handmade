@@ -242,10 +242,11 @@ struct game_state
     world *World;
 
     tile_map_position PlayerP;
+    area2d PlayerArea;
     real32 PlayerSpeed;
     real32 PlayerHeight;
     real32 PlayerWidth;
-    uint32 PlayerHealth;
+    int32 PlayerHealth;
     uint32 MaxHealth;
     uint32 KeyInventory;
     bool32 HasSword;
