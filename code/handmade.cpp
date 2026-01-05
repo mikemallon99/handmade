@@ -778,7 +778,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->PlayerHitbox.BottomLeft.X = 0.1f;
         GameState->PlayerHitbox.TopRight.X = HitboxWidth - 0.1f;
         GameState->PlayerHitbox.TopRight.Y = HitboxHeight;
-        GameState->PlayerHitboxCache = GameState->PlayerHitbox;
+        GameState->PlayerHitboxCache.BottomLeft = GameState->PlayerHitbox.BottomLeft + 
+                                                    GameState->PlayerP.Pos;
+        GameState->PlayerHitboxCache.TopRight = GameState->PlayerHitbox.TopRight + 
+                                                    GameState->PlayerP.Pos;
 
         // SPRITE DATA LOADING
 
@@ -898,7 +901,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         TileRoom->IsConnectorActive[Direction_Left] = true;
         TileRoom->RoomConnector[Direction_Left].RoomID = Room_Overworld_Spawn;
-        TileRoom->RoomConnector[Direction_Left].Pos.X = 15.5f;
+        TileRoom->RoomConnector[Direction_Left].Pos.X = 15.0f;
         TileRoom->RoomConnector[Direction_Left].Pos.Y = 5.5f;
 
         entity *Octorok4 = GetNewEntityInRoom(TileMap, Room_Overworld_Bushes);
@@ -1234,14 +1237,35 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             IsTileRoomPointEmpty(TileMap, TileRoom, TopLeft) &&
             IsTileRoomPointEmpty(TileMap, TileRoom, TopRight))
         {
-            if (!IsOnSameTile(InitialPlayerOrigin, NewPlayerOrigin))
+            uint32 TileValueBottomLeft = GetTileValue(TileMap, TileRoom->RoomID, BottomLeft);
+            uint32 TileValueBottomRight = GetTileValue(TileMap, TileRoom->RoomID, BottomRight);
+            uint32 TileValueTopLeft = GetTileValue(TileMap, TileRoom->RoomID, TopLeft);
+            uint32 TileValueTopRight = GetTileValue(TileMap, TileRoom->RoomID, TopRight);
+            if (TileValueBottomLeft == OW_Entrance)
             {
-                uint32 TileValue = GetTileValue(TileMap, NewPlayerOrigin);
-                if (TileValue == OW_Entrance)
-                {
-                    NewPlayerOrigin = GetDoorDestination(TileMap, NewPlayerOrigin);
-                }
+                NewPlayerOrigin = GetDoorDestination(TileMap, TileRoom, BottomLeft);
             }
+            else if (TileValueBottomRight == OW_Entrance)
+            {
+                NewPlayerOrigin = GetDoorDestination(TileMap, TileRoom, BottomRight);
+            }
+            else if (TileValueTopLeft == OW_Entrance)
+            {
+                NewPlayerOrigin = GetDoorDestination(TileMap, TileRoom, TopLeft);
+            }
+            else if (TileValueTopRight == OW_Entrance)
+            {
+                NewPlayerOrigin = GetDoorDestination(TileMap, TileRoom, TopRight);
+            }
+            // NOTE: Commenting this out cuz i feel like ill understand why it was like this in the future
+            // if (!IsOnSameTile(InitialPlayerOrigin, NewPlayerOrigin))
+            // {
+            //     uint32 TileValue = GetTileValue(TileMap, NewPlayerOrigin);
+            //     if (TileValue == OW_Entrance)
+            //     {
+            //         NewPlayerOrigin = GetDoorDestination(TileMap, NewPlayerOrigin);
+            //     }
+            // }
         }
         else
         {
@@ -1306,9 +1330,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     {
         GameState->PlayerP = NewPlayerOrigin;
         // NOTE: Need to be careful about this PlayerHitbox guy being outdated
-        GameState->PlayerHitboxCache = GameState->PlayerHitbox;
-        NewPlayerHitbox.BottomLeft = NewPlayerHitbox.BottomLeft + GameState->PlayerP.Pos;
-        NewPlayerHitbox.TopRight = NewPlayerHitbox.TopRight + GameState->PlayerP.Pos;
+        GameState->PlayerHitboxCache.BottomLeft = GameState->PlayerHitbox.BottomLeft + GameState->PlayerP.Pos;
+        GameState->PlayerHitboxCache.TopRight = GameState->PlayerHitbox.TopRight + GameState->PlayerP.Pos;
     }
 
     if (GameState->PlayerUsingSword)

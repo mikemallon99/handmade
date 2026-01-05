@@ -118,12 +118,11 @@ GetTileValue(tile_map *TileMap, tile_map_position Pos)
 }
 
 inline tile_map_position
-GetDoorDestination(tile_map *TileMap, tile_map_position Pos)
+GetDoorDestination(tile_map *TileMap, tile_room *TileRoom, vector2 Pos)
 {
     tile_map_position Result;
 
-    Assert(GetTileValue(TileMap, Pos) == OW_Entrance);
-    tile_room *TileRoom = GetTileRoom(TileMap, Pos.RoomID);
+    Assert(GetTileValue(TileMap, TileRoom->RoomID, Pos) == OW_Entrance);
     Result = TileRoom->Door;
 
     return Result;
