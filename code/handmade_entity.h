@@ -68,6 +68,10 @@ struct entity
     // Projectile system
     bool32 IsProjectile;
     uint32 FireFrequency;
+
+    // For Push block
+    bool32 IsSolid;
+    int32 ConsecutiveCollisionCounter;
 };
 
 #endif

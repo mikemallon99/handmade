@@ -843,7 +843,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         TileRoom->IsConnectorActive[Direction_Right] = true;
         TileRoom->RoomConnector[Direction_Right].RoomID = Room_Overworld_Bushes;
         TileRoom->RoomConnector[Direction_Right].Pos.X = 0.5f;
-        TileRoom->RoomConnector[Direction_Right].Pos.Y = 5.5f;
+        // TODO: Make it so when u enter the room next door u keep the same xy
+        TileRoom->RoomConnector[Direction_Right].Pos.Y = 5.0f;
 
         TileRoom->IsConnectorActive[Direction_Up] = true;
         TileRoom->RoomConnector[Direction_Up].RoomID = Room_Dungeon1_Entrance;
@@ -902,7 +903,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         TileRoom->IsConnectorActive[Direction_Left] = true;
         TileRoom->RoomConnector[Direction_Left].RoomID = Room_Overworld_Spawn;
         TileRoom->RoomConnector[Direction_Left].Pos.X = 15.0f;
-        TileRoom->RoomConnector[Direction_Left].Pos.Y = 5.5f;
+        TileRoom->RoomConnector[Direction_Left].Pos.Y = 5.0f;
 
         entity *Octorok4 = GetNewEntityInRoom(TileMap, Room_Overworld_Bushes);
         SetEntityTypeDefaults(Octorok4, EntityType_Octorok);
@@ -984,6 +985,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             SetEntityTypeDefaults(PushBlock, EntityType_PushBlock);
             PushBlock->P.X = 8.0f;
             PushBlock->P.Y = 5.0f;
+            PushBlock->IsSolid = true;
         }
 
         // DUNGEON 2 TEST ROOM INIT
@@ -1009,6 +1011,18 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     world *World = GameState->World;
     tile_map *TileMap = World->TileMap;
+
+    // Update all entities
+    tile_room *PlayerRoom = GetTileRoom(TileMap, GameState->PlayerP.RoomID);
+    for (uint32 EntityIndex = 0; EntityIndex < MAX_ENTITIES; EntityIndex++)
+    {
+        entity *Entity = &PlayerRoom->Entities[EntityIndex];
+        // Re-initialize colliding flag
+        if (Entity->IsActive)
+        {
+            UpdateEntity(GameState, Entity);
+        }
+    }
 
     GameState->PlayerSpeed = 0.0f;
     for (int ControllerIndex = 0;
@@ -1324,6 +1338,29 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 UpdatePosition = false;
             }
         }
+
+        // Check if player is colliding with any entities
+        for (uint32 EntityIndex = 0; EntityIndex < MAX_ENTITIES; EntityIndex++)
+        {
+            entity *Entity = &TileRoom->Entities[EntityIndex];
+            if (Entity->IsActive)
+            {
+                area2d EntityHitbox = GetArea2D(Entity->P, Entity->Width, Entity->Height);
+                bool32 IsColliding = IsAreaInArea(NewPlayerHitbox, EntityHitbox);
+                // NOTE: Combining these just an optimization, can also nest
+                if (IsColliding && Entity->IsSolid)
+                {
+                    // NOTE: Might wanna handle player enemy collisions here
+                    // HandleEntityCollision(GameState, Entity);
+                    Entity->ConsecutiveCollisionCounter += 1;
+                    UpdatePosition = false;
+                }
+                else
+                {
+                    Entity->ConsecutiveCollisionCounter = 0;
+                }
+            }
+        }
     }
 
     if (UpdatePosition)
@@ -1366,18 +1403,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         SwordPoint.Pos.X += (real32)PixelOffsetX / TileMap->MetersToPixels;
         SwordPoint.Pos.Y -= (real32)PixelOffsetY / TileMap->MetersToPixels;
         GameState->SwordPoint = SwordPoint;
-    }
-
-    // Update all entities
-    // NOTE: This kinda uses the tile map system, investigate
-    tile_room *PlayerRoom = GetTileRoom(TileMap, GameState->PlayerP.RoomID);
-    for (uint32 EntityIndex = 0; EntityIndex < MAX_ENTITIES; EntityIndex++)
-    {
-        entity *Entity = &PlayerRoom->Entities[EntityIndex];
-        if (Entity->IsActive)
-        {
-            UpdateEntity(GameState, Entity);
-        }
     }
 
     // Dungeon room completion check

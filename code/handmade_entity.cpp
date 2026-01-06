@@ -196,8 +196,19 @@ UpdateBasicKey(game_state *GameState, entity *BasicKey)
 }
 
 internal void
-UpdatePushBlock(game_state *GameState, entity *PushBlock)
+UpdatePushBlock(game_state *GameState, entity *Entity)
 {
+    if (Entity->ConsecutiveCollisionCounter >= 30)
+    {
+        // Need to see if push block can move to the next space
+        vector2 PushDirection = GameState->PlayerDirection;
+        vector2 NewPosition = Entity->P + PushDirection;
+        tile_map *TileMap = GameState->World->TileMap;
+        if (IsTileRoomPointEmpty(TileMap, Entity->Room, NewPosition))
+        {
+            Entity->P = NewPosition;
+        }
+    }
 }
 
 internal void
