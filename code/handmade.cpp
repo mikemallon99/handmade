@@ -1114,7 +1114,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
          TweenIndex < MAX_ENTITY_TWEENS;
          TweenIndex++)
     {
-        entity_tween *EntityTween = &GameState->EntityTweenQueue[TweenIndex];
+        entity_tween *EntityTween = &GameState->EntityTweenQueue.Tweens[TweenIndex];
         if (EntityTween->Active)
         {
             // Every frame add another chunk of the tween to the position

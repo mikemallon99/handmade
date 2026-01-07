@@ -87,5 +87,11 @@ struct entity_tween
     uint32 CurrentFrame;
 };
 
+struct entity_tween_queue
+{
+    entity_tween Tweens[MAX_ENTITY_TWEENS];
+    uint32 TweenIndex;
+};
+
 #endif
 

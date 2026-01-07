@@ -18,6 +18,18 @@ GetNewEntity(entity *Entities)
     return 0; // No inactive entities found
 }
 
+internal entity_tween *
+GetNewEntityTween(entity_tween_queue *TweenQueue)
+{
+    entity_tween *Result;
+
+    Result = &TweenQueue->Tweens[TweenQueue->TweenIndex++ % MAX_ENTITY_TWEENS];
+    entity_tween ZeroInitializedTween = {};
+    *Result = ZeroInitializedTween;
+
+    return Result;
+}
+
 internal entity *
 GetNewEntityInRoom(tile_room *Room)
 {
@@ -207,8 +219,7 @@ UpdatePushBlock(game_state *GameState, entity *Entity)
         tile_map *TileMap = GameState->World->TileMap;
         if (IsTileRoomPointEmpty(TileMap, Entity->Room, NewPosition))
         {
-            entity_tween *EntityTween = &GameState->EntityTweenQueue[
-                                            GameState->EntityTweenQueueIndex++ % MAX_ENTITY_TWEENS];
+            entity_tween *EntityTween = GetNewEntityTween(&GameState->EntityTweenQueue);
             EntityTween->Active = true;
             EntityTween->Entity = Entity;
             EntityTween->Path = PushDirection;

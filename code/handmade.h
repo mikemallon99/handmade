@@ -299,8 +299,7 @@ struct game_state
     moblin_sprites MoblinSprites;
 
     // Animation stuff
-    entity_tween EntityTweenQueue[MAX_ENTITY_TWEENS];
-    uint32 EntityTweenQueueIndex;
+    entity_tween_queue EntityTweenQueue;
     
     // Items
     entity *Sword;
