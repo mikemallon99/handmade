@@ -198,7 +198,8 @@ UpdateBasicKey(game_state *GameState, entity *BasicKey)
 internal void
 UpdatePushBlock(game_state *GameState, entity *Entity)
 {
-    if (Entity->ConsecutiveCollisionCounter >= 30)
+    bool32 IsTweenActive = Entity->CurrentTween && Entity->CurrentTween->Active;
+    if (Entity->ConsecutiveCollisionCounter >= 30 && !IsTweenActive)
     {
         // Need to see if push block can move to the next space
         vector2 PushDirection = GameState->PlayerDirection;
@@ -206,7 +207,14 @@ UpdatePushBlock(game_state *GameState, entity *Entity)
         tile_map *TileMap = GameState->World->TileMap;
         if (IsTileRoomPointEmpty(TileMap, Entity->Room, NewPosition))
         {
-            Entity->P = NewPosition;
+            entity_tween *EntityTween = &GameState->EntityTweenQueue[
+                                            GameState->EntityTweenQueueIndex++ % MAX_ENTITY_TWEENS];
+            EntityTween->Active = true;
+            EntityTween->Entity = Entity;
+            EntityTween->Path = PushDirection;
+            EntityTween->Length = 30;
+            EntityTween->CurrentFrame = 0;
+            Entity->CurrentTween = EntityTween;
         }
     }
 }

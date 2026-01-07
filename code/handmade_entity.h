@@ -38,6 +38,9 @@ enum entity_type
     EntityType_Total,
 };
 
+// NOTE: I dont like having to do type stubs, remove if possible
+struct entity_tween;
+
 // Unified entity structure - used by all enemies and projectiles
 struct entity
 {
@@ -72,6 +75,16 @@ struct entity
     // For Push block
     bool32 IsSolid;
     int32 ConsecutiveCollisionCounter;
+    entity_tween *CurrentTween;
+};
+
+struct entity_tween
+{
+    entity *Entity;
+    bool32 Active;
+    vector2 Path;
+    uint32 Length;
+    uint32 CurrentFrame;
 };
 
 #endif

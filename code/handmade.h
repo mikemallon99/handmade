@@ -10,6 +10,8 @@
 
 #define Pi32 3.1415926535898f
 
+#define MAX_ENTITY_TWEENS 32
+
 typedef int8_t int8;
 typedef int16_t int16;
 typedef int32_t int32;
@@ -295,6 +297,10 @@ struct game_state
 
     octorok_sprites OctorokSprites;
     moblin_sprites MoblinSprites;
+
+    // Animation stuff
+    entity_tween EntityTweenQueue[MAX_ENTITY_TWEENS];
+    uint32 EntityTweenQueueIndex;
     
     // Items
     entity *Sword;

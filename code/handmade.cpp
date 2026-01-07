@@ -1110,6 +1110,27 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
     }
 
+    for (int32 TweenIndex = 0;
+         TweenIndex < MAX_ENTITY_TWEENS;
+         TweenIndex++)
+    {
+        entity_tween *EntityTween = &GameState->EntityTweenQueue[TweenIndex];
+        if (EntityTween->Active)
+        {
+            // Every frame add another chunk of the tween to the position
+            // This allows us to make tweens additive (not 100% if this is actually useful)
+            real32 TweenStep = 1.0f / (real32)EntityTween->Length;
+            vector2 PathDelta = EntityTween->Path * TweenStep;
+            entity *Entity = EntityTween->Entity;
+            Entity->P = Entity->P + PathDelta;
+            EntityTween->CurrentFrame++;
+            if (EntityTween->CurrentFrame >= EntityTween->Length)
+            {
+                EntityTween->Active = false;
+            }
+        }
+    }
+
     if (GameState->PlayerUsingBoomerang)
     {
         // Set position on first frame
