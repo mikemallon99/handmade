@@ -885,7 +885,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         Moblin1->P.X = 6;
         Moblin1->P.Y = 5.0f;
         Moblin1->Direction.X = -1.0f;
-        Moblin1->Direction.Y = 0.0f;
+        Moblin1->Direction.Y = -1.0f;
 
         entity *Moblin2 = GetNewEntityInRoom(TileMap, Room_Overworld_Spawn);
         SetEntityTypeDefaults(Moblin2, EntityType_Moblin);
@@ -893,7 +893,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         Moblin2->P.X = 7;
         Moblin2->P.Y = 5.0f;
         Moblin2->Direction.X = -1.0f;
-        Moblin2->Direction.Y = 0.0f;
+        Moblin2->Direction.Y = -1.0f;
 
         // BUSH ROOM INIT
 

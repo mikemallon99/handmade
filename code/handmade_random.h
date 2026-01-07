@@ -38,4 +38,6 @@ global_variable uint32 RandomNumberTable[] =
 0x1bc8c4bd, 0x2649c52e, 0x0272ee88, 0x0536c140, 0x113d6f18, 0x0fe7aaa8, 0x196a89e0, 0x02d13411,
 };
 
+global_variable uint32 RandomNumberTableLength = ArrayCount(RandomNumberTable);
+
 #endif

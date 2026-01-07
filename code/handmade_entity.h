@@ -64,6 +64,8 @@ struct entity
     uint32 Damage;  // Amount of damage this entity does on collision (0 = no damage)
     
     // Movement (projectiles use velocity, enemies use direction for AI)
+    // TODO: Make projectiles just use vector2
+    // NOTE: Facing direction & Velocity are 2 different things.
     real32 VelocityX;
     real32 VelocityY;
     vector2 Direction;

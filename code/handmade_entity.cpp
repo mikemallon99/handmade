@@ -141,7 +141,7 @@ IsHitboxPointActive(vector2 PointP, vector2 HitboxP,
 }
 
 internal entity *
-SpawnOctorokProjectile(game_state *GameState, tile_room *Room, vector2 SpawnPosition)
+SpawnOctorokProjectile(tile_room *Room, vector2 SpawnPosition)
 {
     entity *Projectile = GetNewEntityInRoom(Room);
     if (Projectile)
@@ -167,7 +167,7 @@ IsEntityCollidingWithPlayer(entity *Entity, vector2 PlayerRoomPos)
 }
 
 internal void
-UpdateOldMan(game_state *GameState, entity *OldMan)
+UpdateOldMan(entity *OldMan)
 {
     // OldMan doesn't move, just stands there
     // Could add idle animation or dialogue triggers here
@@ -297,16 +297,16 @@ UpdateOctorok(game_state *GameState, entity *Octorok)
             DirectionArray[DirArraySize++] = &RightDir;
         }
 
-        local_persist uint32 RandomIdx = 0;
-        uint32 RandomNum = RandomNumberTable[RandomIdx++] % DirArraySize;
-        Octorok->Direction = *DirectionArray[RandomNum];
+        uint32 RandomIndex = GameState->FrameCounter % RandomNumberTableLength;
+        uint32 RandomNumber = RandomNumberTable[RandomIndex] % DirArraySize;
+        Octorok->Direction = *DirectionArray[RandomNumber];
     }
 
     // Octorok fire projectile
     if (Octorok->Health > 0 &&
         GameState->FrameCounter % Octorok->FireFrequency == 0)
     {
-        SpawnOctorokProjectile(GameState, Octorok->Room, Octorok->P);
+        SpawnOctorokProjectile(Octorok->Room, Octorok->P);
     }
 
     if (Octorok->Health == 0)
@@ -328,7 +328,7 @@ UpdateOctorokProjectile(entity *Projectile)
 }
 
 internal entity *
-SpawnMoblinProjectile(game_state *GameState, tile_room *Room, vector2 SpawnPosition, vector2 ArrowDirection)
+SpawnMoblinProjectile(tile_room *Room, vector2 SpawnPosition, vector2 ArrowDirection)
 {
     entity *Projectile = GetNewEntityInRoom(Room);
     if (Projectile)
@@ -348,23 +348,22 @@ internal void
 UpdateMoblin(game_state *GameState, entity *Moblin)
 {
     // Moblin position update
-    local_persist int32 YDirection = -1;
+    // TODO: Set moblin default Y to -1
+    Moblin->Direction.X = 0.0f;
     if (Moblin->P.Y > 8)
     {
-        YDirection = -1;
+        Moblin->Direction.Y = -1.0f;
     }
     else if (Moblin->P.Y < 3)
     {
-        YDirection = 1;
+        Moblin->Direction.Y = 1.0f;
     }
-    Moblin->Direction.X = 0.0f;
-    Moblin->Direction.Y = (real32)YDirection;
-    Moblin->P.Y += (real32)YDirection * 0.05f;
+    Moblin->P.Y += Moblin->Direction.Y * 0.05f;
 
     // Moblin fire projectile
     if (GameState->FrameCounter % Moblin->FireFrequency == 0)
     {
-        SpawnMoblinProjectile(GameState, Moblin->Room, Moblin->P, Moblin->Direction);
+        SpawnMoblinProjectile(Moblin->Room, Moblin->P, Moblin->Direction);
     }
 
     if (Moblin->Health == 0)
