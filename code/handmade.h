@@ -266,6 +266,7 @@ struct game_state
     real32 BoomerangMaxDistance;
     bool32 BoomerangReturning;
     real32 BoomerangSpeed;
+    bool32 PlayerUsingBomb;
     tile_map_position SwordPoint;
     vector2 PlayerDirection;
     uint32 InvincibilityTimer;
@@ -276,7 +277,6 @@ struct game_state
 
     bmp_file LinkBMP;
     link_sprites LinkSprites;
-    boomerang_sprites BoomerangSprites;
     bmp_file ItemBMP;
     item_sprites ItemSprites;
     uint32 WalkStep;

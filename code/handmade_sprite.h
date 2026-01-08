@@ -118,18 +118,13 @@ struct link_sprites
 
     // Link items
     bmp_tile Sword[3];
+    bmp_tile Boomerang[8];
 };
 
 struct item_sprites
 {
     bmp_file *BaseBMP;
     bmp_tile BasicKey;
-};
-
-struct boomerang_sprites
-{
-    bmp_file *BaseBMP;
-    bmp_tile Sprites[8];
 };
 
 struct npc_sprites

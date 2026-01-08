@@ -27,6 +27,11 @@ enum entity_type
     // Npcs
     EntityType_OldMan,
 
+    // Player weapons
+    EntityType_Bomb,
+    EntityType_BombDust,
+    // TODO: Move boomerang here
+
     // Random stuff
     EntityType_Fire,
     EntityType_PushBlock,
@@ -78,6 +83,9 @@ struct entity
     bool32 IsSolid;
     int32 ConsecutiveCollisionCounter;
     entity_tween *CurrentTween;
+
+    // For Bomb
+    uint32 SpawnFrame;
 };
 
 struct entity_tween

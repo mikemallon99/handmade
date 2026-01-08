@@ -5,17 +5,87 @@
 internal entity *
 GetNewEntity(entity *Entities)
 {
+    entity *Entity = 0;
+
     for (uint32 EntityIndex = 0; EntityIndex < MAX_ENTITIES; EntityIndex++)
     {
-        entity *Entity = &Entities[EntityIndex];
-        if (!Entity->IsActive)
+        entity *CheckEntity = &Entities[EntityIndex];
+        if (!CheckEntity->IsActive)
         {
-            Entity->IsActive = true;
-            return Entity;
+            Entity = CheckEntity;
+            break;
         }
     }
     
-    return 0; // No inactive entities found
+    return Entity;
+}
+
+internal void
+SetEntityTypeDefaults(entity *Entity, entity_type Type, tile_room *Room, uint32 FrameCounter)
+{
+    entity ZeroEntity = {};
+    *Entity = ZeroEntity;
+    Entity->Type = Type;
+    Entity->Room = Room;
+    Entity->SpawnFrame = FrameCounter;
+    Entity->IsActive = true;
+    Entity->Width = 1.0f;
+    Entity->Height = 1.0f;
+    
+    // Set type-specific defaults
+    switch (Type)
+    {
+        case EntityType_Octorok:
+        case EntityType_Moblin:
+        {
+            Entity->Damage = 1;
+            Entity->FireFrequency = 60;
+            Entity->Health = 3;
+        } break;
+        
+        case EntityType_OctorokRock:
+        case EntityType_MoblinArrow:
+        {
+            Entity->Width = 0.5f;
+            Entity->Height = 1.0f;
+            Entity->Damage = 1;
+            Entity->IsProjectile = true;
+        } break;
+        
+        case EntityType_Fire:
+        {
+            Entity->Damage = 1;
+        } break;
+        
+        case EntityType_Sword:
+        {
+            Entity->Width = 0.5f;
+            Entity->Height = 1.0f;
+        } break;
+    }
+}
+
+internal entity *
+AllocateNewEntityInRoom(tile_room *Room, entity_type Type, uint32 FrameCounter)
+{
+    entity *Entity = 0;
+
+    Entity = GetNewEntity(Room->Entities);
+    Assert(Entity);
+    SetEntityTypeDefaults(Entity, Type, Room, FrameCounter);
+
+    return Entity;
+}
+
+internal entity *
+AllocateNewEntityInRoom(tile_map *TileMap, room_id RoomID, entity_type Type, uint32 FrameCounter)
+{
+    entity *Entity = 0;
+
+    tile_room *Room = &TileMap->TileRooms[RoomID];
+    Entity = AllocateNewEntityInRoom(Room, Type, FrameCounter);
+
+    return Entity;
 }
 
 internal entity_tween *
@@ -28,25 +98,6 @@ GetNewEntityTween(entity_tween_queue *TweenQueue)
     *Result = ZeroInitializedTween;
 
     return Result;
-}
-
-internal entity *
-GetNewEntityInRoom(tile_room *Room)
-{
-    entity *Entity = GetNewEntity(Room->Entities);
-    if (Entity)
-    {
-        Entity->Room = Room;  // Set room pointer
-    }
-    return Entity;
-}
-
-internal entity *
-GetNewEntityInRoom(tile_map *TileMap, room_id RoomID)
-{
-    entity *Entity = GetNewEntityInRoom(&TileMap->TileRooms[RoomID]);
-
-    return Entity;
 }
 
 internal bool32
@@ -66,57 +117,6 @@ IsEntityTypeEnemy(entity_type EntityType)
     }
 
     return Result;
-}
-
-internal void
-SetEntityTypeDefaults(entity *Entity, entity_type Type)
-{
-    Entity->Type = Type;
-    Entity->IsActive = true;
-    Entity->InvincibilityTimer = 0;
-    Entity->IFramesFlicker = false;
-    Entity->Health = 0;  // Default, override per-instance if needed
-    Entity->Width = 1.0f;
-    Entity->Height = 1.0f;
-    Entity->Damage = 0;
-    Entity->IsProjectile = false;
-    Entity->FireFrequency = 0;
-    
-    // Set type-specific defaults
-    switch (Type)
-    {
-        case EntityType_Octorok:
-        case EntityType_Moblin:
-        {
-            Entity->Damage = 1;
-            Entity->FireFrequency = 60;
-        } break;
-        
-        case EntityType_OctorokRock:
-        case EntityType_MoblinArrow:
-        {
-            Entity->Width = 0.5f;
-            Entity->Height = 1.0f;
-            Entity->Damage = 1;
-            Entity->IsProjectile = true;
-        } break;
-        
-        case EntityType_OldMan:
-        {
-            // Uses default width/height
-        } break;
-        
-        case EntityType_Fire:
-        {
-            Entity->Damage = 1;
-        } break;
-        
-        case EntityType_Sword:
-        {
-            Entity->Width = 0.5f;
-            Entity->Height = 1.0f;
-        } break;
-    }
 }
 
 internal bool32
@@ -140,23 +140,6 @@ IsHitboxPointActive(vector2 PointP, vector2 HitboxP,
     return false;
 }
 
-internal entity *
-SpawnOctorokProjectile(tile_room *Room, vector2 SpawnPosition)
-{
-    entity *Projectile = GetNewEntityInRoom(Room);
-    if (Projectile)
-    {
-        SetEntityTypeDefaults(Projectile, EntityType_OctorokRock);
-        Projectile->P = SpawnPosition;
-        // TODO: Make projectiles just use direction
-        Projectile->VelocityX = 0.0;
-        Projectile->VelocityY = -5.0;
-        Projectile->Direction = {0.0f, -1.0f};
-    }
-    
-    return Projectile;
-}
-
 internal bool32
 IsEntityCollidingWithPlayer(entity *Entity, vector2 PlayerRoomPos)
 {
@@ -164,13 +147,6 @@ IsEntityCollidingWithPlayer(entity *Entity, vector2 PlayerRoomPos)
     
     // Entities are always in the same room as player (we only iterate PlayerRoom entities)
     return IsHitboxPointActive(PlayerRoomPos, Entity->P, Entity->Width, Entity->Height);
-}
-
-internal void
-UpdateOldMan(entity *OldMan)
-{
-    // OldMan doesn't move, just stands there
-    // Could add idle animation or dialogue triggers here
 }
 
 internal void
@@ -306,7 +282,10 @@ UpdateOctorok(game_state *GameState, entity *Octorok)
     if (Octorok->Health > 0 &&
         GameState->FrameCounter % Octorok->FireFrequency == 0)
     {
-        SpawnOctorokProjectile(Octorok->Room, Octorok->P);
+        entity *Projectile = AllocateNewEntityInRoom(Octorok->Room, EntityType_OctorokRock,
+                                                     GameState->FrameCounter);
+        Projectile->P = Octorok->P;
+        Projectile->Direction = {0.0f, -1.0f};
     }
 
     if (Octorok->Health == 0)
@@ -318,30 +297,13 @@ UpdateOctorok(game_state *GameState, entity *Octorok)
 internal void
 UpdateOctorokProjectile(entity *Projectile)
 {
-    Projectile->P.X += Projectile->VelocityX/60.0f;
-    Projectile->P.Y += Projectile->VelocityY/60.0f;
+    real32 Speed = 0.1f;
+    Projectile->P = Projectile->P + Projectile->Direction * Speed;
 
     if (Projectile->P.Y < 0)
     {
         Projectile->IsActive = false;
     }
-}
-
-internal entity *
-SpawnMoblinProjectile(tile_room *Room, vector2 SpawnPosition, vector2 ArrowDirection)
-{
-    entity *Projectile = GetNewEntityInRoom(Room);
-    if (Projectile)
-    {
-        SetEntityTypeDefaults(Projectile, EntityType_MoblinArrow);
-        Projectile->P = SpawnPosition;
-        // TODO: Make projectiles just use direction
-        Projectile->VelocityX = 0.0;
-        Projectile->VelocityY = -5.0;
-        Projectile->Direction = ArrowDirection;
-    }
-    
-    return Projectile;
 }
 
 internal void
@@ -363,7 +325,13 @@ UpdateMoblin(game_state *GameState, entity *Moblin)
     // Moblin fire projectile
     if (GameState->FrameCounter % Moblin->FireFrequency == 0)
     {
-        SpawnMoblinProjectile(Moblin->Room, Moblin->P, Moblin->Direction);
+        entity *Projectile = AllocateNewEntityInRoom(Moblin->Room, EntityType_MoblinArrow, 
+                                                     GameState->FrameCounter);
+        if (Projectile)
+        {
+            Projectile->P = Moblin->P;
+            Projectile->Direction = Moblin->Direction;
+        }
     }
 
     if (Moblin->Health == 0)
@@ -375,13 +343,30 @@ UpdateMoblin(game_state *GameState, entity *Moblin)
 internal void
 UpdateMoblinProjectile(entity *Projectile)
 {
-    Projectile->P.X += Projectile->VelocityX/60.0f;
-    Projectile->P.Y += Projectile->VelocityY/60.0f;
+    real32 Speed = 0.1f;
+    Projectile->P = Projectile->P + Projectile->Direction * Speed;
 
     if (Projectile->P.Y < 0)
     {
         Projectile->IsActive = false;
     }
+}
+
+internal void
+UpdateBomb(entity *Entity, uint32 FrameCounter)
+{
+    if (FrameCounter - Entity->SpawnFrame > 60)
+    {
+        // Spawn 9 dust particles
+    }
+}
+
+internal void
+UpdateBombDust(entity *Entity)
+{
+    // Colliding with door
+
+    // Colliding with entity in room
 }
 
 internal void

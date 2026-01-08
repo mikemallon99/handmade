@@ -934,6 +934,60 @@ LoadLinkSprites(link_sprites *LinkSprites, bmp_file *BaseBMP)
     LinkSprites->Sword[2].Y = 154;
     LinkSprites->Sword[2].Width = 8;
     LinkSprites->Sword[2].Height = 16;
+
+    LinkSprites->Boomerang[0].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->Boomerang[0].X = 64;
+    LinkSprites->Boomerang[0].Y = 185;
+    LinkSprites->Boomerang[0].Width = 8;
+    LinkSprites->Boomerang[0].Height = 16;
+
+    LinkSprites->Boomerang[1].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->Boomerang[1].X = 73;
+    LinkSprites->Boomerang[1].Y = 185;
+    LinkSprites->Boomerang[1].Width = 8;
+    LinkSprites->Boomerang[1].Height = 16;
+
+    LinkSprites->Boomerang[2].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->Boomerang[2].X = 82;
+    LinkSprites->Boomerang[2].Y = 185;
+    LinkSprites->Boomerang[2].Width = 8;
+    LinkSprites->Boomerang[2].Height = 16;
+
+    LinkSprites->Boomerang[3].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->Boomerang[3].X = 73;
+    LinkSprites->Boomerang[3].Y = 185;
+    LinkSprites->Boomerang[3].Width = 8;
+    LinkSprites->Boomerang[3].Height = 16;
+    LinkSprites->Boomerang[3].FlipX = true;
+
+    LinkSprites->Boomerang[4].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->Boomerang[4].X = 64;
+    LinkSprites->Boomerang[4].Y = 185;
+    LinkSprites->Boomerang[4].Width = 8;
+    LinkSprites->Boomerang[4].Height = 16;
+    LinkSprites->Boomerang[4].FlipX = true;
+
+    LinkSprites->Boomerang[5].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->Boomerang[5].X = 73;
+    LinkSprites->Boomerang[5].Y = 185;
+    LinkSprites->Boomerang[5].Width = 8;
+    LinkSprites->Boomerang[5].Height = 16;
+    LinkSprites->Boomerang[5].FlipX = true;
+    LinkSprites->Boomerang[5].FlipY = true;
+
+    LinkSprites->Boomerang[6].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->Boomerang[6].X = 82;
+    LinkSprites->Boomerang[6].Y = 185;
+    LinkSprites->Boomerang[6].Width = 8;
+    LinkSprites->Boomerang[6].Height = 16;
+    LinkSprites->Boomerang[6].FlipY = true;
+
+    LinkSprites->Boomerang[7].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->Boomerang[7].X = 73;
+    LinkSprites->Boomerang[7].Y = 185;
+    LinkSprites->Boomerang[7].Width = 8;
+    LinkSprites->Boomerang[7].Height = 16;
+    LinkSprites->Boomerang[7].FlipY = true;
 }
 
 internal void
@@ -946,66 +1000,6 @@ LoadItemSprites(item_sprites *ItemSprites, bmp_file *BaseBMP)
     ItemSprites->BasicKey.Y = 0;
     ItemSprites->BasicKey.Width = 8;
     ItemSprites->BasicKey.Height = 16;
-}
-
-internal void
-LoadBoomerangSprites(boomerang_sprites *BoomerangSprites, bmp_file *BaseBMP)
-{
-    BoomerangSprites->BaseBMP = BaseBMP;
-
-    BoomerangSprites->Sprites[0].Tileset = BoomerangSprites->BaseBMP;
-    BoomerangSprites->Sprites[0].X = 64;
-    BoomerangSprites->Sprites[0].Y = 185;
-    BoomerangSprites->Sprites[0].Width = 8;
-    BoomerangSprites->Sprites[0].Height = 16;
-
-    BoomerangSprites->Sprites[1].Tileset = BoomerangSprites->BaseBMP;
-    BoomerangSprites->Sprites[1].X = 73;
-    BoomerangSprites->Sprites[1].Y = 185;
-    BoomerangSprites->Sprites[1].Width = 8;
-    BoomerangSprites->Sprites[1].Height = 16;
-
-    BoomerangSprites->Sprites[2].Tileset = BoomerangSprites->BaseBMP;
-    BoomerangSprites->Sprites[2].X = 82;
-    BoomerangSprites->Sprites[2].Y = 185;
-    BoomerangSprites->Sprites[2].Width = 8;
-    BoomerangSprites->Sprites[2].Height = 16;
-
-    BoomerangSprites->Sprites[3].Tileset = BoomerangSprites->BaseBMP;
-    BoomerangSprites->Sprites[3].X = 73;
-    BoomerangSprites->Sprites[3].Y = 185;
-    BoomerangSprites->Sprites[3].Width = 8;
-    BoomerangSprites->Sprites[3].Height = 16;
-    BoomerangSprites->Sprites[3].FlipX = true;
-
-    BoomerangSprites->Sprites[4].Tileset = BoomerangSprites->BaseBMP;
-    BoomerangSprites->Sprites[4].X = 64;
-    BoomerangSprites->Sprites[4].Y = 185;
-    BoomerangSprites->Sprites[4].Width = 8;
-    BoomerangSprites->Sprites[4].Height = 16;
-    BoomerangSprites->Sprites[4].FlipX = true;
-
-    BoomerangSprites->Sprites[5].Tileset = BoomerangSprites->BaseBMP;
-    BoomerangSprites->Sprites[5].X = 73;
-    BoomerangSprites->Sprites[5].Y = 185;
-    BoomerangSprites->Sprites[5].Width = 8;
-    BoomerangSprites->Sprites[5].Height = 16;
-    BoomerangSprites->Sprites[5].FlipX = true;
-    BoomerangSprites->Sprites[5].FlipY = true;
-
-    BoomerangSprites->Sprites[6].Tileset = BoomerangSprites->BaseBMP;
-    BoomerangSprites->Sprites[6].X = 82;
-    BoomerangSprites->Sprites[6].Y = 185;
-    BoomerangSprites->Sprites[6].Width = 8;
-    BoomerangSprites->Sprites[6].Height = 16;
-    BoomerangSprites->Sprites[6].FlipY = true;
-
-    BoomerangSprites->Sprites[7].Tileset = BoomerangSprites->BaseBMP;
-    BoomerangSprites->Sprites[7].X = 73;
-    BoomerangSprites->Sprites[7].Y = 185;
-    BoomerangSprites->Sprites[7].Width = 8;
-    BoomerangSprites->Sprites[7].Height = 16;
-    BoomerangSprites->Sprites[7].FlipY = true;
 }
 
 internal void
