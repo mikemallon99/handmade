@@ -2,6 +2,58 @@
 #include "handmade_tile.h"
 #include "handmade_position.h"
 
+internal direction
+Vector2ToDirectionEnum(vector2 *Vector2)
+{
+    direction DirectionEnum = Direction_Up;
+    
+    // Determine primary direction based on which component has larger absolute value
+    real32 AbsX = (Vector2->X < 0.0f) ? -Vector2->X : Vector2->X;
+    real32 AbsY = (Vector2->Y < 0.0f) ? -Vector2->Y : Vector2->Y;
+    
+    if (AbsY > AbsX)
+    {
+        // Vertical direction is primary
+        if (Vector2->Y > 0.0f)
+        {
+            DirectionEnum = Direction_Up;
+        }
+        else
+        {
+            DirectionEnum = Direction_Down;
+        }
+    }
+    else
+    {
+        // Horizontal direction is primary
+        if (Vector2->X > 0.0f)
+        {
+            DirectionEnum = Direction_Right;
+        }
+        else
+        {
+            DirectionEnum = Direction_Left;
+        }
+    }
+    
+    return DirectionEnum;
+}
+
+internal bool32
+IsDirectionOpposite(direction DirA, direction DirB)
+{
+    bool32 Result = false;
+    if (DirA == Direction_Up && DirB == Direction_Down ||
+        DirA == Direction_Down && DirB == Direction_Up ||
+        DirA == Direction_Left && DirB == Direction_Right ||
+        DirA == Direction_Right && DirB == Direction_Left)
+    {
+        Result = true;
+    }
+
+    return Result;
+}
+
 internal entity *
 GetNewEntity(entity *Entities)
 {
@@ -10,12 +62,14 @@ GetNewEntity(entity *Entities)
     for (uint32 EntityIndex = 0; EntityIndex < MAX_ENTITIES; EntityIndex++)
     {
         entity *CheckEntity = &Entities[EntityIndex];
-        if (!CheckEntity->IsActive)
+        if (!CheckEntity->Active)
         {
             Entity = CheckEntity;
             break;
         }
     }
+
+    Assert(Entity);
     
     return Entity;
 }
@@ -28,7 +82,7 @@ SetEntityTypeDefaults(entity *Entity, entity_type Type, tile_room *Room, uint32 
     Entity->Type = Type;
     Entity->Room = Room;
     Entity->SpawnFrame = FrameCounter;
-    Entity->IsActive = true;
+    Entity->Active = true;
     Entity->Width = 1.0f;
     Entity->Height = 1.0f;
     
@@ -71,7 +125,6 @@ AllocateNewEntityInRoom(tile_room *Room, entity_type Type, uint32 FrameCounter)
     entity *Entity = 0;
 
     Entity = GetNewEntity(Room->Entities);
-    Assert(Entity);
     SetEntityTypeDefaults(Entity, Type, Room, FrameCounter);
 
     return Entity;
@@ -140,13 +193,24 @@ IsHitboxPointActive(vector2 PointP, vector2 HitboxP,
     return false;
 }
 
+// TODO: Change this to fit the new collision system?
 internal bool32
 IsEntityCollidingWithPlayer(entity *Entity, vector2 PlayerRoomPos)
 {
-    if (!Entity->IsActive) return false;
+    if (!Entity->Active) return false;
     
     // Entities are always in the same room as player (we only iterate PlayerRoom entities)
     return IsHitboxPointActive(PlayerRoomPos, Entity->P, Entity->Width, Entity->Height);
+}
+
+internal void
+DamageEntity(entity *Entity, uint32 Damage)
+{
+    if (Entity->InvincibilityTimer == 0 && Entity->Health > 0)
+    {
+        Entity->InvincibilityTimer = 60;
+        Entity->Health -= Damage;
+    }
 }
 
 internal void
@@ -290,7 +354,7 @@ UpdateOctorok(game_state *GameState, entity *Octorok)
 
     if (Octorok->Health == 0)
     {
-        Octorok->IsActive = false;
+        Octorok->Active = false;
     }
 }
 
@@ -302,7 +366,7 @@ UpdateOctorokProjectile(entity *Projectile)
 
     if (Projectile->P.Y < 0)
     {
-        Projectile->IsActive = false;
+        Projectile->Active = false;
     }
 }
 
@@ -336,7 +400,7 @@ UpdateMoblin(game_state *GameState, entity *Moblin)
 
     if (Moblin->Health == 0)
     {
-        Moblin->IsActive = false;
+        Moblin->Active = false;
     }
 }
 
@@ -348,7 +412,7 @@ UpdateMoblinProjectile(entity *Projectile)
 
     if (Projectile->P.Y < 0)
     {
-        Projectile->IsActive = false;
+        Projectile->Active = false;
     }
 }
 
@@ -358,15 +422,51 @@ UpdateBomb(entity *Entity, uint32 FrameCounter)
     if (FrameCounter - Entity->SpawnFrame > 60)
     {
         // Spawn 9 dust particles
+        uint32 TileX = FloorReal32ToUInt32(Entity->P.X);
+        uint32 TileY = FloorReal32ToUInt32(Entity->P.Y);
+        for (uint32 SpawnY = TileY - 1;
+             SpawnY < TileY + 2;
+             SpawnY++)
+        {
+            for (uint32 SpawnX = TileX - 1;
+                SpawnX < TileX + 2;
+                SpawnX++)
+            {
+                entity *DustEntity = AllocateNewEntityInRoom(Entity->Room, EntityType_BombDust, FrameCounter);
+                DustEntity->P.X = (real32)SpawnX;
+                DustEntity->P.Y = (real32)SpawnY;
+            }
+        }
+        Entity->Active = false;
     }
 }
 
 internal void
-UpdateBombDust(entity *Entity)
+UpdateBombDust(entity *Entity, uint32 FrameCounter)
 {
+    // TEMP
+    if (FrameCounter - Entity->SpawnFrame > 15)
+    {
+        Entity->Active = false;
+    }
+
     // Colliding with door
 
     // Colliding with entity in room
+    area2d BombDustArea = GetArea2D(Entity->P, Entity->Width, Entity->Height);
+    for (uint32 EntityIndex = 0; EntityIndex < MAX_ENTITIES; EntityIndex++)
+    {
+        entity *EnemyEntity = &Entity->Room->Entities[EntityIndex];
+        if (EnemyEntity->Active && (EnemyEntity != Entity) && IsEntityTypeEnemy(EnemyEntity->Type))
+        {
+            area2d EnemyArea = GetArea2D(EnemyEntity->P, EnemyEntity->Width, EnemyEntity->Height);
+            bool32 IsEnemyHit = IsAreaInArea(BombDustArea, EnemyArea);
+            if (IsEnemyHit)
+            {
+                DamageEntity(EnemyEntity, 2);
+            }
+        }
+    }
 }
 
 internal void
@@ -392,6 +492,14 @@ UpdateEntity(game_state *GameState, entity *Entity)
     {
         UpdateSword(GameState, Entity);
     }
+    else if (Entity->Type == EntityType_Bomb)
+    {
+        UpdateBomb(Entity, GameState->FrameCounter);
+    }
+    else if (Entity->Type == EntityType_BombDust)
+    {
+        UpdateBombDust(Entity, GameState->FrameCounter);
+    }
     else if (Entity->Type == EntityType_BasicKey)
     {
         UpdateBasicKey(GameState, Entity);
@@ -415,6 +523,7 @@ HandleCollisionPushBlock(game_state *GameState, entity *Entity)
     }
 }
 
+// NOTE: should handle 2 entities colliding with each other?
 internal void
 HandleEntityCollision(game_state *GameState, entity *Entity)
 {

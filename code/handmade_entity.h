@@ -49,7 +49,7 @@ struct entity_tween;
 // Unified entity structure - used by all enemies and projectiles
 struct entity
 {
-    bool32 IsActive;
+    bool32 Active;
     entity_type Type;
     
     // Position (all entities have this) - local to room, no room coordinates needed
@@ -60,7 +60,7 @@ struct entity
     // Room parent - which room this entity belongs to
     tile_room *Room;
     
-    // Health system (enemies only, projectiles use IsActive instead)
+    // Health system (enemies only, projectiles use Active instead)
     uint32 Health;
     uint32 InvincibilityTimer;
     bool32 IFramesFlicker;

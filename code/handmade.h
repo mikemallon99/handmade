@@ -273,6 +273,9 @@ struct game_state
     bool32 IFramesFlicker;
     bool32 BlockPlayerInput;
 
+    // Debounce thing
+    bool32 BombPressed;
+
     bmp_file Background;
 
     bmp_file LinkBMP;

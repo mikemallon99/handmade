@@ -454,6 +454,19 @@ LoadDungeonRoom(memory_arena *Arena, tile_map *TileMap, char *SourceMap,
     return TileRoom;
 }
 
+internal area2d
+GetArea2D(vector2 Origin, real32 Width, real32 Height)
+{
+    area2d Result = {};
+
+    Result.BottomLeft = Origin;
+    Result.TopRight = Origin;
+    Result.TopRight.X += Width;
+    Result.TopRight.Y += Height;
+
+    return Result;
+}
+
 internal bool32
 IsPointInArea(vector2 Point, area2d Area)
 {

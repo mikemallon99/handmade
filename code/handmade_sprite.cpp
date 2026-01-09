@@ -988,6 +988,30 @@ LoadLinkSprites(link_sprites *LinkSprites, bmp_file *BaseBMP)
     LinkSprites->Boomerang[7].Width = 8;
     LinkSprites->Boomerang[7].Height = 16;
     LinkSprites->Boomerang[7].FlipY = true;
+
+    LinkSprites->Bomb.Tileset = LinkSprites->BaseBMP;
+    LinkSprites->Bomb.X = 129;
+    LinkSprites->Bomb.Y = 185;
+    LinkSprites->Bomb.Width = 8;
+    LinkSprites->Bomb.Height = 16;
+
+    LinkSprites->BombDust[0].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->BombDust[0].X = 138;
+    LinkSprites->BombDust[0].Y = 185;
+    LinkSprites->BombDust[0].Width = 16;
+    LinkSprites->BombDust[0].Height = 16;
+
+    LinkSprites->BombDust[1].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->BombDust[1].X = 155;
+    LinkSprites->BombDust[1].Y = 185;
+    LinkSprites->BombDust[1].Width = 16;
+    LinkSprites->BombDust[1].Height = 16;
+
+    LinkSprites->BombDust[2].Tileset = LinkSprites->BaseBMP;
+    LinkSprites->BombDust[2].X = 172;
+    LinkSprites->BombDust[2].Y = 185;
+    LinkSprites->BombDust[2].Width = 16;
+    LinkSprites->BombDust[2].Height = 16;
 }
 
 internal void

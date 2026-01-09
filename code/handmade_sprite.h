@@ -119,6 +119,8 @@ struct link_sprites
     // Link items
     bmp_tile Sword[3];
     bmp_tile Boomerang[8];
+    bmp_tile Bomb;
+    bmp_tile BombDust[3];
 };
 
 struct item_sprites
