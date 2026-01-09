@@ -359,12 +359,12 @@ UpdateOctorok(game_state *GameState, entity *Octorok)
 }
 
 internal void
-UpdateOctorokProjectile(entity *Projectile)
+UpdateOctorokProjectile(entity *Projectile, tile_map *TileMap)
 {
     real32 Speed = 0.1f;
     Projectile->P = Projectile->P + Projectile->Direction * Speed;
 
-    if (Projectile->P.Y < 0)
+    if (IsPointOffscreen(TileMap, Projectile->P))
     {
         Projectile->Active = false;
     }
@@ -405,12 +405,12 @@ UpdateMoblin(game_state *GameState, entity *Moblin)
 }
 
 internal void
-UpdateMoblinProjectile(entity *Projectile)
+UpdateMoblinProjectile(entity *Projectile, tile_map *TileMap)
 {
     real32 Speed = 0.1f;
     Projectile->P = Projectile->P + Projectile->Direction * Speed;
 
-    if (Projectile->P.Y < 0)
+    if (IsPointOffscreen(TileMap, Projectile->P))
     {
         Projectile->Active = false;
     }
@@ -482,11 +482,11 @@ UpdateEntity(game_state *GameState, entity *Entity)
     }
     else if (Entity->Type == EntityType_OctorokRock)
     {
-        UpdateOctorokProjectile(Entity);
+        UpdateOctorokProjectile(Entity, GameState->World->TileMap);
     }
     else if (Entity->Type == EntityType_MoblinArrow)
     {
-        UpdateMoblinProjectile(Entity);
+        UpdateMoblinProjectile(Entity, GameState->World->TileMap);
     }
     else if (Entity->Type == EntityType_Sword)
     {

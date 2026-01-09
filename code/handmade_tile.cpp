@@ -502,13 +502,21 @@ IsAreaInArea(area2d AreaA, area2d AreaB)
     return Result;
 }
 
-internal bool32
+inline bool32
+IsPointOffscreen(tile_map *TileMap, vector2 Pos)
+{
+    bool32 IsOffscreen = (Pos.X > (real32)TileMap->RoomWidth ||
+                          Pos.X < 0.0f ||
+                          Pos.Y > (real32)TileMap->RoomHeight ||
+                          Pos.Y < 0.0f);
+
+    return IsOffscreen;
+}
+
+inline bool32
 IsPointOffscreen(tile_map *TileMap, tile_map_position Pos)
 {
-    bool32 IsOffscreen = (Pos.Pos.X > (real32)TileMap->RoomWidth ||
-                          Pos.Pos.X < 0.0f ||
-                          Pos.Pos.Y > (real32)TileMap->RoomHeight ||
-                          Pos.Pos.Y < 0.0f);
+    bool32 IsOffscreen = IsPointOffscreen(TileMap, Pos.Pos);
 
     return IsOffscreen;
 }

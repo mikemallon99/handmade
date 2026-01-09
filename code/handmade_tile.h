@@ -4,8 +4,6 @@
 #include "handmade_position.h"
 #include "handmade_entity.h"
 
-#define MAX_ENTITIES 256
-
 enum room_type 
 {
     RoomType_Overworld,
