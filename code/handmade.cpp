@@ -856,36 +856,31 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         TileRoom->Door.Pos.Y = 0.5f;
         TileRoom->Door.RoomID = Room_Overworld_SwordCave;
 
-        entity *Octorok1 = AllocateNewEntityInRoom(TileMap, Room_Overworld_Spawn, EntityType_Octorok, 
-                                                   GameState->FrameCounter);
+        entity *Octorok1 = AllocateNewEntityInRoom(GameState, Room_Overworld_Spawn, EntityType_Octorok);
         Octorok1->P.X = 8;
         Octorok1->P.Y = 5.0f;
         Octorok1->Direction.X = -1.0f;
         Octorok1->Direction.Y = 0.0f;
 
-        entity *Octorok2 = AllocateNewEntityInRoom(TileMap, Room_Overworld_Spawn, EntityType_Octorok, 
-                                                   GameState->FrameCounter);
+        entity *Octorok2 = AllocateNewEntityInRoom(GameState, Room_Overworld_Spawn, EntityType_Octorok);
         Octorok2->P.X = 9;
         Octorok2->P.Y = 5.0f;
         Octorok2->Direction.X = -1.0f;
         Octorok2->Direction.Y = 0.0f;
 
-        entity *Octorok3 = AllocateNewEntityInRoom(TileMap, Room_Overworld_Spawn, EntityType_Octorok,
-                                                   GameState->FrameCounter);
+        entity *Octorok3 = AllocateNewEntityInRoom(GameState, Room_Overworld_Spawn, EntityType_Octorok);
         Octorok3->P.X = 4;
         Octorok3->P.Y = 5.0f;
         Octorok3->Direction.X = -1.0f;
         Octorok3->Direction.Y = 0.0f;
 
-        entity *Moblin1 = AllocateNewEntityInRoom(TileMap, Room_Overworld_Spawn, EntityType_Moblin, 
-                                                  GameState->FrameCounter);
+        entity *Moblin1 = AllocateNewEntityInRoom(GameState, Room_Overworld_Spawn, EntityType_Moblin);
         Moblin1->P.X = 6;
         Moblin1->P.Y = 5.0f;
         Moblin1->Direction.X = -1.0f;
         Moblin1->Direction.Y = -1.0f;
 
-        entity *Moblin2 = AllocateNewEntityInRoom(TileMap, Room_Overworld_Spawn, EntityType_Moblin, 
-                                                  GameState->FrameCounter);
+        entity *Moblin2 = AllocateNewEntityInRoom(GameState, Room_Overworld_Spawn, EntityType_Moblin);
         Moblin2->P.X = 7;
         Moblin2->P.Y = 5.0f;
         Moblin2->Direction.X = -1.0f;
@@ -901,8 +896,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         TileRoom->RoomConnector[Direction_Left].Pos.X = 15.0f;
         TileRoom->RoomConnector[Direction_Left].Pos.Y = 5.0f;
 
-        entity *Octorok4 = AllocateNewEntityInRoom(TileMap, Room_Overworld_Bushes, EntityType_Octorok,
-                                                   GameState->FrameCounter);
+        entity *Octorok4 = AllocateNewEntityInRoom(GameState, Room_Overworld_Bushes, EntityType_Octorok);
         Octorok4->Health = 3;
         Octorok4->P.X = 8;
         Octorok4->P.Y = 5.0f;
@@ -918,28 +912,28 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         CaveRoom->RoomConnector[Direction_Down].Pos.X = 4.5f;
         CaveRoom->RoomConnector[Direction_Down].Pos.Y = 8.5f;
 
-        entity *OldMan = AllocateNewEntityInRoom(CaveRoom, EntityType_OldMan, GameState->FrameCounter);
+        entity *OldMan = AllocateNewEntityInRoom(GameState, CaveRoom->RoomID, EntityType_OldMan);
         if (OldMan)
         {
             OldMan->P.X = 7.5f;
             OldMan->P.Y = 5.0f;
         }
 
-        entity *Fire1 = AllocateNewEntityInRoom(CaveRoom, EntityType_Fire, GameState->FrameCounter);
+        entity *Fire1 = AllocateNewEntityInRoom(GameState, CaveRoom->RoomID, EntityType_Fire);
         if (Fire1)
         {
             Fire1->P.X = 5.5f;
             Fire1->P.Y = 5.0f;
         }
 
-        entity *Fire2 = AllocateNewEntityInRoom(CaveRoom, EntityType_Fire, GameState->FrameCounter);
+        entity *Fire2 = AllocateNewEntityInRoom(GameState, CaveRoom->RoomID, EntityType_Fire);
         if (Fire2)
         {
             Fire2->P.X = 9.5f;
             Fire2->P.Y = 5.0f;
         }
 
-        entity *Sword = AllocateNewEntityInRoom(CaveRoom, EntityType_Sword, GameState->FrameCounter);
+        entity *Sword = AllocateNewEntityInRoom(GameState, CaveRoom->RoomID, EntityType_Sword);
         if (Sword)
         {
             Sword->P.X = 7.5f;
@@ -963,14 +957,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         DungeonRoom->RoomConnector[Direction_Up].Pos.Y = 2.5f;
         DungeonRoom->DungeonDoors[Direction_Up].DoorState = Dungeon_Door_Locked;
 
-        entity *BasicKey = AllocateNewEntityInRoom(DungeonRoom, EntityType_BasicKey, GameState->FrameCounter);
+        entity *BasicKey = AllocateNewEntityInRoom(GameState, DungeonRoom->RoomID, EntityType_BasicKey);
         if (BasicKey)
         {
             BasicKey->P.X = 9.5f;
             BasicKey->P.Y = 3.0f;
         }
 
-        entity *PushBlock = AllocateNewEntityInRoom(DungeonRoom, EntityType_PushBlock, GameState->FrameCounter);
+        entity *PushBlock = AllocateNewEntityInRoom(GameState, DungeonRoom->RoomID, EntityType_PushBlock);
         if (PushBlock)
         {
             PushBlock->P.X = 8.0f;
@@ -987,8 +981,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         DungeonRoom->RoomConnector[Direction_Down].Pos.Y = 8.5f;
         DungeonRoom->DungeonDoors[Direction_Down].DoorState = Dungeon_Door_Shut;
 
-        entity *DungeonOctorok = AllocateNewEntityInRoom(TileMap, Room_Dungeon1_Two, EntityType_Octorok,
-                                                         GameState->FrameCounter);
+        entity *DungeonOctorok = AllocateNewEntityInRoom(GameState, Room_Dungeon1_Two, EntityType_Octorok);
         DungeonOctorok->P.X = 8;
         DungeonOctorok->P.Y = 5.0f;
         DungeonOctorok->Direction.X = -1.0f;

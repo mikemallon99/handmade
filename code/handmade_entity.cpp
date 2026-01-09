@@ -78,12 +78,12 @@ AllocateNewEntityInRoom(tile_room *Room, entity_type Type, uint32 FrameCounter)
 }
 
 internal entity *
-AllocateNewEntityInRoom(tile_map *TileMap, room_id RoomID, entity_type Type, uint32 FrameCounter)
+AllocateNewEntityInRoom(game_state *GameState, room_id RoomID, entity_type Type)
 {
     entity *Entity = 0;
 
-    tile_room *Room = &TileMap->TileRooms[RoomID];
-    Entity = AllocateNewEntityInRoom(Room, Type, FrameCounter);
+    tile_room *Room = &GameState->World->TileMap->TileRooms[RoomID];
+    Entity = AllocateNewEntityInRoom(Room, Type, GameState->FrameCounter);
 
     return Entity;
 }
@@ -282,8 +282,8 @@ UpdateOctorok(game_state *GameState, entity *Octorok)
     if (Octorok->Health > 0 &&
         GameState->FrameCounter % Octorok->FireFrequency == 0)
     {
-        entity *Projectile = AllocateNewEntityInRoom(Octorok->Room, EntityType_OctorokRock,
-                                                     GameState->FrameCounter);
+        entity *Projectile = AllocateNewEntityInRoom(GameState, Octorok->Room->RoomID, 
+                                                     EntityType_OctorokRock);
         Projectile->P = Octorok->P;
         Projectile->Direction = {0.0f, -1.0f};
     }
@@ -325,8 +325,8 @@ UpdateMoblin(game_state *GameState, entity *Moblin)
     // Moblin fire projectile
     if (GameState->FrameCounter % Moblin->FireFrequency == 0)
     {
-        entity *Projectile = AllocateNewEntityInRoom(Moblin->Room, EntityType_MoblinArrow, 
-                                                     GameState->FrameCounter);
+        entity *Projectile = AllocateNewEntityInRoom(GameState, Moblin->Room->RoomID, 
+                                                     EntityType_MoblinArrow);
         if (Projectile)
         {
             Projectile->P = Moblin->P;
