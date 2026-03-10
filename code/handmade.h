@@ -10,8 +10,6 @@
 
 #define Pi32 3.1415926535898f
 
-#define MAX_ENTITY_TWEENS 32
-
 typedef int8_t int8;
 typedef int16_t int16;
 typedef int32_t int32;
@@ -27,6 +25,8 @@ typedef uint64_t uint64;
 
 typedef float real32;
 typedef double real64;
+
+#define MAX_ENTITY_TWEENS 32
 
 /*
   HANDMADE_INTERNAL
