@@ -1,8 +1,8 @@
 #ifndef HANDMADE_H
 #define HANDMADE_H
 
-#include <math.h>
 #include <stdint.h>
+#include <stddef.h>
 
 #define internal static 
 #define local_persist static
@@ -80,7 +80,7 @@ struct debug_read_file_result
     void *Contents;
 };
 
-#define DEBUG_PLATFORM_READ_ENTIRE_FILE(name) debug_read_file_result name(thread_context *Thread, char *Filename)
+#define DEBUG_PLATFORM_READ_ENTIRE_FILE(name) void name(thread_context *Thread, char *Filename, char *Buffer, uint32 BufferSize, uint32 *OutputSize)
 typedef DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platform_read_entire_file);
 
 #define DEBUG_PLATFORM_FREE_FILE_MEMORY(name) void name(thread_context *Thread, void *Memory)
@@ -88,6 +88,9 @@ typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platform_free_file_memory);
 
 #define DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name) bool32 name(thread_context *Thread, char *Filename, uint32 MemorySize, void *Memory)
 typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
+
+#define DEBUG_PLATFORM_LOG(name) void name(char *CString)
+typedef DEBUG_PLATFORM_LOG(debug_platform_log);
 
 #endif
 
@@ -183,6 +186,7 @@ struct game_memory
     debug_platform_read_entire_file *DEBUGPlatformReadEntireFile;
     debug_platform_free_file_memory *DEBUGPlatformFreeFileMemory;
     debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;
+    debug_platform_log *DEBUGPlatformLog;
 
     real32 GameUpdateHz;
 };
@@ -222,7 +226,7 @@ InitializeArena(memory_arena *Arena, memory_index Size, uint8 *Base)
 
 #define PushStruct(Arena, type) (type *)PushSize_(Arena, sizeof(type))
 #define PushArray(Arena, Count, type) (type *)PushSize_(Arena, (Count)*sizeof(type))
-void *
+inline void *
 PushSize_(memory_arena *Arena, memory_index Size)
 {
     Assert((Arena->Used + Size) <= Arena->Size)

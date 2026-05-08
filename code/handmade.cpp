@@ -122,11 +122,14 @@ extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
 // NOTE: Assume 60fps for now until we start having problems with that assumption
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
+    Memory->DEBUGPlatformLog("Game Update Begin\n");
     Assert(sizeof(game_state) <= Memory->PermanentStorageSize);
 
     game_state *GameState = (game_state *)Memory->PermanentStorage;
     if (!Memory->IsInitialized)
     {
+        Memory->DEBUGPlatformLog("Initializing...\n");
+
         // QUESTION: Should we be using a separate arena for sprite data?
         InitializeArena(&GameState->WorldArena, Memory->PermanentStorageSize - sizeof(game_state), 
                         (uint8 *)Memory->PermanentStorage + sizeof(game_state));
@@ -160,33 +163,33 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         // SPRITE DATA LOADING
 
         GameState->LinkBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                           "tiles/link.bmp");
+                                           "w:/game/data/tiles/link.bmp");
         LoadLinkSprites(&GameState->LinkSprites, &GameState->LinkBMP);
 
         GameState->ItemBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                           "tiles/items.bmp");
+                                           "w:/game/data/tiles/items.bmp");
         LoadItemSprites(&GameState->ItemSprites, &GameState->ItemBMP);
 
         GameState->NPCBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                           "tiles/npcs.bmp");
+                                           "w:/game/data/tiles/npcs.bmp");
         LoadNPCSprites(&GameState->NPCSprites, &GameState->NPCBMP);
 
         GameState->OverworldBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                                "tiles/overworld_tileset.bmp");
+                                                "w:/game/data/tiles/overworld_tileset.bmp");
         LoadOverworldTileset(&GameState->OverworldTileset, &GameState->OverworldBMP);
 
         GameState->DungeonBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                                "tiles/dungeon_tileset.bmp");
+                                                "w:/game/data/tiles/dungeon_tileset.bmp");
         LoadDungeonTileset(&GameState->DungeonTileset, &GameState->DungeonBMP);
 
         LoadTextTileset(&GameState->TextTileset, &GameState->OverworldBMP);
 
         GameState->HudBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                                "tiles/hud_tileset.bmp");
+                                                "w:/game/data/tiles/hud_tileset.bmp");
         LoadHudTileset(&GameState->HudTileset, &GameState->HudBMP);
 
         GameState->OWEnemiesBMP = LoadBMPFile(&GameState->WorldArena, Memory, Thread, 
-                                                "tiles/overworld_enemies.bmp");
+                                                "w:/game/data/tiles/overworld_enemies.bmp");
         
         LoadOctorokSprites(&GameState->OctorokSprites, &GameState->OWEnemiesBMP);
 
@@ -361,6 +364,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         // NOTE: maybe move this to platform layer
         Memory->IsInitialized = true;
+
+        Memory->DEBUGPlatformLog("Initialization complete\n");
     }
 
     world *World = GameState->World;

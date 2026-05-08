@@ -24,19 +24,35 @@ GetBitShift(uint32 Value)
 internal bmp_file
 LoadBMPFile(memory_arena *Arena, game_memory *Memory, thread_context *Thread, char *Filename)
 {
-    debug_read_file_result File = Memory->DEBUGPlatformReadEntireFile(Thread, Filename);
-    bmp_file BMPFile = {};
-    if (File.Contents)
+    // NOTE: We push the file onto memory here and then we also push a copy of the image onto memory
+    // TODO: Should do this in a more memory efficient way I suppose
+    uint32 FileSizeGuess = Kilobytes(256);
+    uint32 FileSizeActual = 0;
+    uint8 *FileBuffer = PushArray(Arena, FileSizeGuess, uint8);
+    Memory->DEBUGPlatformLog("Calling read");
+    Memory->DEBUGPlatformReadEntireFile(Thread, Filename, (char*)FileBuffer, FileSizeGuess, &FileSizeActual);
+    Memory->DEBUGPlatformLog("Okay");
+    if (FileSizeActual > FileSizeGuess)
     {
-        uint32 BMPSize = *((uint32 *)((uint8 *)File.Contents + 2));
-        uint32 Offset = *((uint32 *)((uint8 *)File.Contents + 10));
-        uint32 *FilePixels = (uint32 *)((uint8 *)File.Contents + Offset);
+        Memory->DEBUGPlatformLog("Trying again");
+        PushArray(Arena, FileSizeActual - FileSizeGuess, uint8);
+        FileSizeGuess = FileSizeActual;
+        Memory->DEBUGPlatformReadEntireFile(Thread, Filename, (char*)FileBuffer, FileSizeGuess, &FileSizeActual);
+    }
+    Memory->DEBUGPlatformLog("Worked");
 
-        BMPFile.Width = *((int32 *)((uint8 *)File.Contents + 18));
-        BMPFile.Height = *((int32 *)((uint8 *)File.Contents + 22));
-        BMPFile.BitsPerPixel = *((int16 *)((uint8 *)File.Contents + 28));
-        BMPFile.ImageSize = *((uint32 *)((uint8 *)File.Contents + 34));
-        uint32 CompressionMethod = *((uint32 *)((uint8 *)File.Contents + 30));
+    bmp_file BMPFile = {};
+    if (FileSizeActual)
+    {
+        uint32 BMPSize = *((uint32 *)((uint8 *)FileBuffer + 2));
+        uint32 Offset = *((uint32 *)((uint8 *)FileBuffer + 10));
+        uint32 *FilePixels = (uint32 *)((uint8 *)FileBuffer + Offset);
+
+        BMPFile.Width = *((int32 *)((uint8 *)FileBuffer + 18));
+        BMPFile.Height = *((int32 *)((uint8 *)FileBuffer + 22));
+        BMPFile.BitsPerPixel = *((int16 *)((uint8 *)FileBuffer + 28));
+        BMPFile.ImageSize = *((uint32 *)((uint8 *)FileBuffer + 34));
+        uint32 CompressionMethod = *((uint32 *)((uint8 *)FileBuffer + 30));
 
         uint32 TransparentColor1 = 0xFF747474;
         uint32 TransparentColor2 = 0xFF008000;
@@ -51,10 +67,10 @@ LoadBMPFile(memory_arena *Arena, game_memory *Memory, thread_context *Thread, ch
         {
             if (CompressionMethod == 3)
             {
-                RedMask = *((uint32 *)((uint8 *)File.Contents + 0x36));
-                GreenMask = *((uint32 *)((uint8 *)File.Contents + 0x3A));
-                BlueMask = *((uint32 *)((uint8 *)File.Contents + 0x3E));
-                AlphaMask = *((uint32 *)((uint8 *)File.Contents + 0x42));
+                RedMask = *((uint32 *)((uint8 *)FileBuffer + 0x36));
+                GreenMask = *((uint32 *)((uint8 *)FileBuffer + 0x3A));
+                BlueMask = *((uint32 *)((uint8 *)FileBuffer + 0x3E));
+                AlphaMask = *((uint32 *)((uint8 *)FileBuffer + 0x42));
             }
 
             int32 RedShift = GetBitShift(RedMask);
@@ -128,7 +144,7 @@ LoadBMPFile(memory_arena *Arena, game_memory *Memory, thread_context *Thread, ch
             Assert(0);
         }
 
-        Memory->DEBUGPlatformFreeFileMemory(Thread, File.Contents);
+        // Memory->DEBUGPlatformFreeFileMemory(Thread, File.Contents);
     }
     return BMPFile;
 }

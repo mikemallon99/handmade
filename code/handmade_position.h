@@ -1,8 +1,6 @@
 #ifndef HANDMADE_POSITION_H
 #define HANDMADE_POSITION_H
 
-#include <math.h>
-
 struct vector2
 {
     union
