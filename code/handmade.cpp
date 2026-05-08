@@ -20,7 +20,8 @@ ProcessPlayerInput(game_state *GameState, game_controller_input *Controller)
     else
     {
         // Prevent movement during animations
-        if (GameState->PlayerPickingUpThing || GameState->PlayerUsingSword || GameState->PlayerUsingBoomerang)
+        // TODO: Weird that we have this check here but then also a check for updating the position. Position + direction updated together?
+        if (GameState->PlayerPickingUpThing || GameState->PlayerUsingSword || (GameState->PlayerUsingBoomerang && !GameState->BoomerangReturning))
         {
             GameState->PlayerSpeed = 0.0f;
         }
@@ -559,7 +560,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     tile_map_position InitialPlayerOrigin = GameState->PlayerP;
     tile_map_position NewPlayerOrigin = GameState->PlayerP;
 
-    if (!GameState->PlayerUsingSword && !GameState->PlayerUsingBoomerang)
+    // TODO: Weird that we have this check here but then also a check for the controller. Combine to just a single check
+    if (!GameState->PlayerUsingSword && !(GameState->PlayerUsingBoomerang && !GameState->BoomerangReturning))
     {
         vector2 MovementDelta = Input->dtForFrame * GameState->PlayerSpeed * GameState->PlayerDirection;
         NewPlayerOrigin.Pos.X += MovementDelta.X;

@@ -3,7 +3,7 @@
 
 #include "handmade_position.h"
 
-#define MAX_ENTITIES 16
+#define MAX_ENTITIES 256
 
 // Forward declaration to avoid circular dependency
 struct tile_room;
